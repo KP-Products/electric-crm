@@ -1,0 +1,22 @@
+.custom-splitter .ant-splitter-bar .ant-splitter-bar-dragger:hover::before,
+.custom-splitter .ant-splitter-bar .ant-splitter-bar-dragger-active::before {
+  background-color: rgb(var(--primary-300)) !important;
+}
+
+.custom-splitter .ant-splitter-bar .ant-splitter-bar-collapse-bar {
+  padding: 12px 8px;
+  opacity: 1;
+  background-color: rgb(var(--primary-500)) !important;
+  z-index: 2;
+}
+.custom-splitter .ant-splitter-bar .ant-splitter-bar-collapse-bar-start {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  right: 1px;
+}
+
+.custom-splitter .ant-splitter-bar .ant-splitter-bar-collapse-bar-end {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  left: 1px;
+}

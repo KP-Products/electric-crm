@@ -1,0 +1,35 @@
+.app-tree .ant-select-focused .ant-select-selector {
+  border-color: theme('colors.primary.500') !important;
+  box-shadow: none !important;
+}
+
+.app-tree .ant-tree-select .ant-select-selector {
+  border-color: theme('colors.color.300') !important;
+  padding-right: 32px;
+  border-radius: 0.5rem;
+}
+.app-tree .ant-select-focused:hover .ant-select-selector {
+  border-color: theme('colors.primary.500') !important;
+}
+
+.app-tree .ant-tree-select:hover .ant-select-selector {
+  border-color: theme('colors.primary.500') !important;
+}
+
+.app-tree .ant-tree-select .ant-select-selector .ant-select-selection-wrap {
+  min-height: 24px;
+  margin: 3px 0 2px 4px;
+}
+
+.ant-tree-select-dropdown
+  .ant-select-tree
+  .ant-select-tree-treenode:not(.ant-select-tree-treenode-disabled).filter-node
+  .ant-select-tree-title {
+  color: inherit !important;
+  font-weight: inherit !important;
+}
+
+.app-tree .ant-tree-select.tree-select-error .ant-select-selector {
+  --tw-border-opacity: 1 !important;
+  border-color: rgb(var(--error-500) / var(--tw-border-opacity, 1)) !important;
+}

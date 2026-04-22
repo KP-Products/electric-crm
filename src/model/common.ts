@@ -1,0 +1,34 @@
+export interface PaginationReq {
+  page: number;
+  size: number;
+}
+
+export interface PaginationRes<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface ErrorBase {
+  businessErrorCode?: string;
+  businessErrorMessage?: string;
+  detailMessage?: string;
+  systemErrorCode?: string;
+  systemErrorMessage?: string;
+}
+
+export interface ResultBase<T = unknown> {
+  code?: string;
+  message?: string;
+  timestamp?: string;
+  data?: T;
+}
+
+export type ApiResponse<T = unknown> = ErrorBase & ResultBase & T;
+
+export enum TYPE_STATUS {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE'
+}

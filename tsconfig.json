@@ -1,0 +1,51 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "baseUrl": "src",
+    "downlevelIteration": true,
+    "allowSyntheticDefaultImports": true,
+    "noUnusedLocals": true,
+    "noImplicitAny": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "typeRoots": ["../node_modules/@types", "../@types", "./types"],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@constant": ["./utils/constant/index"],
+      "@store": ["./stores/store/index"],
+      "@store/*": ["./stores/store/*"],
+      "@redux-slice/*": ["./stores/action-slice/*"],
+      "@redux-selector/*": ["./stores/selector/*"],
+      "@redux-action-type/*": ["./stores/action-type/*"],
+      "@redux-common": ["./stores/@extends/index"],
+      "@listener": ["./stores/@extends/middleware/listener.ts"],
+      "@common-screens/*": ["./screens/@common/*"],
+      "@auth-common/*": ["./screens/authentication/@common/*"],
+      "@unauth-common/*": ["./screens/un-authentication/@common/*"],
+      "@app-services": ["./services/networking/app-services.ts"],
+      "@mock/*": ["../_mock/*"],
+      "@pilot": ["./utils/pilot-check/checkService.ts"],
+      "@pilot-component": ["./utils/pilot-check/index"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

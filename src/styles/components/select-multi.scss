@@ -1,0 +1,54 @@
+/* Root */
+.ant-select {
+  display: flex;
+  align-items: center;
+
+  /* selector */
+  .ant-select-selector {
+    border-radius: 8px;
+    padding: 0 11px;
+    min-height: 37px;
+
+    &:hover,
+    &:active {
+      border-color: rgb(var(--primary-500)) !important;
+      box-shadow: none !important;
+    }
+  }
+
+  /* focus */
+  &.ant-select-focused .ant-select-selector {
+    border-color: rgb(var(--primary-500)) !important;
+    box-shadow: none !important;
+  }
+
+  /* multiple mode */
+  &.ant-select-multiple {
+    .ant-select-selection-search {
+      margin-left: 0;
+    }
+
+    .ant-select-selection-placeholder {
+      margin-left: -8px;
+    }
+  }
+
+  /* overflow (tags container) */
+  .ant-select-selection-overflow {
+    min-height: 37px;
+  }
+}
+
+/* dropdown (portal) */
+.ant-select-dropdown {
+  .rc-virtual-list-holder {
+    max-height: 300px !important;
+    overflow-y: auto;
+  }
+
+  .ant-select-item-option-content {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+}
