@@ -4,29 +4,11 @@ import customerServices from 'services/customer-services';
 import { isSuccess } from 'services/networking/app-helper';
 
 takeLatestListeners({
-  actionCreator: customerActions.getCustomers,
-  effect: async (action, listenerApi) => {
-    const { body, onSuccess, onFailed } = action.payload;
-    listenerApi.dispatch(customerActions.setListLoading(true));
-    const response = await customerServices.getCustomerList(body);
-    listenerApi.dispatch(customerActions.setListLoading(false));
-
-    if (isSuccess(response)) {
-      const data = response.data;
-      listenerApi.dispatch(customerActions.setCustomers(data));
-      onSuccess?.(data);
-    } else {
-      onFailed?.(response);
-    }
-  }
-});
-
-takeLatestListeners({
-  actionCreator: customerActions.getCustomerGroupList,
+  actionCreator: customerActions.getCustomerList,
   effect: async (action, listenerApi) => {
     const { onSuccess, onFailed } = action.payload;
     listenerApi.dispatch(customerActions.setGroupLoading(true));
-    const response = await customerServices.getCustomerGroupList();
+    const response = await customerServices.getCustomerList();
     listenerApi.dispatch(customerActions.setGroupLoading(false));
 
     if (isSuccess(response)) {
@@ -40,10 +22,10 @@ takeLatestListeners({
 });
 
 takeLatestListeners({
-  actionCreator: customerActions.createCustomerGroup,
+  actionCreator: customerActions.createCustomer,
   effect: async (action, listenerApi) => {
     const { body, onSuccess, onFailed } = action.payload;
-    const response = await customerServices.createCustomerGroup(body);
+    const response = await customerServices.createCustomer(body);
 
     if (isSuccess(response)) {
       const data = response.data;
@@ -55,10 +37,10 @@ takeLatestListeners({
 });
 
 takeLatestListeners({
-  actionCreator: customerActions.updateCustomerGroup,
+  actionCreator: customerActions.updateCustomer,
   effect: async (action, listenerApi) => {
     const { body, onSuccess, onFailed } = action.payload;
-    const response = await customerServices.updateCustomerGroup(body);
+    const response = await customerServices.updateCustomer(body);
 
     if (isSuccess(response)) {
       const data = response.data;
@@ -70,10 +52,10 @@ takeLatestListeners({
 });
 
 takeLatestListeners({
-  actionCreator: customerActions.downloadCustomerGroup,
+  actionCreator: customerActions.downloadCustomer,
   effect: async (action, listenerApi) => {
     const { body, onSuccess, onFailed } = action.payload;
-    const response = await customerServices.downloadCustomerGroup(body);
+    const response = await customerServices.downloadCustomer(body);
 
     if (isSuccess(response)) {
       const data = response.data;

@@ -24,14 +24,14 @@ import AppPagination from 'components/table/pagination';
 import IconHover from 'components/icon-vec-local/icon-hover';
 import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { AppSelectControl } from 'components/select';
-import useManageCustomerGroup from 'screens/authentication/manage-customer-group/useManageCustomerGroup';
+import useManageCustomer from './useManageCustomer';
 import React, { useEffect } from 'react';
 
-const ManageCustomerGroupScreen = () => {
+const ManageCustomerScreen = () => {
   const { isMobile, isTablet } = useResponsive();
   const {
     t,
-    fecthList,
+    fetchList,
     setMoreAction,
     selectedItem,
     setSelectedItem,
@@ -50,11 +50,10 @@ const ManageCustomerGroupScreen = () => {
     search,
     setSearch,
     custList,
-    customerTypes,
-    fetchCustomeType,
+    // fetchCustomeType,
     loadingDP,
     onDownload
-  } = useManageCustomerGroup();
+  } = useManageCustomer();
 
   const {
     control,
@@ -65,14 +64,14 @@ const ManageCustomerGroupScreen = () => {
   const isView = !!selectedItem?.id && !openCreate;
 
   useEffect(() => {
-    fecthList();
+    fetchList();
   }, []);
 
-  useEffect(() => {
-    if (!customerTypes) {
-      fetchCustomeType();
-    }
-  }, [customerTypes]);
+  // useEffect(() => {
+  //   if (!customerTypes) {
+  //     fetchCustomeType();
+  //   }
+  // }, [customerTypes]);
   return (
     <section>
       <Flex
@@ -336,10 +335,11 @@ const ManageCustomerGroupScreen = () => {
                 })}
                 wrapperClassName={'flex-1'}
                 options={
-                  customerTypes?.map((cus) => ({
-                    value: cus.code || '',
-                    label: `${cus.name} - ${cus.description}`
-                  })) || []
+                  // customerTypes?.map((cus) => ({
+                  //   value: cus.code || '',
+                  //   label: `${cus.name} - ${cus.description}`
+                  // })) || []
+                  []
                 }
                 isView={!openCreate}
                 control={control}
@@ -374,4 +374,4 @@ const ManageCustomerGroupScreen = () => {
   );
 };
 
-export default ManageCustomerGroupScreen;
+export default ManageCustomerScreen;

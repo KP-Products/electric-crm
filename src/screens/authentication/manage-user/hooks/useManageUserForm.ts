@@ -1,6 +1,5 @@
-import { K_SIZE_0, K_SIZE_1, MAX_PAGE_SIZE } from '@constant';
+import { K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { GET_LIST_ROLE } from '@redux-action-type/role';
 import { ADD_USER, EDIT_USER } from '@redux-action-type/user';
 import { dispatch } from '@redux-common';
 import { selectRoleList } from '@redux-selector/role';
@@ -8,7 +7,6 @@ import { selectUserList, selectUserLoadingDetail } from '@redux-selector/user';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
-import { GetListRoleReq } from 'model/role';
 import { AddUserReq, EditUserReq } from 'model/user';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -24,25 +22,16 @@ const userSchema = (t: TypedT) => {
       .string()
       .trim()
       .min(K_SIZE_1, { message: t('validate:required', { name: t('login_screen:username') }) }),
+    password: z
+      .string()
+      .trim()
+      .min(K_SIZE_1, { message: t('validate:required', { name: t('login_screen:username') }) }),
     fullName: z.string().trim(),
     email: z.string().trim(),
-    phone: z.string().trim(),
-    status: z
-      .string()
-      .trim()
-      .min(K_SIZE_1, { message: t('validate:required', { name: t('common:status') }) }),
-    roleId: z
-      .string()
-      .trim()
-      .min(K_SIZE_1, { message: t('validate:required', { name: t('manage_user:role') }) }),
-    unitId: z.string().trim(),
-    departmentId: z.string().trim(),
-    permissions: z
-      .object({
-        permissionId: z.string().trim().min(K_SIZE_1),
-        title: z.string().trim().min(K_SIZE_1)
-      })
-      .array()
+    status: z.string().trim(),
+    // .min(K_SIZE_1, { message: t('validate:required', { name: t('common:status') }) }),
+    roleId: z.string().trim()
+    // .min(K_SIZE_1, { message: t('validate:required', { name: t('manage_user:role') }) })
   });
 };
 
@@ -77,28 +66,15 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
     [roleList]
   );
 
-  const getUserPermission = useCallback(
-    (roleId?: string) => {
-      return (roleList.find((role) => role.roleId === roleId)?.permissions || []).map(
-        (p) =>
-          ({ permissionId: p.permissionId, title: p.action }) as UserForm['permissions'][number]
-      );
-    },
-    [roleList]
-  );
-
   const userForm = useForm<UserForm>({
     mode: 'onTouched',
     defaultValues: {
       username: '',
+      password: '',
       fullName: '',
       email: '',
-      phone: '',
-      status: '',
-      roleId: '',
-      unitId: '',
-      departmentId: '',
-      permissions: []
+      // roleId: '',
+      status: ''
     },
     resolver: zodResolver(userSchema(t))
   });
@@ -109,23 +85,20 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
         return router.replace(ROUTES.MANAGE_USER);
       } else {
         userForm.reset({
-          ...userDetail,
-          roleId: userDetail?.roleGroup?.roleId || '',
-          unitId: userDetail?.unit?.id || '',
-          departmentId: userDetail?.department?.id || '',
-          permissions: getUserPermission(userDetail?.roleGroup?.roleId)
+          ...userDetail
+          // roleId: userDetail?.roles?.roleId || ''
         });
       }
     }
-  }, [router, userDetail, isAddMode, userForm, getUserPermission]);
+  }, [router, userDetail, isAddMode, userForm]);
 
-  useEffect(() => {
-    const body: GetListRoleReq = {
-      page: K_SIZE_0,
-      size: MAX_PAGE_SIZE
-    };
-    dispatch({ type: GET_LIST_ROLE, payload: { body } });
-  }, []);
+  // useEffect(() => {
+  //   const body: GetListRoleReq = {
+  //     page: K_SIZE_0,
+  //     size: MAX_PAGE_SIZE
+  //   };
+  //   dispatch({ type: GET_LIST_ROLE, payload: { body } });
+  // }, []);
 
   const onSubmitSuccess = useCallback(
     (res: any) => {
@@ -152,13 +125,10 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
       if (isAddMode) {
         const body: AddUserReq = {
           username: data.username,
+          password: data.password,
           email: data.email,
-          fullName: data.fullName,
-          phone: data.phone,
-          unitId: data.unitId,
-          departmentId: data.departmentId,
-          status: data.status,
-          roleId: data.roleId
+          // fullName: data.fullName,
+          role: 'ADMIN'
         };
         dispatch({
           type: ADD_USER,
@@ -171,8 +141,8 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
       } else if (id) {
         const body: EditUserReq = {
           userId: id,
-          status: data.status,
-          roleId: data.roleId
+          status: data.status
+          // roleId: data.roleId
         };
         dispatch({
           type: EDIT_USER,
@@ -202,7 +172,6 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
     loading,
     onBack,
     onEdit,
-    roleOptions,
-    getUserPermission
+    roleOptions
   };
 }

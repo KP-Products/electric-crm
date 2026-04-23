@@ -1,3 +1,4 @@
+'use client';
 import ManageUserForm from 'screens/authentication/manage-user/form';
 
 const ManageUserAddPage = () => {

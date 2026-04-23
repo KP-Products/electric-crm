@@ -3,11 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { LOGIN } from '@redux-action-type/auth';
 import { dispatch } from '@redux-common';
 import { selectLoginLoading } from '@redux-selector/auth';
-import { appActions } from '@redux-slice/app';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
-import { MENU_GROUP_KEYS } from 'layout/AppLayout/components/NavigationMenu';
 import { LoginParams, LoginResult } from 'model/auth';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -46,7 +44,6 @@ export default function useLogin() {
 
   const onLoginSuccess = (res: LoginResult) => {
     DebugUtils.logS(res);
-    dispatch(appActions.setSelectedOpenKeys(Object.values(MENU_GROUP_KEYS)));
     router.push(ROUTES.MANAGE_USER);
   };
 

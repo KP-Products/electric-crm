@@ -10,13 +10,12 @@ import {
   K_SIZE_160,
   K_SIZE_18,
   K_SIZE_180,
-  K_SIZE_2,
   K_SIZE_200,
   K_SIZE_220,
   K_SIZE_8,
   NULL_VALUE
 } from '@constant';
-import { Divider, Dropdown, Flex } from 'antd';
+import { Divider, Flex } from 'antd';
 import clsx from 'clsx';
 import ButtonBase from 'components/button';
 import IconHover from 'components/icon-vec-local/icon-hover';
@@ -39,6 +38,7 @@ import {
   USER_STATUS_TYPE_MAP
 } from 'screens/authentication/manage-user/utils/constant';
 import { displayDateTimeFromServer } from 'utils/date';
+import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
 
 const ManageUser = () => {
   const {
@@ -90,25 +90,11 @@ const ManageUser = () => {
         render: (text: string) => renderColumn(text)
       },
       {
-        title: t('manage_user:unit'),
-        dataIndex: 'unit',
-        align: 'left',
-        width: K_SIZE_220,
-        render: (unit: User['unit']) => renderColumn(unit?.name)
-      },
-      {
-        title: t('manage_user:department'),
-        dataIndex: 'department',
-        align: 'left',
-        width: K_SIZE_220,
-        render: (department: User['department']) => renderColumn(department?.name)
-      },
-      {
         title: t('manage_user:role'),
-        dataIndex: 'roleGroup',
+        dataIndex: 'roles',
         align: 'left',
         width: K_SIZE_200,
-        render: (roleGroup: User['roleGroup']) => renderColumn(roleGroup?.name)
+        render: (roles: User['roles']) => renderColumn(roles.join(','))
       },
       {
         title: t('common:status'),
@@ -230,61 +216,50 @@ const ManageUser = () => {
       </div>
     );
   }, [t, filterApplied, onResetFilter, roleOptions, unitList, departmentList]);
-
+  const breadcrumbList = [
+    {
+      title: t('menu:system_administration'),
+      key: ROUTES.MANAGE_USER
+    },
+    {
+      title: t('manage_user:manage_user'),
+      key: ROUTES.MANAGE_USER
+    }
+  ];
   return (
-    <div>
-      <Flex
-        justify={'space-between'}
-        align={'center'}
-        gap={K_SIZE_8}
-        className={'tablet:flex-col tablet:items-start'}
-      >
-        <TextBase classNames="title4" t18n={'menu:user_management'} />
+    <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
+      <div>
         <Flex
-          flex={K_SIZE_1}
-          justify={'end'}
-          gap={K_SIZE_16}
-          className={'mobile:w-full mobile:flex-col'}
+          justify={'space-between'}
+          align={'center'}
+          gap={K_SIZE_8}
+          className={'tablet:flex-col tablet:items-start'}
         >
-          <Flex gap={K_SIZE_16}>
+          <TextBase classNames="title4" t18n={'menu:user_management'} />
+          <Flex
+            flex={K_SIZE_1}
+            justify={'end'}
+            gap={K_SIZE_16}
+            className={'mobile:w-full mobile:flex-col'}
+          >
+            <Flex gap={K_SIZE_16}>
+              <ButtonBase
+                type={'ghost'}
+                customContent={t('common:advanced_filter')}
+                leftIcon={'IC_FILTER_OUTLINE'}
+                onClick={() => filterDrawerRef.current?.open(filterApplied)}
+                classNames={'mobile:flex-1 mobile:justify-center'}
+              />
+            </Flex>
+
             <ButtonBase
               type={'ghost'}
-              customContent={t('common:advanced_filter')}
-              leftIcon={'IC_FILTER_OUTLINE'}
-              onClick={() => filterDrawerRef.current?.open(filterApplied)}
+              leftIcon={'IC_ADD_OUTLINE2'}
+              customContent={t('common:add_new')}
               classNames={'mobile:flex-1 mobile:justify-center'}
+              onClick={() => router.push(ROUTES.MANAGE_USER_ADD)}
             />
-          </Flex>
-          <Flex gap={K_SIZE_16}>
-            {permission.canAdd && (
-              <Dropdown
-                trigger={['click']}
-                menu={{
-                  items: [
-                    { key: K_SIZE_1.toString(), label: t('manage_user:add_user') },
-                    { key: K_SIZE_2.toString(), label: t('manage_user:upload_user') }
-                  ],
-                  onClick: (item) => {
-                    switch (item.key) {
-                      case K_SIZE_1.toString(): {
-                        return router.push(ROUTES.MANAGE_USER_ADD);
-                      }
-                      case K_SIZE_2.toString(): {
-                        return router.push(ROUTES.MANAGE_USER_UPLOAD);
-                      }
-                    }
-                  }
-                }}
-                placement={'bottomLeft'}
-              >
-                <ButtonBase
-                  type={'ghost'}
-                  leftIcon={'IC_ADD_OUTLINE2'}
-                  customContent={t('common:add_new')}
-                  classNames={'mobile:flex-1 mobile:justify-center'}
-                />
-              </Dropdown>
-            )}
+
             {permission.canDownload && (
               <ButtonBase
                 type={'primary'}
@@ -296,34 +271,34 @@ const ManageUser = () => {
             )}
           </Flex>
         </Flex>
-      </Flex>
-      <Divider className={'my-16 '} />
-      <TagFilterGroup />
-      <div className={'overflow-hidden rounded-radius-l border border-color-400 pb-4'}>
-        <AppTable
-          rootClassName={'w-full'}
-          className={'[&_.ant-pagination]:hidden'}
-          scroll={{ x: 'max-content', y: '75vh' }}
-          dataSource={userPaginated}
-          loading={loadingUserList}
-          columns={[...columns]}
-          rowKey={'id'}
+        <Divider className={'my-16 '} />
+        <TagFilterGroup />
+        <div className={'overflow-hidden rounded-radius-l border border-color-400 pb-4'}>
+          <AppTable
+            rootClassName={'w-full'}
+            className={'[&_.ant-pagination]:hidden'}
+            scroll={{ x: 'max-content', y: '75vh' }}
+            dataSource={userPaginated}
+            loading={loadingUserList}
+            columns={[...columns]}
+            rowKey={'id'}
+            pagination={pagination}
+          />
+        </div>
+        <AppPagination
+          currentPage={pagination.current}
+          total={pagination.total}
           pagination={pagination}
         />
+        <UserFilterDrawer
+          ref={filterDrawerRef}
+          defaultValues={defaultFilter}
+          onApplyFilter={onApplyFilter}
+          onResetFilter={onResetFilter}
+          roleOptions={roleOptions}
+        />
       </div>
-      <AppPagination
-        currentPage={pagination.current}
-        total={pagination.total}
-        pagination={pagination}
-      />
-      <UserFilterDrawer
-        ref={filterDrawerRef}
-        defaultValues={defaultFilter}
-        onApplyFilter={onApplyFilter}
-        onResetFilter={onResetFilter}
-        roleOptions={roleOptions}
-      />
-    </div>
+    </PageWithBreadcrumb>
   );
 };
 

@@ -1,7 +1,5 @@
 import { PaginationReq, ResultBase } from 'model/common';
-import { Department, Unit } from 'model/master-data';
-import { Role } from 'model/role';
-
+import { Department, Unit } from './master-data';
 export interface User {
   id: string;
   username: string;
@@ -13,7 +11,7 @@ export interface User {
   bio: string;
   image: string;
   status: string;
-  roleGroup: Role;
+  roles: string[];
   unit: Unit;
   department: Department;
   isActive: boolean;
@@ -22,7 +20,6 @@ export interface User {
   createdBy: string;
   updatedBy: string;
 }
-
 export interface GetListUserReq extends PaginationReq {
   username?: string;
   fullName?: string;
@@ -40,12 +37,9 @@ export interface DownloadListUserRes extends ResultBase<string> {}
 export interface AddUserReq {
   username: string;
   email: string;
-  fullName: string;
-  phone: string;
-  unitId: string;
-  departmentId: string;
-  status: string;
-  roleId: string;
+  // fullName: string;
+  password: string;
+  role: string;
 }
 
 export interface AddUserRes extends ResultBase {}
@@ -82,7 +76,7 @@ export interface AddListUserRes extends ResultBase {}
 export interface EditUserReq {
   userId: string;
   status: string;
-  roleId: string;
+  // roleId: string;
 }
 
 export interface EditUserRes extends ResultBase {}

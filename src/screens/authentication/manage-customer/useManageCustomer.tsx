@@ -10,28 +10,24 @@ import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import lod from 'lodash';
 import { dispatch } from '@redux-common';
-import { MASTERDATA_CUS_TYPE } from '@redux-action-type/fee-code-type';
-import { MasterDataCusSegment } from 'model/fee-code';
 import { ErrorBase } from 'model/common';
-import { selectCustomerTypes } from '@redux-selector/fee-code-selector';
-import { useSelector } from 'react-redux';
 import {
-  CUSTOMER_GROUP_CREATE,
-  CUSTOMER_GROUP_DOWNLOAD,
-  CUSTOMER_GROUP_LIST,
-  CUSTOMER_GROUP_UPDATE
+  CUSTOMER_CREATE,
+  CUSTOMER_DOWNLOAD,
+  CUSTOMER_LIST,
+  CUSTOMER_UPDATE
 } from '@redux-action-type/customer-type';
-import { CreateCustomerGroupReq, CustomerGroup } from 'model/customer';
+import { CreateCustomerGroupReq, Customer, CustomerGroup } from 'model/customer';
 import { DownloadUtils } from 'utils/download.utils';
 import moment from 'moment/moment';
 import { FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
 import { appCodes } from 'utils/constant/appCodes';
 
 interface Props {}
-function useManageCustomerGroup(props?: Props) {
+function useManageCustomer(props?: Props) {
   const { t } = useAppTranslation();
-  const [custListDefault, setCustListDefault] = useState<CustomerGroup[]>([]);
-  const [custList, setCustList] = useState<CustomerGroup[]>([]);
+  const [custListDefault, setCustListDefault] = useState<Customer[]>([]);
+  const [custList, setCustList] = useState<Customer[]>([]);
   const listLoading = false;
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
@@ -41,27 +37,12 @@ function useManageCustomerGroup(props?: Props) {
   const [loadingEdit, setLoadingEdit] = useState<boolean>(false);
   const [loadingDP, setLoadingDP] = useState<boolean>(false);
   const [total, setTotal] = useState<number>(K_SIZE_0);
-  const customerTypes = useSelector(selectCustomerTypes);
 
-  const fetchCustomeType = () => {
+  const fetchList = () => {
     dispatch({
-      type: MASTERDATA_CUS_TYPE,
+      type: CUSTOMER_LIST,
       payload: {
-        onSuccess: (data: MasterDataCusSegment[]) => {
-          DebugUtils.logS(['MASTERDATA_CUS_TYPE data', data]);
-        },
-        onFailed: (error?: ErrorBase) => {
-          DebugUtils.logS(['MASTERDATA_CUS_TYPE error', error]);
-        }
-      }
-    });
-  };
-
-  const fecthList = () => {
-    dispatch({
-      type: CUSTOMER_GROUP_LIST,
-      payload: {
-        onSuccess: (data: CustomerGroup[]) => {
+        onSuccess: (data: Customer[]) => {
           DebugUtils.logS(['CUSTOMER_GROUP_LIST data', data]);
           setTotal(data?.length || K_SIZE_0);
           setCustList(data || []);
@@ -132,7 +113,7 @@ function useManageCustomerGroup(props?: Props) {
     if (selectedItem) {
       setLoadingEdit(true);
       dispatch({
-        type: CUSTOMER_GROUP_UPDATE,
+        type: CUSTOMER_UPDATE,
         payload: {
           body: {
             id: selectedItem.id,
@@ -147,7 +128,7 @@ function useManageCustomerGroup(props?: Props) {
               type: TYPE_TOAST.SUCCESS,
               content: t('common:msg_done', { action: t('common:edit') })
             });
-            fecthList();
+            fetchList();
           },
           onFailed: (err: ErrorBase) => {
             DebugUtils.logS(['CUSTOMER_GROUP_UPDATE error: ', err]);
@@ -164,7 +145,7 @@ function useManageCustomerGroup(props?: Props) {
     }
 
     dispatch({
-      type: CUSTOMER_GROUP_CREATE,
+      type: CUSTOMER_CREATE,
       payload: {
         body: bodyCreate,
         onSuccess: (res?: CustomerGroup) => {
@@ -175,7 +156,7 @@ function useManageCustomerGroup(props?: Props) {
             type: TYPE_TOAST.SUCCESS,
             content: t('common:msg_done', { action: t('common:add_new') })
           });
-          fecthList();
+          fetchList();
         },
         onFailed: (err: ErrorBase) => {
           DebugUtils.logS(['CUSTOMER_GROUP_CREATE error: ', err]);
@@ -212,8 +193,8 @@ function useManageCustomerGroup(props?: Props) {
       const dataFil = custListDefault.filter((cus) => {
         if (!searchF) return true;
         return (
-          cus.name.toLowerCase().includes(searchF.toLowerCase()) ||
-          cus.value.toLowerCase().includes(searchF.toLowerCase())
+          cus.fullName.toLowerCase().includes(searchF.toLowerCase()) ||
+          cus.contactName.toLowerCase().includes(searchF.toLowerCase())
         );
       });
       setCustList(dataFil);
@@ -226,7 +207,7 @@ function useManageCustomerGroup(props?: Props) {
   const onDownload = () => {
     setLoadingDP(true);
     dispatch({
-      type: CUSTOMER_GROUP_DOWNLOAD,
+      type: CUSTOMER_DOWNLOAD,
       payload: {
         body: search,
         onSuccess: (res: string) => {
@@ -266,7 +247,7 @@ function useManageCustomerGroup(props?: Props) {
 
   return {
     t,
-    fecthList,
+    fetchList,
     moreAction,
     setMoreAction,
     selectedItem,
@@ -287,11 +268,10 @@ function useManageCustomerGroup(props?: Props) {
     search,
     setSearch,
     custList,
-    customerTypes,
-    fetchCustomeType,
+    // fetchCustomeType,
     loadingDP,
     onDownload
   };
 }
 
-export default useManageCustomerGroup;
+export default useManageCustomer;

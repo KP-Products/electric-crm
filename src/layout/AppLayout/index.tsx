@@ -7,11 +7,10 @@ import { ReactNode } from 'react';
 import { useResponsive } from 'utils/responsive';
 import Footer from './components/Footer';
 
-const { Sider, Content } = Layout;
+const { Sider } = Layout;
 
 const AppLayout = ({ children }: { children: ReactNode }) => {
   const { isDesktop } = useResponsive();
-
   return (
     <Layout style={{ minHeight: '100vh' }}>
       {isDesktop && (
@@ -40,7 +39,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
       )}
       <Layout className="ml-[254px] tablet:ml-0">
         {!isDesktop && <Header />}
-        <Content className="bg-color-50 px-24 py-16 mobile:px-12">{children}</Content>
+        {children}
         <Footer />
       </Layout>
     </Layout>

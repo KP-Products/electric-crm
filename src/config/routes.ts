@@ -34,7 +34,7 @@ export const ROUTES = {
   MANAGE_CODE_FEE_GROUP_ADD: '/manage-code-fee-group/add',
   MANAGE_CODE_FEE_GROUP_EDIT: '/manage-code-fee-group/edit',
   MANAGE_CODE_FEE_GROUP_DETAIL: '/manage-code-fee-group/detail',
-  MANAGE_CUSTOMER_GROUP: '/manage-customer-group',
+  MANAGE_CUSTOMER: '/manage-customer',
   APPROVAL_MATRIX: '/approval-matrix',
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
   APPROVAL_MATRIX_EDIT: '/approval-matrix/edit',

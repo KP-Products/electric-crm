@@ -1,5 +1,5 @@
 {
-  "plugins": ["prettier", "@typescript-eslint", "tailwindcss"],
+  "plugins": ["prettier", "@typescript-eslint", "tailwindcss", "unused-imports"],
   "extends": ["next/core-web-vitals", "prettier", "plugin:tailwindcss/recommended"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
@@ -45,6 +45,16 @@
       {
         "vars": "all",
         "args": "none"
+      }
+    ],
+    "unused-imports/no-unused-imports": "error",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^_",
+        "args": "after-used",
+        "argsIgnorePattern": "^_"
       }
     ],
     "prettier/prettier": [

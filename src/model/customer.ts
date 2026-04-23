@@ -1,24 +1,20 @@
 export interface Customer {
   id: string;
-  name: string;
-  cif: string;
-  accountNumber: string;
-  customerType: string;
-  branchCode: string;
-  wardCode: string;
-  provinceCode: string;
-  status: string;
+  customerCode: string;
+  fullName: string;
+  taxNo: string;
   phone: string;
-  effectiveDate: string;
-  expireDate: string;
-  updatedBy: string | null;
-  updatedAt: string | null;
-  approvedBy: string | null;
-  approvedAt: string | null;
-  createdAt: string;
-  createdBy: string | null;
+  email: string;
+  fileContractName: string;
+  contactName: string;
+  contactIdNo: string;
+  contactIssueDate: string; // date string
+  address: string;
+  createdAt: string; // ISO datetime
+  createdBy: string;
+  updatedAt: string; // ISO datetime
+  updatedBy: string;
 }
-
 export interface CustomerFilter {
   phone?: string;
   provinceCode?: string;

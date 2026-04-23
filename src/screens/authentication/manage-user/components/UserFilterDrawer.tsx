@@ -8,8 +8,6 @@ import { AppSelectControl, AppSelectOption } from 'components/select';
 import { AppTextFieldControl } from 'components/text-field';
 import { ForwardedRef, forwardRef, useCallback, useImperativeHandle, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import SelectDepartment from 'screens/authentication/manage-user/components/SelectDepartment';
-import SelectUnit from 'screens/authentication/manage-user/components/SelectUnit';
 import { USER_STATUS_OPTIONS } from 'screens/authentication/manage-user/utils/constant';
 import { useAppTranslation } from 'utils/i18n';
 import { useResponsive } from 'utils/responsive';
@@ -44,11 +42,10 @@ const UserFilterDrawer = forwardRef(
     const { t } = useAppTranslation();
     const { isMobile, isTablet } = useResponsive();
 
-    const { control, handleSubmit, reset, setError, clearErrors, setValue } =
-      useForm<UserFilterForm>({
-        mode: 'onTouched',
-        defaultValues
-      });
+    const { control, handleSubmit, reset } = useForm<UserFilterForm>({
+      mode: 'onTouched',
+      defaultValues
+    });
 
     const [isOpen, setIsOpen] = useState<boolean>(false);
 
@@ -132,18 +129,6 @@ const UserFilterDrawer = forwardRef(
             label={t('manage_user:email')}
             placeholder={t('manage_user:enter_email')}
             control={control}
-          />
-          <SelectUnit
-            control={control}
-            name={'unitId'}
-            onSelectExpand={() => setValue('departmentId', '')}
-          />
-          <SelectDepartment
-            control={control}
-            name={'departmentId'}
-            unitIdFieldName={'unitId'}
-            setError={setError}
-            clearErrors={clearErrors}
           />
           <AppSelectControl
             name="status"

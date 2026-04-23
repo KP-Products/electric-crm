@@ -15,9 +15,9 @@ import {
 } from 'model/user';
 import { ApiConstants } from './networking/app-apis';
 
-async function getListUser(params: GetListUserReq): Promise<ApiResponse<GetListUserRes>> {
+async function getListUser(): Promise<ApiResponse<GetListUserRes>> {
   try {
-    const rs = await appServices.post(ApiConstants.GET_LIST_USER, params);
+    const rs = await appServices.post(ApiConstants.GET_LIST_USER);
     const data = rs.data;
     return data;
   } catch (error: any) {

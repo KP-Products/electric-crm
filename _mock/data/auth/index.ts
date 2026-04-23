@@ -1,6 +1,6 @@
-import { LoginResult, LogoutResult } from 'model/auth';
+import { LogoutResult } from 'model/auth';
 
-export const fakeLogin: LoginResult = {
+export const fakeLogin = {
   username: 'hungnh',
   bio: '',
   image: '',

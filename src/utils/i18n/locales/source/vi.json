@@ -261,6 +261,7 @@
     "title": "Tra cứu chương trình ưu đãi theo khách hàng"
   },
   "manage_user": {
+    "manage_user": "Quản lý người dùng",
     "title": "{{action}} người dùng",
     "action_success": "{{action}} người dùng thành công",
     "action_failed": "{{action}} người dùng thất bại",

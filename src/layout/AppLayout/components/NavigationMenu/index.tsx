@@ -4,6 +4,7 @@ import {
   SafetyCertificateOutlined,
   SettingOutlined,
   TeamOutlined,
+  UsergroupAddOutlined
 } from '@ant-design/icons';
 import { Menu } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
@@ -20,6 +21,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { useAppTranslation } from 'utils/i18n';
 import { PERMISSION_VIEW_ACTION, useCheckAction } from 'utils/permission.util';
+import { TextBase } from '../../../../components/text';
 
 export const MENU_GROUP_KEYS = {
   PARAMETER: K_SIZE_1.toString(),
@@ -88,7 +90,7 @@ const NavigationMenu = () => {
             icon: <ReconciliationOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_DEFAULT_PARAMETER_VIEW_ACTION
-          }
+          },
           // {
           //   key: ROUTES.JOB_LIST_MANAGEMENT,
           //   label: t('menu:job_list_management'),
@@ -112,13 +114,13 @@ const NavigationMenu = () => {
           //   type: 'item',
           //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_FEE_CODE_VIEW_ACTION
           // },
-          // {
-          //   key: ROUTES.MANAGE_CUSTOMER_GROUP,
-          //   label: t('menu:customer_group_management'),
-          //   icon: <UsergroupAddOutlined />,
-          //   type: 'item',
-          //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          // },
+          {
+            key: ROUTES.MANAGE_CUSTOMER,
+            label: 'Quản lý khách hàng',
+            icon: <UsergroupAddOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
           // {
           //   key: ROUTES.FORM_MANAGEMENT,
           //   label: t('menu:form_management'),
@@ -142,9 +144,9 @@ const NavigationMenu = () => {
 
             return { ...item, children };
           }
-          if (item.permission && !hasPermission(item.permission)) {
-            return null;
-          }
+          // if (item.permission && !hasPermission(item.permission)) {
+          //   return null;
+          // }
           return item;
         })
         .filter(Boolean) as ItemType[];
@@ -165,15 +167,16 @@ const NavigationMenu = () => {
 
   return (
     <div className="flex h-full w-[254px] flex-col">
-      {/*<div>*/}
-      {/*  <IconSvgLocal*/}
-      {/*    height={K_SIZE_44}*/}
-      {/*    name="ICON_PVCB_LOGO"*/}
-      {/*    fill="none"*/}
-      {/*    classNames="cursor-pointer mx-24 my-16"*/}
-      {/*    onClick={() => router.push(ROUTES.ROOT)}*/}
-      {/*  />*/}
-      {/*</div>*/}
+      <div>
+        {/*<IconSvgLocal*/}
+        {/*  height={K_SIZE_44}*/}
+        {/*  name="ICON_PVCB_LOGO"*/}
+        {/*  fill="none"*/}
+        {/*  classNames="cursor-pointer mx-24 my-16"*/}
+        {/*  onClick={() => router.push(ROUTES.ROOT)}*/}
+        {/*/>*/}
+        <TextBase preset="h4" text={'⚡️ CRM Điện'} classNames={'text-center my-[34px]'} />
+      </div>
       <Menu
         mode="inline"
         items={menuItems}

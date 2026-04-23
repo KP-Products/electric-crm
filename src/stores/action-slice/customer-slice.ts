@@ -1,9 +1,8 @@
 import {
-  CUSTOMER_GROUP_CREATE,
-  CUSTOMER_GROUP_DOWNLOAD,
-  CUSTOMER_GROUP_LIST,
-  CUSTOMER_GROUP_UPDATE,
+  CUSTOMER_CREATE,
+  CUSTOMER_DOWNLOAD,
   CUSTOMER_LIST,
+  CUSTOMER_UPDATE,
   SLICE_NAME
 } from '@redux-action-type/customer-type';
 import { createAction, createSlice } from '@reduxjs/toolkit';
@@ -11,7 +10,6 @@ import { ErrorBase } from 'model/common';
 import {
   CreateCustomerGroupReq,
   Customer,
-  CustomerFilter,
   CustomerGroup,
   UpdateCustomerGroupReq
 } from 'model/customer';
@@ -49,26 +47,15 @@ const customerSlice = createSlice({
   }
 });
 
-const getCustomers = createAction(
+const getCustomerList = createAction(
   CUSTOMER_LIST,
-  (
-    body: CustomerFilter,
-    onSuccess?: (data?: Customer[]) => void,
-    onFailed?: (error?: ErrorBase) => void
-  ) => ({
-    payload: { body, onSuccess, onFailed }
-  })
-);
-
-const getCustomerGroupList = createAction(
-  CUSTOMER_GROUP_LIST,
-  (onSuccess?: (data?: CustomerGroup[]) => void, onFailed?: (error?: ErrorBase) => void) => ({
+  (onSuccess?: (data?: Customer[]) => void, onFailed?: (error?: ErrorBase) => void) => ({
     payload: { onSuccess, onFailed }
   })
 );
 
-const createCustomerGroup = createAction(
-  CUSTOMER_GROUP_CREATE,
+const createCustomer = createAction(
+  CUSTOMER_CREATE,
   (
     body: CreateCustomerGroupReq,
     onSuccess?: (data?: CustomerGroup) => void,
@@ -78,8 +65,8 @@ const createCustomerGroup = createAction(
   })
 );
 
-const updateCustomerGroup = createAction(
-  CUSTOMER_GROUP_UPDATE,
+const updateCustomer = createAction(
+  CUSTOMER_UPDATE,
   (
     body: UpdateCustomerGroupReq,
     onSuccess?: (data?: CustomerGroup) => void,
@@ -89,8 +76,8 @@ const updateCustomerGroup = createAction(
   })
 );
 
-const downloadCustomerGroup = createAction(
-  CUSTOMER_GROUP_DOWNLOAD,
+const downloadCustomer = createAction(
+  CUSTOMER_DOWNLOAD,
   (body: string, onSuccess?: (data?: string) => void, onFailed?: (error?: ErrorBase) => void) => ({
     payload: { body, onSuccess, onFailed }
   })
@@ -98,11 +85,10 @@ const downloadCustomerGroup = createAction(
 
 export const customerActions = {
   ...customerSlice.actions,
-  getCustomers,
-  getCustomerGroupList,
-  createCustomerGroup,
-  updateCustomerGroup,
-  downloadCustomerGroup
+  getCustomerList,
+  createCustomer,
+  updateCustomer,
+  downloadCustomer
 };
 
 export const customerReducer = customerSlice.reducer;
