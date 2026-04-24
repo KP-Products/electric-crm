@@ -6,6 +6,7 @@ const ApiEndPoint = {
 
   // USER
   GET_LIST_USER: '/admin/users/list',
+  GET_USER_SEARCH_LIST: '/admin/users/search',
   DOWNLOAD_LIST_USER: '/admin/users/download',
   ADD_USER: '/admin/users/create',
   ADD_LIST_USER: '/admin/users/create-list',
@@ -14,11 +15,11 @@ const ApiEndPoint = {
   // USER
 
   // ROLE
-  GET_LIST_ROLE: '/role/list',
-  GET_ROLE_DETAIL: '/role/detail',
-  ADD_ROLE: '/role/create',
-  EDIT_ROLE: '/role/update',
-  DELETE_ROLE: '/role/delete',
+  GET_LIST_ROLE: '/admin/roles/list',
+  GET_ROLE_DETAIL: '/admin/roles/detail',
+  ADD_ROLE: '/admin/roles/create',
+  EDIT_ROLE: '/admin/roles/update',
+  DELETE_ROLE: '/admin/roles/delete',
   DOWNLOAD_LIST_ROLE: '/role/download',
   GET_LIST_PERMISSION: '/admin/permissions/list',
   // ROLE

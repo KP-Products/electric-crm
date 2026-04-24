@@ -6,8 +6,8 @@ import 'styles/global.scss';
 import ProviderWrapper from './ProviderWrapper';
 
 export const metadata: Metadata = {
-  title: 'Electric',
-  description: 'Electric'
+  title: 'CRM Điện',
+  description: 'CRM Điện'
 };
 
 export default function RootLayout({ children }: { children: React.ReactElement }) {

@@ -29,6 +29,8 @@
       }
     ],
     "paths": {
+      "@/*": ["./src/*"],
+      "@/public/*": ["./public/*"],
       "@constant": ["./utils/constant/index"],
       "@store": ["./stores/store/index"],
       "@store/*": ["./stores/store/*"],

@@ -1,6 +1,7 @@
 import { SLICE_NAME } from 'stores/types';
 
 export const GET_LIST_USER = SLICE_NAME.USER + '/getListUser';
+export const GET_USER_SEARCH_LIST = SLICE_NAME.USER + '/getUserSearchList';
 export const DOWNLOAD_LIST_USER = SLICE_NAME.USER + '/downloadListUser';
 export const ADD_USER = SLICE_NAME.USER + '/addUser';
 export const GET_USER_TEMPLATE = SLICE_NAME.USER + '/getUserTemplate';

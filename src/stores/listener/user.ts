@@ -22,7 +22,26 @@ takeLatestListeners({
     onSuccess?.(response);
   }
 });
-
+takeLatestListeners({
+  actionCreator: userActions.getUserSearchList,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(userActions.setLoadingList(true));
+    const response = await userServices.getUserSearchList(body);
+    listenerApi.dispatch(userActions.setLoadingList(false));
+    if (!response || !response?.data?.items) {
+      onFailed?.();
+      return;
+    }
+    const userList = response?.data?.items || [];
+    listenerApi.dispatch(
+      userActions.setUserList(
+        userList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      )
+    );
+    onSuccess?.(response);
+  }
+});
 takeLatestListeners({
   actionCreator: userActions.downloadListUser,
   effect: async (action, listenerApi) => {

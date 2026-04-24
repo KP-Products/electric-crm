@@ -1,18 +1,16 @@
 import { PaginationReq, PaginationRes, ResultBase } from 'model/common';
 
 export interface Role {
-  roleId: string;
-  name: string;
+  id: string;
   code: string;
-  status: string;
+  name: string;
   description: string;
-  roleName: string;
-  roleType: string;
-  createdBy: string;
+  status: string;
   createdAt: string;
-  updatedBy: string;
-  updatedAt: string;
-  permissions: Permission[];
+  createdBy: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+  permissions: string[];
 }
 
 export interface GetListRoleReq extends PaginationReq {
@@ -48,7 +46,7 @@ export interface AddRoleReq {
   name: string;
   status: string;
   description: string;
-  permissionIds: string[];
+  permissionIds?: string[];
 }
 
 export interface AddRoleRes extends ResultBase<Role> {}

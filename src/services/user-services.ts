@@ -11,13 +11,24 @@ import {
   GetListUserReq,
   GetListUserRes,
   UploadUserReq,
-  UploadUserRes
+  UploadUserRes,
+  UserSearchReq,
+  UserSearchRes
 } from 'model/user';
 import { ApiConstants } from './networking/app-apis';
 
 async function getListUser(): Promise<ApiResponse<GetListUserRes>> {
   try {
     const rs = await appServices.post(ApiConstants.GET_LIST_USER);
+    const data = rs.data;
+    return data;
+  } catch (error: any) {
+    return error;
+  }
+}
+async function getUserSearchList(params: UserSearchReq): Promise<ApiResponse<UserSearchRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.GET_USER_SEARCH_LIST, params);
     const data = rs.data;
     return data;
   } catch (error: any) {
@@ -81,7 +92,8 @@ const userServices = {
   addUser,
   uploadUser,
   addListUser,
-  editUser
+  editUser,
+  getUserSearchList
 };
 
 export default userServices;

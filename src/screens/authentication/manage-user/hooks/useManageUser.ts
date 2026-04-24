@@ -1,5 +1,5 @@
 import { DEFAULT_PAGE_SIZE, FILE_EXT, K_SIZE_1 } from '@constant';
-import { DOWNLOAD_LIST_USER, GET_LIST_USER } from '@redux-action-type/user';
+import { DOWNLOAD_LIST_USER, GET_LIST_USER, GET_USER_SEARCH_LIST } from '@redux-action-type/user';
 import { dispatch } from '@redux-common';
 import { selectRoleList } from '@redux-selector/role';
 import {
@@ -94,6 +94,22 @@ export default function useManageUser() {
   const onApplyFilter = useCallback((data: UserFilterForm) => {
     setFilterApplied(data);
     setCurrentPage(K_SIZE_1);
+    const body = {
+      usernameContains: data?.username,
+      emailContains: '',
+      fullNameContains: '',
+      status: '',
+      enabled: true,
+      roleCode: '',
+      page: 0,
+      size: 0
+    };
+    dispatch({
+      type: GET_USER_SEARCH_LIST,
+      payload: {
+        body
+      }
+    });
   }, []);
 
   const onResetFilter = useCallback(

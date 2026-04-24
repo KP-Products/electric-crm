@@ -218,8 +218,7 @@ const ManageUser = () => {
   }, [t, filterApplied, onResetFilter, roleOptions, unitList, departmentList]);
   const breadcrumbList = [
     {
-      title: t('menu:system_administration'),
-      key: ROUTES.MANAGE_USER
+      title: t('menu:system_administration')
     },
     {
       title: t('manage_user:manage_user'),

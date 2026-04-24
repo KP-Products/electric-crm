@@ -1,5 +1,5 @@
 export const appCodes = {
-  SUCCESS: '00000',
+  SUCCESS: 'Success',
   PRODUCT: {
     ERROR: '00010', // Product service error
     UPDATE_DATE: '99045',

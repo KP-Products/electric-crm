@@ -40,7 +40,7 @@ const permissionGroupSchema = (t: TypedT) => {
         title: z.string().trim().min(K_SIZE_1)
       })
       .array()
-      .min(K_SIZE_1)
+      .optional()
   });
 };
 
@@ -101,8 +101,8 @@ export default function useManagePermissionGroupForm({
         code: data.groupCode,
         name: data.groupName,
         status: data.status,
-        description: data.note,
-        permissionIds: data.permissions.map((p) => p.permissionId)
+        description: data.note
+        // permissionIds: data.permissions.map((p) => p.permissionId)
       };
       const body = isAddMode
         ? baseBody

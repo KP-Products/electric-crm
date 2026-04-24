@@ -1,4 +1,3 @@
-import { K_SIZE_0 } from '@constant';
 import { takeLatestListeners } from '@listener';
 import { roleActions } from '@redux-slice/role';
 import { TYPE_STATUS } from 'components/status';
@@ -7,16 +6,16 @@ import roleServices from 'services/role-services';
 takeLatestListeners({
   actionCreator: roleActions.getListRole,
   effect: async (action, listenerApi) => {
-    const { body, onSuccess, onFailed } = action.payload;
+    const { onSuccess, onFailed } = action.payload;
     listenerApi.dispatch(roleActions.setLoadingList(true));
-    const response = await roleServices.getListRole(body);
+    const response = await roleServices.getListRole();
     listenerApi.dispatch(roleActions.setLoadingList(false));
     if (!response || !response?.data) {
       onFailed?.();
       return;
     }
-    listenerApi.dispatch(roleActions.setRoleList(response?.data?.content || []));
-    listenerApi.dispatch(roleActions.setTotal(Number(response?.data?.totalElements || K_SIZE_0)));
+    listenerApi.dispatch(roleActions.setRoleList(response?.data || []));
+    // listenerApi.dispatch(roleActions.setTotal(Number(response?.data?.totalElements || K_SIZE_0)));
     onSuccess?.(response);
   }
 });

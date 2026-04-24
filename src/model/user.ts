@@ -80,3 +80,30 @@ export interface EditUserReq {
 }
 
 export interface EditUserRes extends ResultBase {}
+
+export interface UserSearchReq {
+  usernameContains: string;
+  emailContains: string;
+  fullNameContains: string;
+  status: string;
+  enabled: boolean;
+  roleCode: string;
+}
+export interface UserSearchItem {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  status: string;
+  createdAt: string;
+  enabled: boolean;
+  roles: string[];
+}
+
+export interface UserSearchList {
+  items: UserSearchItem[];
+  total: number;
+  page: number;
+  size: number;
+}
+export interface UserSearchRes extends ResultBase<UserSearchList> {}

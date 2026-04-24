@@ -16,9 +16,9 @@ import {
 } from 'model/role';
 import { ApiConstants } from './networking/app-apis';
 
-async function getListRole(params: GetListRoleReq): Promise<ApiResponse<GetListRoleRes>> {
+async function getListRole(): Promise<ApiResponse<GetListRoleRes>> {
   try {
-    const rs = await appServices.post(ApiConstants.GET_LIST_ROLE, params);
+    const rs = await appServices.post(ApiConstants.GET_LIST_ROLE);
     const data = rs.data;
     return data;
   } catch (error: any) {

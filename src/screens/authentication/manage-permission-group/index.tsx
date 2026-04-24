@@ -33,6 +33,7 @@ import {
   ROLE_STATUS_TYPE_MAP
 } from 'screens/authentication/manage-permission-group/utils/constant';
 import { displayDateTimeFromServer } from 'utils/date';
+import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
 
 const ManagePermissionGroup = () => {
   const {
@@ -72,7 +73,7 @@ const ManagePermissionGroup = () => {
                 'sub-title4 !text-secondary-500 cursor-pointer hover:!text-secondary-700 truncate max-w-[168px]'
               }
               onClick={() =>
-                router.push(`${ROUTES.MANAGE_PERMISSION_GROUP_DETAIL}?id=${record.roleId}`)
+                router.push(`${ROUTES.MANAGE_PERMISSION_GROUP_DETAIL}?id=${record.id}`)
               }
             />
           );
@@ -154,10 +155,10 @@ const ManagePermissionGroup = () => {
               onClick: (item) => {
                 switch (item.key) {
                   case K_SIZE_1.toString(): {
-                    return onEdit(record.roleId);
+                    return onEdit(record.id);
                   }
                   case K_SIZE_2.toString(): {
-                    return onDelete(record.roleId);
+                    return onDelete(record.id);
                   }
                 }
               }
@@ -174,84 +175,95 @@ const ManagePermissionGroup = () => {
     }
     return cols;
   }, [t, router, renderColumn, onEdit, onDelete, permission]);
-
+  const breadcrumbList = [
+    {
+      title: t('menu:system_administration'),
+      key: ROUTES.MANAGE_USER
+    },
+    {
+      title: t('menu:permission_group_management'),
+      key: ROUTES.MANAGE_PERMISSION_GROUP
+    }
+  ];
   return (
-    <div>
-      <Flex
-        justify={'space-between'}
-        align={'center'}
-        gap={K_SIZE_8}
-        className={'tablet:flex-col tablet:items-start'}
-      >
-        <TextBase classNames="title4" t18n="menu:permission_group_management" />
+    <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
+      <div>
         <Flex
-          flex={K_SIZE_1}
-          justify={'end'}
-          gap={K_SIZE_16}
-          className={'mobile:w-full mobile:flex-col'}
+          justify={'space-between'}
+          align={'center'}
+          gap={K_SIZE_8}
+          className={'tablet:flex-col tablet:items-start'}
         >
-          <div className={'w-[250px] mobile:w-full'}>
-            <AppTextField
-              allowClear
-              placeholder={t('common:search_placeholder')}
-              rootClassName={'h-44'}
-              prefix={
-                <IconSvgLocal
-                  name={'IC_SEARCH_OUTLINE2'}
-                  width={K_SIZE_20}
-                  height={K_SIZE_20}
-                  classNames={'text-color-500'}
+          <TextBase classNames="title4" t18n="menu:permission_group_management" />
+          <Flex
+            flex={K_SIZE_1}
+            justify={'end'}
+            gap={K_SIZE_16}
+            className={'mobile:w-full mobile:flex-col'}
+          >
+            <div className={'w-[250px] mobile:w-full'}>
+              <AppTextField
+                allowClear
+                placeholder={t('common:search_placeholder')}
+                rootClassName={'h-44'}
+                prefix={
+                  <IconSvgLocal
+                    name={'IC_SEARCH_OUTLINE2'}
+                    width={K_SIZE_20}
+                    height={K_SIZE_20}
+                    classNames={'text-color-500'}
+                  />
+                }
+                value={filter.search}
+                onChange={(e) => {
+                  setFilter((prev) => ({ ...prev, search: e.target.value }));
+                  debouncedApplySearch(e.target.value);
+                }}
+                onPressEnter={(e) => e.currentTarget.blur()}
+              />
+            </div>
+            <Flex gap={K_SIZE_16}>
+              {/*{permission.canAdd && (*/}
+                <ButtonBase
+                  type={'ghost'}
+                  leftIcon={'IC_ADD_OUTLINE2'}
+                  customContent={t('common:add_new')}
+                  onClick={onAdd}
+                  classNames={'mobile:flex-1 mobile:justify-center'}
                 />
-              }
-              value={filter.search}
-              onChange={(e) => {
-                setFilter((prev) => ({ ...prev, search: e.target.value }));
-                debouncedApplySearch(e.target.value);
-              }}
-              onPressEnter={(e) => e.currentTarget.blur()}
-            />
-          </div>
-          <Flex gap={K_SIZE_16}>
-            {permission.canAdd && (
-              <ButtonBase
-                type={'ghost'}
-                leftIcon={'IC_ADD_OUTLINE2'}
-                customContent={t('common:add_new')}
-                onClick={onAdd}
-                classNames={'mobile:flex-1 mobile:justify-center'}
-              />
-            )}
-            {permission.canDownload && (
-              <ButtonBase
-                type={'primary'}
-                customContent={t('common:download')}
-                leftIcon={'IC_DOWNLOAD_OUTLINE'}
-                onClick={onDownload}
-                classNames={'mobile:flex-1 mobile:justify-center'}
-              />
-            )}
+              {/*)}*/}
+              {permission.canDownload && (
+                <ButtonBase
+                  type={'primary'}
+                  customContent={t('common:download')}
+                  leftIcon={'IC_DOWNLOAD_OUTLINE'}
+                  onClick={onDownload}
+                  classNames={'mobile:flex-1 mobile:justify-center'}
+                />
+              )}
+            </Flex>
           </Flex>
         </Flex>
-      </Flex>
-      <Divider className={'my-16 '} />
-      <div className={'overflow-hidden rounded-radius-l border border-color-400 pb-4'}>
-        <AppTable
-          rootClassName={'w-full'}
-          className={'[&_.ant-pagination]:hidden'}
-          scroll={{ x: 'max-content', y: '75vh' }}
-          dataSource={roleList}
-          loading={loadingRoleList}
-          columns={[...columns]}
-          rowKey={'roleId'}
+        <Divider className={'my-16 '} />
+        <div className={'overflow-hidden rounded-radius-l border border-color-400 pb-4'}>
+          <AppTable
+            rootClassName={'w-full'}
+            className={'[&_.ant-pagination]:hidden'}
+            scroll={{ x: 'max-content', y: '75vh' }}
+            dataSource={roleList}
+            loading={loadingRoleList}
+            columns={[...columns]}
+            rowKey={'roleId'}
+            pagination={pagination}
+          />
+        </div>
+        <AppPagination
+          currentPage={pagination.current}
+          total={pagination.total}
           pagination={pagination}
         />
       </div>
-      <AppPagination
-        currentPage={pagination.current}
-        total={pagination.total}
-        pagination={pagination}
-      />
-    </div>
+    </PageWithBreadcrumb>
   );
 };
 

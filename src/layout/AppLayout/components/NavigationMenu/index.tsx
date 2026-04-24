@@ -11,7 +11,7 @@ import { ItemType } from 'antd/es/menu/interface';
 import type { MenuInfo } from 'rc-menu/es/interface';
 import { memo, useCallback, useEffect, useMemo } from 'react';
 
-import { K_SIZE_1, K_SIZE_2, K_SIZE_3, K_SIZE_4, K_SIZE_5 } from '@constant';
+import { K_SIZE_1, K_SIZE_2, K_SIZE_3 } from '@constant';
 import { dispatch } from '@redux-common';
 import { selectMenuKeys, selectOpenKeys } from '@redux-selector/app';
 import { appActions } from '@redux-slice/app';
@@ -24,11 +24,9 @@ import { PERMISSION_VIEW_ACTION, useCheckAction } from 'utils/permission.util';
 import { TextBase } from '../../../../components/text';
 
 export const MENU_GROUP_KEYS = {
-  PARAMETER: K_SIZE_1.toString(),
-  LOOKUP: K_SIZE_2.toString(),
-  REPORT: K_SIZE_3.toString(),
-  OTHER_FUNCTION: K_SIZE_4.toString(),
-  SYSTEM_ADMINISTRATION: K_SIZE_5.toString()
+  SYSTEM_ADMINISTRATION: K_SIZE_1.toString(),
+  CONTRACT: K_SIZE_2.toString(),
+  DEVICE: K_SIZE_3.toString()
 };
 
 const NavigationMenu = () => {
@@ -70,64 +68,41 @@ const NavigationMenu = () => {
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_AUTHORIZATION_VIEW_ACTION
           },
-          // {
-          //   key: ROUTES.APPROVAL_MATRIX,
-          //   label: t('menu:approval_matrix'),
-          //   icon: <ApartmentOutlined />,
-          //   type: 'item',
-          //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_APPROVAL_MATRIX_VIEW_ACTION
-          // },
-          // {
-          //   key: ROUTES.FEE_CALCULATE_CONDITION,
-          //   label: t('menu:fee_calculation_condition_category'),
-          //   icon: <ContainerOutlined />,
-          //   type: 'item',
-          //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_FEE_CONDITION_VIEW_ACTION
-          // },
           {
             key: ROUTES.DEFAULT_PARAMETERS,
             label: t('menu:default_parameter_management'),
             icon: <ReconciliationOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_DEFAULT_PARAMETER_VIEW_ACTION
-          },
-          // {
-          //   key: ROUTES.JOB_LIST_MANAGEMENT,
-          //   label: t('menu:job_list_management'),
-          //   icon: <DatabaseOutlined />,
-          //   type: 'item',
-          //   permission:
-          //     PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_JOB_CREATE_RECURRING_DATA_VIEW_ACTION
-          // },
-          // {
-          //   key: ROUTES.JOB_HISTORY,
-          //   label: t('menu:daily_job_history'),
-          //   icon: <FileSearchOutlined />,
-          //   type: 'item',
-          //   permission:
-          //     PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_JOB_HISTORY_ACTIVITY_CREATE_DATA_VIEW_ACTION
-          // },
-          // {
-          //   key: ROUTES.MANAGE_CODE_FEE_GROUP,
-          //   label: t('menu:fee_code_group_management'),
-          //   icon: <CodeOutlined />,
-          //   type: 'item',
-          //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_FEE_CODE_VIEW_ACTION
-          // },
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.CONTRACT,
+        label: 'Hợp đồng',
+        icon: <SettingOutlined />,
+        children: [
           {
             key: ROUTES.MANAGE_CUSTOMER,
             label: 'Quản lý khách hàng',
             icon: <UsergroupAddOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
-          // {
-          //   key: ROUTES.FORM_MANAGEMENT,
-          //   label: t('menu:form_management'),
-          //   icon: <FormOutlined />,
-          //   type: 'item',
-          //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_TEMPLATE_VIEW_ACTION
-          // }
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.DEVICE,
+        label: 'Thiết bị',
+        icon: <SettingOutlined />,
+        children: [
+          {
+            key: ROUTES.METER_MANAGEMENT,
+            label: 'Quản lý công tơ',
+            icon: <SettingOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          }
         ]
       }
     ],

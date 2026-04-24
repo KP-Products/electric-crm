@@ -70,11 +70,10 @@ const roleSlice = createSlice({
 const getListRole = createAction(
   GET_LIST_ROLE,
   (
-    body: GetListRoleReq,
     onSuccess: (data: GetListRoleRes) => void,
     onFailed: (error?: ErrorBase) => void
   ) => ({
-    payload: { body, onSuccess, onFailed }
+    payload: { onSuccess, onFailed }
   })
 );
 

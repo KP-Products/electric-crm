@@ -30,7 +30,7 @@ const userSchema = (t: TypedT) => {
     email: z.string().trim(),
     status: z.string().trim(),
     // .min(K_SIZE_1, { message: t('validate:required', { name: t('common:status') }) }),
-    roleId: z.string().trim()
+    roleId: z.string().trim().optional()
     // .min(K_SIZE_1, { message: t('validate:required', { name: t('manage_user:role') }) })
   });
 };

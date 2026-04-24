@@ -6,6 +6,7 @@ import {
   GET_LIST_DEPARTMENT,
   GET_LIST_UNIT,
   GET_LIST_USER,
+  GET_USER_SEARCH_LIST,
   GET_USER_TEMPLATE,
   UPLOAD_USER
 } from '@redux-action-type/user';
@@ -31,7 +32,9 @@ import {
   GetListUserRes,
   UploadUserReq,
   UploadUserRes,
-  User
+  User,
+  UserSearchReq,
+  UserSearchRes
 } from 'model/user';
 import { SLICE_NAME } from 'stores/types';
 
@@ -79,6 +82,16 @@ const getListUser = createAction(
   (
     body: GetListUserReq,
     onSuccess: (data: GetListUserRes) => void,
+    onFailed: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
+const getUserSearchList = createAction(
+  GET_USER_SEARCH_LIST,
+  (
+    body: UserSearchReq,
+    onSuccess: (data: UserSearchRes) => void,
     onFailed: (error?: ErrorBase) => void
   ) => ({
     payload: { body, onSuccess, onFailed }
@@ -175,7 +188,8 @@ export const userActions = {
   addListUser,
   editUser,
   getListUnit,
-  getListDepartment
+  getListDepartment,
+  getUserSearchList
 };
 
 export const userReducer = userSlice.reducer;
