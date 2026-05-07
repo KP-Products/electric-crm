@@ -19,7 +19,7 @@ export interface IdPropButton {
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   rightIcon?: IconSvgTypes;
   fontSize?: number;
-  size?: 44 | 32;
+  size?: number;
   styles?: React.CSSProperties;
   t18n?: TextT18nKey;
   t18nOptions?: any;

@@ -1,23 +1,32 @@
+import { ReactNode } from 'react';
 import { TextBase } from 'components/text';
-import { ReactElement } from 'react';
 
 interface Props {
-  children: ReactElement;
+  children: ReactNode;
 }
 
 const LoginWrapper = ({ children }: Props) => {
   return (
-    <div className="flex flex-col gap-20">
-      <div>
-        <TextBase preset="h4" text={'⚡️ CRM Điện'} classNames={'text-center'} />
-        <TextBase text={'Hệ Thống Quản Lý Điện Lực'} classNames={'text-center'} />
-      </div>
-      <div className="size-full rounded-radius-xl border border-color-400 bg-color-50 p-20 shadow-[0_8px_24px_rgba(16,36,62,0.05)]">
-        <div className="mb-20 flex items-center justify-between">
-          <TextBase text="Đăng nhập hệ thống" />
+    <div className="mx-auto flex size-full max-w-[520px] flex-col">
+      <div className="flex flex-1 flex-col  justify-center">
+        <div className="mb-48 mt-20 text-center">
+          <TextBase
+            text="Chào mừng bạn quay trở lại"
+            classNames="!mb-8 text-24 !font-semibold text-color-800"
+          />
+          <TextBase
+            text="Đăng nhập để tiếp tục sử dụng hệ thống"
+            classNames="!text-[15px] text-color-700"
+          />
         </div>
-        {children}
+
+        <div className="w-full">{children}</div>
       </div>
+
+      <TextBase
+        text="© 2026 CRM System. All rights reserved."
+        classNames="!text-center !text-14 text-secondary pb-32"
+      />
     </div>
   );
 };

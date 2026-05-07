@@ -114,6 +114,7 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
       text-color-800
       placeholder:text-color-600
       focus:shadow-none
+      py-[10px]
       disabled:!border-color-200
       disabled:!bg-color-200
       disabled:!text-color-800
@@ -123,6 +124,7 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
       [&>input]:text-color-800
       [&>input]:placeholder:text-color-600
       [&_.ant-input-password-icon]:cursor-pointer
+      
       ${classNameMore}
       ${
         error
