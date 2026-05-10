@@ -2,12 +2,12 @@ import { TYPE_STATUS } from 'components/status';
 import { I18nKeys } from 'utils/i18n';
 
 export const USER_ACTION = {
-  VIEW: 'VIEW_ACTION',
-  ADD: 'CREATE_ACTION',
-  EDIT: 'EDIT_ACTION',
-  DELETE: 'DELETE_ACTION',
-  DOWNLOAD: 'DOWNLOAD_ACTION',
-  APPROVE: 'APPROVE_ACTION'
+  VIEW: 'VIEW',
+  ADD: 'CREATE',
+  EDIT: 'EDIT',
+  DELETE: 'DELETE',
+  DOWNLOAD: 'DOWNLOAD',
+  APPROVE: 'APPROVE'
 };
 
 export const ROLE_STATUS = {

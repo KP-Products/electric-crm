@@ -4,7 +4,7 @@ import { USER_ACTION } from 'screens/authentication/manage-permission-group/util
 import { PermissionGroup } from 'screens/authentication/manage-permission-group/utils/type';
 
 export const mapPermissionGroup = (data: Permission[]): PermissionGroup[] => {
-  const permissions = data.filter((p) => !p.action?.includes(USER_ACTION.APPROVE));
+  const permissions = data.filter((p) => !p.actionCode?.includes(USER_ACTION.APPROVE));
   if (!permissions.length) return [];
   const groupMap = new Map<
     string,
@@ -31,8 +31,8 @@ export const mapPermissionGroup = (data: Permission[]): PermissionGroup[] => {
       group.functions.push(func);
     }
     group.functionMap.get(item.actionSubGroup)!.permissions.push({
-      permissionId: item.permissionId,
-      title: item.action
+      permissionId: item.id,
+      title: item.actionCode
     });
   });
   let functionOrder = K_SIZE_0;

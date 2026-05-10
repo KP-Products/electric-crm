@@ -31,12 +31,12 @@ const ExpandedTable = ({ data, form, isView }: ExpandedTableProps) => {
     (action: string, permissions: PermissionGroupForm['permissions']) => {
       const permission = permissions?.find((per) => per.title.includes(action));
       if (!permission) return NULL_VALUE;
-      const isChecked = watchPermission?.some((p) => p.permissionId === permission.permissionId);
+      const isChecked = watchPermission.some((p) => p.permissionId === permission.permissionId);
       const handleChange = (checked: boolean) => {
         if (checked) {
           onChange([...watchPermission, permission]);
         } else {
-          onChange(watchPermission?.filter((p) => p.permissionId !== permission.permissionId));
+          onChange(watchPermission.filter((p) => p.permissionId !== permission.permissionId));
         }
       };
       return (

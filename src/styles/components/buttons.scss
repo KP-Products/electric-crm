@@ -60,6 +60,7 @@
   background-color: theme('colors.color.50');
   border-width: 1px;
   border-color: theme('colors.color.500');
+  color: theme('colors.common.0');
 
   &:hover {
     border-color: theme('colors.color.700');
@@ -79,6 +80,7 @@
 .btn_whiteGhost {
   background-color: theme('colors.color.50');
   color: theme('colors.common.0');
+
   &:hover {
     background-color: theme('colors.primary.50');
     color: theme('colors.primary.700');

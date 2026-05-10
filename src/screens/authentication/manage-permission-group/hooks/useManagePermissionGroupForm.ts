@@ -40,7 +40,6 @@ const permissionGroupSchema = (t: TypedT) => {
         title: z.string().trim().min(K_SIZE_1)
       })
       .array()
-      .optional()
   });
 };
 
@@ -101,8 +100,8 @@ export default function useManagePermissionGroupForm({
         code: data.groupCode,
         name: data.groupName,
         status: data.status,
-        description: data.note
-        // permissionIds: data.permissions.map((p) => p.permissionId)
+        description: data.note,
+        permissionIds: data.permissions.map((p) => p.permissionId)
       };
       const body = isAddMode
         ? baseBody
@@ -139,8 +138,8 @@ export default function useManagePermissionGroupForm({
           note: role.description,
           status: role.status,
           permissions: role.permissions.map((p) => ({
-            permissionId: p.permissionId,
-            title: p.action
+            permissionId: p.id,
+            title: p.actionCode
           }))
         });
       }

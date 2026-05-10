@@ -10,7 +10,7 @@ export interface Role {
   createdBy: string | null;
   updatedAt: string | null;
   updatedBy: string | null;
-  permissions: string[];
+  permissions: Permission[];
 }
 
 export interface GetListRoleReq extends PaginationReq {
@@ -28,8 +28,8 @@ export interface GetRoleDetailReq {
 export interface GetRoleDetailRes extends ResultBase<Role> {}
 
 export interface Permission {
-  permissionId: string;
-  action: string;
+  id: string;
+  actionCode: string;
   description: string;
   actionGroup: string;
   actionGroupName: string;
