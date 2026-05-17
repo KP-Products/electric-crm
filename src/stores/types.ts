@@ -1,20 +1,8 @@
 export enum SLICE_NAME {
   APP = 'app',
   AUTH = 'auth',
-  APPROVAL_MATRIX = 'approvalMatrix',
   USER = 'user',
   ROLE = 'role',
-  MENU = 'menu',
-  SNACKBAR = 'snackbar',
   SYSTEM_PARAMETER = 'systemParameter',
-  FEE_CONDITION = 'feeCondition',
-  FEE_CODE = 'feeCode',
-  FEE_FORMULA = 'feeFormula',
-  JOB_MANAGEMENT = 'jobManagement',
-  PENDING_TASK = 'pendingTask',
-  PRODUCT = 'product',
-  FEE_SCHEDULE = 'feeSchedule',
-  FEE_LOOKUP = 'feeLookup',
-  MANAGE_CODE_FEE_GROUP = 'manageCodeFeeGroup',
-  FORM_MANAGEMENT = 'formManagement'
+  METER = 'meter'
 }

@@ -33,5 +33,8 @@ export const ROUTES = {
 
   DEFAULT_PARAMETERS: '/default-parameters',
   // METER
-  METER_MANAGEMENT: '/meter-management'
+  METER_MANAGEMENT: '/meter-management',
+  MANAGE_METER_ADD: '/meter-management/add',
+  MANAGE_METER_EDIT: '/meter-management/edit',
+  MANAGE_METER_DETAIL: '/meter-management/detail',
 };

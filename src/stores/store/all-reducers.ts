@@ -5,6 +5,7 @@ import { appReducer } from 'stores/action-slice/app';
 import { authReducer } from 'stores/action-slice/auth';
 import { customerReducer } from 'stores/action-slice/customer-slice';
 import { sysParameterReducer } from 'stores/action-slice/sys-parameter-slice';
+import { meterReducer } from '@redux-slice/meter';
 
 export const allReducer = combineReducers({
   app: appReducer,
@@ -12,7 +13,8 @@ export const allReducer = combineReducers({
   user: userReducer,
   customer: customerReducer,
   role: roleReducer,
-  sysParameter: sysParameterReducer
+  sysParameter: sysParameterReducer,
+  meter: meterReducer
 });
 
 export type RootState = ReturnType<typeof allReducer>;
