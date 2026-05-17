@@ -107,3 +107,7 @@ export interface UserSearchList {
   size: number;
 }
 export interface UserSearchRes extends ResultBase<UserSearchList> {}
+export enum STATUS {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE'
+}

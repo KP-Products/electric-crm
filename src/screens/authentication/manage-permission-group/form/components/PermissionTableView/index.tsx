@@ -1,6 +1,6 @@
 'use client';
 
-import { K_SIZE_0, K_SIZE_120, K_SIZE_20, K_SIZE_302, K_SIZE_60, K_SIZE_7 } from '@constant';
+import { K_SIZE_0, K_SIZE_120, K_SIZE_20, K_SIZE_302, K_SIZE_60 } from '@constant';
 import { GET_LIST_PERMISSION } from '@redux-action-type/role';
 import { dispatch } from '@redux-common';
 import { selectPermissionList, selectRoleLoadingList } from '@redux-selector/role';
@@ -14,10 +14,10 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useController, UseFormReturn } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import ExpandedTable from 'screens/authentication/manage-permission-group/form/components/PermissionTableView/ExpandedTable';
-import { PermissionGroupForm } from 'screens/authentication/manage-permission-group/hooks/useManagePermissionGroupForm';
 import { mapPermissionGroup } from 'screens/authentication/manage-permission-group/utils/method';
 import { PermissionGroup } from 'screens/authentication/manage-permission-group/utils/type';
 import { useAppTranslation } from 'utils/i18n';
+import { PermissionGroupForm } from '../../../hooks/useManagePermissionGroupForm';
 
 interface PermissionTableViewProps {
   form: UseFormReturn<PermissionGroupForm>;
@@ -45,8 +45,8 @@ const PermissionTableView = ({ form, isView }: PermissionTableViewProps) => {
 
   const isAllPermissionsChecked = useCallback(
     (permissions: PermissionGroup['functions'][number]['permissions']) => {
-      const watchIds = new Set(watchPermission.map((p) => p.permissionId));
-      return permissions.every((permission) => watchIds.has(permission.permissionId));
+      const watchIds = new Set(watchPermission.map((p) => p.permissionCode));
+      return permissions.every((permission) => watchIds.has(permission.permissionCode));
     },
     [watchPermission]
   );
@@ -54,17 +54,18 @@ const PermissionTableView = ({ form, isView }: PermissionTableViewProps) => {
   const onToggleAllPermission = useCallback(
     (checked: boolean, permissions: PermissionGroupForm['permissions']) => {
       if (checked) {
-        const existingIds = new Set(watchPermission.map((p) => p.permissionId));
+        const existingIds = new Set(watchPermission.map((p) => p.permissionCode));
         const newPermissions = permissions
-          .filter((p) => !existingIds.has(p.permissionId))
+          .filter((p) => !existingIds.has(p.permissionCode))
           .map((p) => ({
-            permissionId: p.permissionId,
-            title: p.title
+            permissionId: p.permissionCode,
+            title: p.title,
+            permissionCode: p.permissionCode
           }));
         return onChange([...watchPermission, ...newPermissions]);
       } else {
-        const groupIds = new Set(permissions.map((p) => p.permissionId));
-        const filteredPermissions = watchPermission.filter((p) => !groupIds.has(p.permissionId));
+        const groupIds = new Set(permissions.map((p) => p.permissionCode));
+        const filteredPermissions = watchPermission.filter((p) => !groupIds.has(p.permissionCode));
         return onChange(filteredPermissions);
       }
     },
@@ -72,7 +73,6 @@ const PermissionTableView = ({ form, isView }: PermissionTableViewProps) => {
   );
 
   const sharedOnCell = useCallback(() => ({ colSpan: K_SIZE_0 }), []);
-
   const columns: any = useMemo(
     () => [
       {
@@ -81,7 +81,7 @@ const PermissionTableView = ({ form, isView }: PermissionTableViewProps) => {
         align: 'center',
         width: K_SIZE_60,
         onCell: () => ({
-          colSpan: K_SIZE_7
+          colSpan: 8
         }),
         render: (text: string, record: PermissionGroup) => {
           const allPermissions = record.functions.flatMap((fn) => fn.permissions);
@@ -131,7 +131,13 @@ const PermissionTableView = ({ form, isView }: PermissionTableViewProps) => {
         onCell: sharedOnCell
       },
       {
-        title: t('manage_role:download'),
+        title: 'Phê duyệt',
+        align: 'center',
+        width: K_SIZE_120,
+        onCell: sharedOnCell
+      },
+      {
+        title: 'In ấn',
         align: 'center',
         width: K_SIZE_120,
         onCell: sharedOnCell

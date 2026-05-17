@@ -62,7 +62,7 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
   );
 
   const roleOptions = useMemo(
-    () => roleList.map((role) => ({ value: role.roleId, label: role.name })),
+    () => roleList.map((role) => ({ value: role.id, label: role.name })),
     [roleList]
   );
 

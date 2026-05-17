@@ -27,11 +27,18 @@ export interface CustomerFilter {
 export interface CustomerGroup extends UpdateCustomerGroupReq {}
 
 export interface CreateCustomerGroupReq {
-  name: string;
-  value: string;
-  customerType?: string;
-  note?: string;
+  customerCode: string;
+  fullName: string;
+  taxNo: string;
+  phone: string;
+  email: string;
+  // fileContractName: string;
+  // contactName: string;
+  // contactIdNo: string;
+  // contactIssueDate: string;
+  address: string;
   status?: string;
+  note?: string;
 }
 
 export interface UpdateCustomerGroupReq extends CreateCustomerGroupReq {

@@ -1,6 +1,7 @@
 interface Permission {
   permissionId: string;
   title: string;
+  permissionCode: string;
 }
 
 interface Function {

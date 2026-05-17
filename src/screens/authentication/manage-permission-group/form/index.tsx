@@ -15,11 +15,13 @@ import PageWithBreadcrumb from '../../../../layout/AppLayout/PageWithBreadcumb';
 import { ROUTES } from '../../../../config/routes';
 import Link from 'next/link';
 import PermissionTableView from './components/PermissionTableView';
+import { AppSelectControl } from '../../../../components/select';
+import React from 'react';
 
 const ManagePermissionGroupForm = (props: ManagePermissionGroupFormProps) => {
   const { isView } = props;
 
-  const { t, action, onSubmit, permissionGroupForm, loading, onBack, onEdit } =
+  const { t, action, onSubmit, permissionGroupForm, loading, onBack, onEdit, optionStatus } =
     useManagePermissionGroupForm(props);
 
   const { permission } = useManagePermissionGroupPermission();
@@ -31,17 +33,15 @@ const ManagePermissionGroupForm = (props: ManagePermissionGroupFormProps) => {
   } = permissionGroupForm;
   const breadcrumbList = [
     {
-      title: t('menu:system_administration'),
+      title: 'Quản trị hệ thống',
       key: ROUTES.MANAGE_USER
     },
     {
-      title: (
-        <Link href={ROUTES.MANAGE_PERMISSION_GROUP}>{t('menu:permission_group_management')}</Link>
-      ),
+      title: <Link href={ROUTES.MANAGE_PERMISSION_GROUP}>{'Quản lý nhóm quyền'}</Link>,
       key: ROUTES.MANAGE_PERMISSION_GROUP
     },
     {
-      title: t('manage_role:title', { action }),
+      title: action + ' nhóm quyền',
       key: ROUTES.MANAGE_PERMISSION_GROUP_DETAIL
     }
   ];
@@ -84,7 +84,7 @@ const ManagePermissionGroupForm = (props: ManagePermissionGroupFormProps) => {
           )}
         </Flex>
         <Divider className={'my-16'} />
-        <div className="grid grid-cols-3 gap-16 mobile:grid-cols-1">
+        <div className="grid grid-cols-4 gap-16 mobile:grid-cols-1">
           <AppTextFieldControl
             name="groupCode"
             label={t('manage_role:role_code')}
@@ -108,6 +108,15 @@ const ManagePermissionGroupForm = (props: ManagePermissionGroupFormProps) => {
             label={t('manage_role:note')}
             placeholder={t('manage_role:enter_note')}
             isView={isView}
+            control={control}
+          />
+          <AppSelectControl
+            name={'status'}
+            label={t('common:status')}
+            placeholder={t('common:select_pla', {
+              label: t('common:status').toLowerCase()
+            })}
+            options={optionStatus}
             control={control}
           />
         </div>

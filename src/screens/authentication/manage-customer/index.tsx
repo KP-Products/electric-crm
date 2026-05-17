@@ -18,7 +18,6 @@ import {
 import { TextBase } from 'components/text';
 import ButtonBase from 'components/button';
 import AppTable from 'components/table';
-import { STATUS_FEE_COND } from 'model/fee-condition';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import AppPagination from 'components/table/pagination';
 import IconHover from 'components/icon-vec-local/icon-hover';
@@ -28,6 +27,7 @@ import useManageCustomer from './useManageCustomer';
 import React, { useEffect } from 'react';
 import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
 import { ROUTES } from '../../../config/routes';
+import { STATUS } from '../../../model/user';
 
 const ManageCustomerScreen = () => {
   const { isMobile, isTablet } = useResponsive();
@@ -259,7 +259,7 @@ const ManageCustomerScreen = () => {
                   align: 'center',
                   width: K_SIZE_108,
                   render: (_, record: any) =>
-                    record?.status?.toUpperCase() === STATUS_FEE_COND.ACTIVE ? (
+                    record?.status?.toUpperCase() === STATUS.ACTIVE ? (
                       NULL_VALUE
                     ) : (
                       <Flex justify={'center'}>
@@ -299,9 +299,9 @@ const ManageCustomerScreen = () => {
                         ? 'common:edit'
                         : 'common:view_detail'
                       : 'common:add_new'
-                  )} ${t('fee:cust_group').toLowerCase()}`}
+                  )} khách hàng`}
                 </div>
-                {selectedItem?.status?.toUpperCase() === STATUS_FEE_COND.ACTIVE ? null : (
+                {selectedItem?.status?.toUpperCase() === STATUS.ACTIVE ? null : (
                   <IconHover
                     title={isView ? t('common:edit') : ''}
                     icon={isView ? 'ICON_EDIT' : 'IC_CLOSE_OUTLINE'}
@@ -351,38 +351,46 @@ const ManageCustomerScreen = () => {
                   />
                 )}
                 <AppTextFieldControl
-                  name={'name'}
+                  name={'customerCode'}
                   control={control}
-                  label={t('manage_customer_group:name_group') + ' *'}
-                  placeholder={t('common:input_pla', {
-                    label: t('manage_customer_group:name_group').toLowerCase()
-                  })}
+                  label={'Mã khách hàng *'}
+                  placeholder={'Nhập mã khách hàng'}
                   wrapperClassName={'flex-1'}
                   isView={!openCreate}
                 />
                 <AppTextFieldControl
-                  name={'valueData'}
-                  label={t('common:value') + ' *'}
-                  placeholder={t('common:input_pla', {
-                    label: t('common:value').toLowerCase()
-                  })}
+                  name={'name'}
+                  control={control}
+                  label={'Tên khách hàng *'}
+                  placeholder={'Nhập tên khách hàng'}
+                  wrapperClassName={'flex-1'}
+                  isView={!openCreate}
+                />
+                <AppTextFieldControl
+                  name={'taxNo'}
+                  label={'Mã số thuế *'}
+                  placeholder={'Nhập mã số thuế'}
                   isView={!openCreate}
                   control={control}
                 />
-                <AppSelectControl
-                  name={'customerType'}
-                  label={t('manage_customer_group:cust_type') + ' *'}
-                  placeholder={t('common:select_pla', {
-                    label: t('manage_customer_group:cust_type').toLowerCase()
-                  })}
-                  wrapperClassName={'flex-1'}
-                  options={
-                    // customerTypes?.map((cus) => ({
-                    //   value: cus.code || '',
-                    //   label: `${cus.name} - ${cus.description}`
-                    // })) || []
-                    []
-                  }
+                <AppTextFieldControl
+                  name={'phone'}
+                  label={'Số điện thoại *'}
+                  placeholder={'Nhập số điện thoại'}
+                  isView={!openCreate}
+                  control={control}
+                />
+                <AppTextFieldControl
+                  name={'email'}
+                  label={'Email *'}
+                  placeholder={'Nhập email'}
+                  isView={!openCreate}
+                  control={control}
+                />
+                <AppTextFieldControl
+                  name={'address'}
+                  label={'Địa chỉ *'}
+                  placeholder={'Nhập địa chỉ'}
                   isView={!openCreate}
                   control={control}
                 />

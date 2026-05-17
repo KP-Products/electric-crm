@@ -3,6 +3,8 @@ import { ApiResponse } from 'model/common';
 import {
   AddRoleReq,
   AddRoleRes,
+  AssignPermissionReq,
+  AssignPermissionRes,
   DeleteRoleReq,
   DeleteRoleRes,
   DownloadListRoleRes,
@@ -19,6 +21,15 @@ import { ApiConstants } from './networking/app-apis';
 async function getListRole(): Promise<ApiResponse<GetListRoleRes>> {
   try {
     const rs = await appServices.post(ApiConstants.GET_LIST_ROLE);
+    const data = rs.data;
+    return data;
+  } catch (error: any) {
+    return error;
+  }
+}
+async function getListRoleSearch(params: GetListRoleReq): Promise<ApiResponse<GetListRoleRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.GET_LIST_ROLE_SEARCH, params);
     const data = rs.data;
     return data;
   } catch (error: any) {
@@ -85,15 +96,39 @@ async function deleteRole(params: DeleteRoleReq): Promise<ApiResponse<DeleteRole
     return error;
   }
 }
-
+async function assignPermission(
+  params: AssignPermissionReq
+): Promise<ApiResponse<AssignPermissionRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.ASSIGN_PERMISSION, params);
+    const data = rs.data;
+    return data;
+  } catch (error: any) {
+    return error;
+  }
+}
+async function removePermission(
+  params: AssignPermissionReq
+): Promise<ApiResponse<AssignPermissionRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.REMOVE_PERMISSION, params);
+    const data = rs.data;
+    return data;
+  } catch (error: any) {
+    return error;
+  }
+}
 const roleServices = {
   getListRole,
+  getListRoleSearch,
   downloadListRole,
   getRolDetail,
   getListPermission,
   addRole,
   editRole,
-  deleteRole
+  deleteRole,
+  assignPermission,
+  removePermission
 };
 
 export default roleServices;

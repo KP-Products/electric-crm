@@ -33,12 +33,12 @@ takeLatestListeners({
       onFailed?.();
       return;
     }
-    const userList = response?.data?.items || [];
-    listenerApi.dispatch(
-      userActions.setUserList(
-        userList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      )
-    );
+    // const userList = response?.data?.items || [];
+    // listenerApi.dispatch(
+    //   userActions.setUserList(
+    //     userList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    //   )
+    // );
     onSuccess?.(response);
   }
 });

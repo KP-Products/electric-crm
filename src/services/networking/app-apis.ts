@@ -16,12 +16,15 @@ const ApiEndPoint = {
 
   // ROLE
   GET_LIST_ROLE: '/admin/roles/list',
+  GET_LIST_ROLE_SEARCH: '/admin/roles/search',
   GET_ROLE_DETAIL: '/admin/roles/detail',
   ADD_ROLE: '/admin/roles/create',
   EDIT_ROLE: '/admin/roles/update',
   DELETE_ROLE: '/admin/roles/delete',
   DOWNLOAD_LIST_ROLE: '/role/download',
   GET_LIST_PERMISSION: '/admin/permissions/list',
+  ASSIGN_PERMISSION: '/admin/roles/permissions/assign',
+  REMOVE_PERMISSION: '/admin/roles/permissions/remove',
   // ROLE
 
   // SYSTEM PARAMETER
@@ -35,8 +38,16 @@ const ApiEndPoint = {
   CUSTOMER_UPDATE: '/admin/customers/update',
   CUSTOMER_DELETE: '/admin/customers/delete',
   CUSTOMER_DETAIL: '/admin/customers/detail',
-  CUSTOMER_DOWNLOAD: '/admin/customers/download'
+  CUSTOMER_DOWNLOAD: '/admin/customers/download',
   // MANAGE CUSTOMERS
+
+  // METER
+  GET_LIST_METER: '/admin/meters/list',
+  GET_METER_SEARCH_LIST: '/admin/meters/search',
+  ADD_METER: '/admin/meters/create',
+  EDIT_METER: '/admin/meters/update',
+  DELETE_METER: '/admin/meters/delete',
+  METER_DETAIL: '/admin/meters/detail'
 } as const;
 
 const configApi = () => {

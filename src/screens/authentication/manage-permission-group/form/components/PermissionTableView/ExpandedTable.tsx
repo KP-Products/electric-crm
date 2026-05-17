@@ -29,14 +29,14 @@ const ExpandedTable = ({ data, form, isView }: ExpandedTableProps) => {
 
   const renderUserAction = useCallback(
     (action: string, permissions: PermissionGroupForm['permissions']) => {
-      const permission = permissions?.find((per) => per.title.includes(action));
+      const permission = permissions?.find((per) => per.permissionCode.includes(action));
       if (!permission) return NULL_VALUE;
-      const isChecked = watchPermission.some((p) => p.permissionId === permission.permissionId);
+      const isChecked = watchPermission.some((p) => p.permissionCode === permission.permissionCode);
       const handleChange = (checked: boolean) => {
         if (checked) {
           onChange([...watchPermission, permission]);
         } else {
-          onChange(watchPermission.filter((p) => p.permissionId !== permission.permissionId));
+          onChange(watchPermission.filter((p) => p.permissionCode !== permission.permissionCode));
         }
       };
       return (
@@ -102,12 +102,20 @@ const ExpandedTable = ({ data, form, isView }: ExpandedTableProps) => {
           renderUserAction(USER_ACTION.DELETE, permissions)
       },
       {
-        title: t('manage_role:download'),
+        title: 'Phê duyệt',
         dataIndex: 'permissions',
         align: 'center',
         width: K_SIZE_120,
         render: (permissions: PermissionGroupForm['permissions']) =>
-          renderUserAction(USER_ACTION.DOWNLOAD, permissions)
+          renderUserAction(USER_ACTION.APPROVE, permissions)
+      },
+      {
+        title: 'In ấn',
+        dataIndex: 'permissions',
+        align: 'center',
+        width: K_SIZE_120,
+        render: (permissions: PermissionGroupForm['permissions']) =>
+          renderUserAction(USER_ACTION.PRINT, permissions)
       },
       { width: K_SIZE_52 }
     ],

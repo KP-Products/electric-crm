@@ -23,13 +23,14 @@ const PermissionGroupBody = ({ data, form }: PermissionGroupBodyProps) => {
 
   const handleChange = useCallback(
     (checkedValue: any[]) => {
-      const groupIds = new Set(permissions.map((p) => p.permissionId.toString()));
-      const filteredPermissions = value.filter((p) => !groupIds.has(p.permissionId));
+      const groupIds = new Set(permissions.map((p) => p.permissionCode.toString()));
+      const filteredPermissions = value.filter((p) => !groupIds.has(p.permissionCode));
       const newPermissions = permissions
-        .filter((p) => checkedValue.includes(p.permissionId.toString()))
+        .filter((p) => checkedValue.includes(p.permissionCode.toString()))
         .map((p) => ({
           permissionId: p.permissionId.toString(),
-          title: p.title
+          title: p.title,
+          permissionCode: p.permissionCode.toString()
         }));
       return onChange([...filteredPermissions, ...newPermissions]);
     },
@@ -40,11 +41,11 @@ const PermissionGroupBody = ({ data, form }: PermissionGroupBodyProps) => {
     <AppCheckbox
       direction="column"
       name={name}
-      value={value.map((p) => p.permissionId.toString())}
+      value={value.map((p) => p.permissionCode.toString())}
       onChange={handleChange}
       options={permissions.map((item) => ({
         label: item.title,
-        value: item.permissionId.toString()
+        value: item.permissionCode.toString()
       }))}
     />
   );

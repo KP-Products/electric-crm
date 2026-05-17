@@ -22,24 +22,25 @@ const PermissionGroupHeader = ({ data, form }: PermissionGroupHeaderProps) => {
   const permissions = useMemo(() => functions.flatMap((fn) => fn.permissions), [functions]);
 
   const checked: boolean = useMemo(() => {
-    const watchIds = new Set(watchPermission.map((p) => p.permissionId));
-    return permissions.every((permission) => watchIds.has(permission.permissionId.toString()));
+    const watchIds = new Set(watchPermission.map((p) => p.permissionCode));
+    return permissions.every((permission) => watchIds.has(permission.permissionCode.toString()));
   }, [permissions, watchPermission]);
 
   const onToggle = useCallback(
     (value: boolean) => {
       if (value) {
-        const existingIds = new Set(watchPermission.map((p) => p.permissionId));
+        const existingIds = new Set(watchPermission.map((p) => p.permissionCode));
         const newPermissions = permissions
-          .filter((p) => !existingIds.has(p.permissionId.toString()))
+          .filter((p) => !existingIds.has(p.permissionCode.toString()))
           .map((p) => ({
             permissionId: p.permissionId.toString(),
-            title: p.title
+            title: p.title,
+            permissionCode: p.permissionCode.toString()
           }));
         return setValue('permissions', [...watchPermission, ...newPermissions]);
       } else {
-        const groupIds = new Set(permissions.map((p) => p.permissionId.toString()));
-        const filteredPermissions = watchPermission.filter((p) => !groupIds.has(p.permissionId));
+        const groupIds = new Set(permissions.map((p) => p.permissionCode.toString()));
+        const filteredPermissions = watchPermission.filter((p) => !groupIds.has(p.permissionCode));
         return setValue('permissions', filteredPermissions);
       }
     },

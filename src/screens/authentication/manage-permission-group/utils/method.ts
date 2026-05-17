@@ -32,7 +32,8 @@ export const mapPermissionGroup = (data: Permission[]): PermissionGroup[] => {
     }
     group.functionMap.get(item.actionSubGroup)!.permissions.push({
       permissionId: item.id,
-      title: item.actionCode
+      title: item.actionCode,
+      permissionCode: item.actionCode,
     });
   });
   let functionOrder = K_SIZE_0;

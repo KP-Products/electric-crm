@@ -48,7 +48,7 @@ export default function useManageUser() {
   const filterDrawerRef = useRef<UserFilterDrawerRef>(null);
 
   const roleOptions = useMemo(
-    () => roleList.map((role) => ({ value: role.roleId, label: role.name })),
+    () => roleList.map((role) => ({ value: role.id, label: role.name })),
     [roleList]
   );
 

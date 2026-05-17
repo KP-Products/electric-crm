@@ -1,6 +1,5 @@
 import { takeLatestListeners } from '@listener';
 import { roleActions } from '@redux-slice/role';
-import { TYPE_STATUS } from 'components/status';
 import roleServices from 'services/role-services';
 
 takeLatestListeners({
@@ -14,7 +13,23 @@ takeLatestListeners({
       onFailed?.();
       return;
     }
-    listenerApi.dispatch(roleActions.setRoleList(response?.data || []));
+    // listenerApi.dispatch(roleActions.setRoleList(response?.data || []));
+    // listenerApi.dispatch(roleActions.setTotal(Number(response?.data?.totalElements || K_SIZE_0)));
+    onSuccess?.(response);
+  }
+});
+takeLatestListeners({
+  actionCreator: roleActions.getSearchListRole,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(roleActions.setLoadingList(true));
+    const response = await roleServices.getListRoleSearch(body);
+    listenerApi.dispatch(roleActions.setLoadingList(false));
+    if (!response || !response?.data) {
+      onFailed?.();
+      return;
+    }
+    listenerApi.dispatch(roleActions.setRoleList(response?.data.items || []));
     // listenerApi.dispatch(roleActions.setTotal(Number(response?.data?.totalElements || K_SIZE_0)));
     onSuccess?.(response);
   }
@@ -103,7 +118,35 @@ takeLatestListeners({
     listenerApi.dispatch(roleActions.setLoadingDetail(true));
     const response = await roleServices.deleteRole(body);
     listenerApi.dispatch(roleActions.setLoadingDetail(false));
-    if (!response || response?.message?.toUpperCase?.() !== TYPE_STATUS.SUCCESS.toUpperCase()) {
+    if (!response || !response?.data) {
+      onFailed?.();
+      return;
+    }
+    onSuccess?.(response);
+  }
+});
+takeLatestListeners({
+  actionCreator: roleActions.assignPermission,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(roleActions.setLoadingDetail(true));
+    const response = await roleServices.assignPermission(body);
+    listenerApi.dispatch(roleActions.setLoadingDetail(false));
+    if (!response || !response?.data) {
+      onFailed?.();
+      return;
+    }
+    onSuccess?.(response);
+  }
+});
+takeLatestListeners({
+  actionCreator: roleActions.removePermission,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(roleActions.setLoadingDetail(true));
+    const response = await roleServices.removePermission(body);
+    listenerApi.dispatch(roleActions.setLoadingDetail(false));
+    if (!response || !response?.data) {
       onFailed?.();
       return;
     }

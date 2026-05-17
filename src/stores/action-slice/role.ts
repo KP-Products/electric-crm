@@ -1,18 +1,23 @@
 import { K_SIZE_0 } from '@constant';
 import {
   ADD_ROLE,
+  ASSIGN_PERMISSION,
   DELETE_ROLE,
   DOWNLOAD_LIST_ROLE,
   EDIT_ROLE,
   GET_LIST_PERMISSION,
   GET_LIST_ROLE,
-  GET_ROLE_DETAIL
+  GET_LIST_ROLE_SEARCH,
+  GET_ROLE_DETAIL,
+  REMOVE_PERMISSION
 } from '@redux-action-type/role';
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ErrorBase } from 'model/common';
 import {
   AddRoleReq,
   AddRoleRes,
+  AssignPermissionReq,
+  AssignPermissionRes,
   DeleteRoleReq,
   DeleteRoleRes,
   DownloadListRoleRes,
@@ -69,11 +74,18 @@ const roleSlice = createSlice({
 
 const getListRole = createAction(
   GET_LIST_ROLE,
+  (onSuccess: (data: GetListRoleRes) => void, onFailed: (error?: ErrorBase) => void) => ({
+    payload: { onSuccess, onFailed }
+  })
+);
+const getSearchListRole = createAction(
+  GET_LIST_ROLE_SEARCH,
   (
+    body: GetListRoleReq,
     onSuccess: (data: GetListRoleRes) => void,
     onFailed: (error?: ErrorBase) => void
   ) => ({
-    payload: { onSuccess, onFailed }
+    payload: { body, onSuccess, onFailed }
   })
 );
 
@@ -138,16 +150,39 @@ const deleteRole = createAction(
     payload: { body, onSuccess, onFailed }
   })
 );
+const assignPermission = createAction(
+  ASSIGN_PERMISSION,
+  (
+    body: AssignPermissionReq,
+    onSuccess: (data: AssignPermissionRes) => void,
+    onFailed: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
+const removePermission = createAction(
+  REMOVE_PERMISSION,
+  (
+    body: AssignPermissionReq,
+    onSuccess: (data: AssignPermissionRes) => void,
+    onFailed: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
 
 export const roleActions = {
   ...roleSlice.actions,
   getListRole,
+  getSearchListRole,
   downloadListRole,
   getRoleDetail,
   getListPermission,
   addRole,
   editRole,
-  deleteRole
+  deleteRole,
+  assignPermission,
+  removePermission
 };
 
 export const roleReducer = roleSlice.reducer;

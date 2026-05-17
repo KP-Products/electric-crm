@@ -4,10 +4,11 @@ import { I18nKeys } from 'utils/i18n';
 export const USER_ACTION = {
   VIEW: 'VIEW',
   ADD: 'CREATE',
-  EDIT: 'EDIT',
+  EDIT: 'UPDATE',
   DELETE: 'DELETE',
   DOWNLOAD: 'DOWNLOAD',
-  APPROVE: 'APPROVE'
+  APPROVE: 'APPROVE',
+  PRINT: 'PRINT'
 };
 
 export const ROLE_STATUS = {

@@ -1,5 +1,5 @@
 import { CONSTANTS, DEFAULT_PAGE_SIZE, FILE_EXT, K_SIZE_1 } from '@constant';
-import { DELETE_ROLE, DOWNLOAD_LIST_ROLE, GET_LIST_ROLE } from '@redux-action-type/role';
+import { DELETE_ROLE, DOWNLOAD_LIST_ROLE, GET_LIST_ROLE_SEARCH } from '@redux-action-type/role';
 import { dispatch } from '@redux-common';
 import { selectRoleList, selectRoleLoadingList, selectRoleTotal } from '@redux-selector/role';
 import { showDialog } from 'components/dialog';
@@ -8,7 +8,7 @@ import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
 import { debounce } from 'lodash';
-import { DeleteRoleReq, DownloadListRoleRes, GetListRoleReq } from 'model/role';
+import { DeleteRoleReq, DownloadListRoleRes, GetListRoleReq, Role } from 'model/role';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
@@ -51,7 +51,7 @@ export default function useManagePermissionGroup() {
 
   useEffect(() => {
     dispatch({
-      type: GET_LIST_ROLE,
+      type: GET_LIST_ROLE_SEARCH,
       payload: { body: buildBodyListRole(filterApplied, currentPage) }
     });
   }, [filterApplied, currentPage, buildBodyListRole]);
@@ -121,7 +121,7 @@ export default function useManagePermissionGroup() {
       size: DEFAULT_PAGE_SIZE,
       filter: filterApplied.search
     };
-    dispatch({ type: GET_LIST_ROLE, payload: { body } });
+    dispatch({ type: GET_LIST_ROLE_SEARCH, payload: { body } });
     return showToast({
       type: TYPE_TOAST.SUCCESS,
       content: t('manage_role:action_success', { action: t('common:delete') })
@@ -129,17 +129,21 @@ export default function useManagePermissionGroup() {
   }, [t, filterApplied, currentPage]);
 
   const onDelete = useCallback(
-    (roleId: string) => {
+    (selectedRole?: Role) => {
       return showDialog({
         title: t('common:delete_confirm'),
-        content: t('manage_role:delete_role_confirm'),
+        content: (
+          <>
+            Bạn có chắc chắn xoá nhóm quyền <strong>{selectedRole?.name}</strong> này?
+          </>
+        ),
         type: TYPE_MESSAGE.ALERT,
         actions: [
           {
             title: t('common:agree'),
             type: TYPE_ACTION.PRIMARY,
             onPress: () => {
-              const body: DeleteRoleReq = { roleId };
+              const body: DeleteRoleReq = { roleId: selectedRole?.id || '' };
               dispatch({ type: DELETE_ROLE, payload: { body, onSuccess: onDeleteSuccess } });
             }
           },

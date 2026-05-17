@@ -1,6 +1,5 @@
 import { useAppTranslation } from 'utils/i18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { STATUS_FEE_COND } from 'model/fee-condition';
 import { CONSTANTS, DEFAULT_PAGE_SIZE, FILE_EXT, K_SIZE_0, K_SIZE_1 } from '@constant';
 import { DebugUtils } from 'utils/debug-utils';
 import { z } from 'zod';
@@ -22,6 +21,7 @@ import { DownloadUtils } from 'utils/download.utils';
 import moment from 'moment/moment';
 import { FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
 import { appCodes } from 'utils/constant/appCodes';
+import { STATUS } from '../../../model/user';
 
 interface Props {}
 function useManageCustomer(props?: Props) {
@@ -56,8 +56,8 @@ function useManageCustomer(props?: Props) {
   };
 
   const optionStatus = [
-    { value: STATUS_FEE_COND.ACTIVE, label: t('common:status_active') },
-    { value: STATUS_FEE_COND.INACTIVE, label: t('common:status_inactive') }
+    { value: STATUS.ACTIVE, label: t('common:status_active') },
+    { value: STATUS.INACTIVE, label: t('common:status_inactive') }
   ];
 
   const pagination = useMemo(
@@ -75,15 +75,27 @@ function useManageCustomer(props?: Props) {
     name: z
       .string()
       .trim()
-      .min(1, { message: t('validate:required', { name: t('condition:name') }) }),
-    valueData: z
+      .min(1, { message: t('validate:required', { name: 'Tên khách hàng' }) }),
+    customerCode: z
       .string()
       .trim()
-      .min(1, { message: t('validate:required', { name: t('common:value') }) }),
-    customerType: z
+      .min(1, { message: t('validate:required', { name: 'Mã khách hàng' }) }),
+    taxNo: z
       .string()
       .trim()
-      .min(1, { message: t('validate:required', { name: t('manage_customer_group:cust_type') }) }),
+      .min(1, { message: t('validate:required', { name: 'Mã số thuế' }) }),
+    phone: z
+      .string()
+      .trim()
+      .min(1, { message: t('validate:required', { name: 'Số điện thoại' }) }),
+    email: z
+      .string()
+      .trim()
+      .min(1, { message: t('validate:required', { name: 'Email' }) }),
+    address: z
+      .string()
+      .trim()
+      .min(1, { message: t('validate:required', { name: 'Địa chỉ' }) }),
     status: z.string().trim(),
     note: z.string().trim()
   });
@@ -93,9 +105,12 @@ function useManageCustomer(props?: Props) {
   const updateForm = useForm<UpdateForm>({
     mode: 'onTouched',
     defaultValues: {
-      name: selectedItem?.name || '',
-      customerType: selectedItem?.customerType || '',
-      valueData: selectedItem?.value || '',
+      name: selectedItem?.fullName || '',
+      customerCode: selectedItem?.customerCode || '',
+      taxNo: selectedItem?.taxNo || '',
+      phone: selectedItem?.phone || '',
+      email: selectedItem?.email || '',
+      address: selectedItem?.address || '',
       status: selectedItem?.status || '',
       note: selectedItem?.note || ''
     },
@@ -104,9 +119,12 @@ function useManageCustomer(props?: Props) {
 
   const handleUpdateSubmit = (dataF: UpdateForm) => {
     const bodyCreate: CreateCustomerGroupReq = {
-      name: dataF.name,
-      customerType: dataF.customerType,
-      value: dataF.valueData,
+      fullName: dataF.name,
+      customerCode: dataF?.customerCode || '',
+      taxNo: dataF?.taxNo || '',
+      phone: dataF?.phone || '',
+      email: dataF?.email || '',
+      address: dataF?.address || '',
       note: dataF.note
     };
     // edit
@@ -237,9 +255,12 @@ function useManageCustomer(props?: Props) {
 
   useEffect(() => {
     updateForm.reset({
-      name: selectedItem?.name || '',
-      customerType: selectedItem?.customerType || '',
-      valueData: selectedItem?.value || '',
+      name: selectedItem?.fullName || '',
+      customerCode: selectedItem?.customerCode || '',
+      taxNo: selectedItem?.taxNo || '',
+      phone: selectedItem?.phone || '',
+      email: selectedItem?.email || '',
+      address: selectedItem?.address || '',
       status: selectedItem?.status || '',
       note: selectedItem?.note || ''
     });

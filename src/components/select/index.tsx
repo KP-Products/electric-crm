@@ -234,6 +234,8 @@ export function AppSelect(props: AppSelectProps) {
                 {...restProps}
                 disabled={disabledInput}
                 className={`
+                px-[11px]
+                py-[10px]
                 !text-14
                 text-color-800
                 placeholder:!text-color-600

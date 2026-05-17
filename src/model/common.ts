@@ -4,10 +4,10 @@ export interface PaginationReq {
 }
 
 export interface PaginationRes<T> {
-  content: T[];
+  items: T[];
   page: number;
   size: number;
-  totalElements: number;
+  total: number;
   totalPages: number;
 }
 
