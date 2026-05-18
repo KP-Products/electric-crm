@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import {
   PERMISSION_ADD_ACTION,
+  PERMISSION_DELETE_ACTION,
   PERMISSION_DOWNLOAD_ACTION,
   PERMISSION_EDIT_ACTION,
   useCheckAction
@@ -15,7 +16,8 @@ export default function useManageUserPermission() {
     const canDownload = hasPermission(
       PERMISSION_DOWNLOAD_ACTION.SYSTEM_MANAGEMENT_USER_DOWNLOAD_ACTION
     );
-    return { canAdd, canEdit, canDownload };
+    const canDelete = hasPermission(PERMISSION_DELETE_ACTION.SYSTEM_MANAGEMENT_USER_DELETE_ACTION);
+    return { canAdd, canEdit, canDownload, canDelete };
   }, [hasPermission]);
 
   return {

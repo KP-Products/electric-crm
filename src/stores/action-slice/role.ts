@@ -12,7 +12,7 @@ import {
   REMOVE_PERMISSION
 } from '@redux-action-type/role';
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { ErrorBase } from 'model/common';
+import { ApiResponse, ErrorBase, ResultBase } from 'model/common';
 import {
   AddRoleReq,
   AddRoleRes,
@@ -74,7 +74,10 @@ const roleSlice = createSlice({
 
 const getListRole = createAction(
   GET_LIST_ROLE,
-  (onSuccess: (data: GetListRoleRes) => void, onFailed: (error?: ErrorBase) => void) => ({
+  (
+    onSuccess: (data: ApiResponse<ResultBase<Role[]>>) => void,
+    onFailed: (error?: ErrorBase) => void
+  ) => ({
     payload: { onSuccess, onFailed }
   })
 );

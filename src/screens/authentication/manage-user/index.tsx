@@ -3,7 +3,6 @@
 import {
   K_SIZE_0,
   K_SIZE_1,
-  K_SIZE_100,
   K_SIZE_108,
   K_SIZE_130,
   K_SIZE_16,
@@ -30,7 +29,7 @@ import { useCallback, useMemo } from 'react';
 import UserFilterDrawer, {
   UserFilterForm
 } from 'screens/authentication/manage-user/components/UserFilterDrawer';
-import useManageUser from 'screens/authentication/manage-user/hooks/useManageUser';
+import useManageUser from './hooks/useManageUser';
 import useManageUserPermission from 'screens/authentication/manage-user/hooks/useManageUserPermission';
 import {
   USER_FILTER_LABEL_MAP,
@@ -54,8 +53,7 @@ const ManageUser = () => {
     onResetFilter,
     filterDrawerRef,
     roleOptions,
-    unitList,
-    departmentList
+    onDelete
   } = useManageUser();
 
   const { permission } = useManageUserPermission();
@@ -106,17 +104,10 @@ const ManageUser = () => {
             <Status
               type={USER_STATUS_TYPE_MAP[status]}
               kind={KIND_STATUS.SECONDARY}
-              content={t(USER_STATUS_LABEL_MAP[status])}
+              content={USER_STATUS_LABEL_MAP[status]}
             />
           );
         }
-      },
-      {
-        title: t('manage_user:phone'),
-        dataIndex: 'phone',
-        align: 'left',
-        width: K_SIZE_160,
-        render: (text: string) => renderColumn(text)
       },
       {
         title: t('manage_user:email'),
@@ -131,44 +122,34 @@ const ManageUser = () => {
         align: 'left',
         width: K_SIZE_180,
         render: (text: string) => renderColumn(text, displayDateTimeFromServer)
-      },
-      {
-        title: t('common:created_by'),
-        dataIndex: 'createdBy',
-        align: 'left',
-        width: K_SIZE_100,
-        render: (text: string) => renderColumn(text)
-      },
-      {
-        title: t('common:updated_at'),
-        dataIndex: 'updatedAt',
-        align: 'left',
-        width: K_SIZE_180,
-        render: (text: string) => renderColumn(text, displayDateTimeFromServer)
-      },
-      {
-        title: t('common:updated_by'),
-        dataIndex: 'updatedBy',
-        align: 'left',
-        width: K_SIZE_100,
-        render: (text: string) => renderColumn(text)
       }
     ];
-    if (permission.canEdit) {
+    if (permission.canEdit || permission.canDelete) {
       cols.push({
         title: t('common:action'),
         fixed: 'right',
         width: K_SIZE_108,
         align: 'center',
         render: (_: any, record: User) => (
-          <div className="flex justify-center">
-            <IconHover
-              rootClassName={'text-color-800'}
-              title={t('common:edit')}
-              icon={'ICON_EDIT'}
-              iconHeight={K_SIZE_18}
-              onClick={() => router.push(`${ROUTES.MANAGE_USER_EDIT}?id=${record.id}`)}
-            />
+          <div className="flex justify-center gap-8">
+            {permission.canEdit && (
+              <IconHover
+                rootClassName={'text-color-800'}
+                title={t('common:edit')}
+                icon={'ICON_EDIT'}
+                iconHeight={K_SIZE_18}
+                onClick={() => router.push(`${ROUTES.MANAGE_USER_EDIT}?id=${record.id}`)}
+              />
+            )}
+            {permission.canDelete && (
+              <IconHover
+                rootClassName={'text-error-500 hover:text-error-500'}
+                title={t('common:delete')}
+                icon={'IC_TRASH_OUTLINE'}
+                iconHeight={K_SIZE_18}
+                onClick={() => onDelete(record)}
+              />
+            )}
           </div>
         )
       });
@@ -182,16 +163,10 @@ const ManageUser = () => {
     const formatValue = (key: keyof UserFilterForm, value: any) => {
       switch (key) {
         case 'status':
-          return t(USER_STATUS_LABEL_MAP[value]);
+          return USER_STATUS_LABEL_MAP[value];
         case 'roleId':
           const role = roleOptions.find((r) => r.value === value);
           return role?.label;
-        case 'unitId':
-          const unit = unitList.find((u) => u.id === value);
-          return unit?.name;
-        case 'departmentId':
-          const department = departmentList.find((d) => d.id === value);
-          return department?.name;
         default:
           return value;
       }
@@ -215,7 +190,7 @@ const ManageUser = () => {
         })}
       </div>
     );
-  }, [t, filterApplied, onResetFilter, roleOptions, unitList, departmentList]);
+  }, [t, filterApplied, onResetFilter, roleOptions]);
   const breadcrumbList = [
     {
       title: t('menu:system_administration')
@@ -225,6 +200,84 @@ const ManageUser = () => {
       key: ROUTES.MANAGE_USER
     }
   ];
+  const userDashboardCards = useMemo(() => {
+    const getStatus = (status?: string) => String(status || '').toUpperCase();
+
+    const activeUsers = userPaginated.filter((user) => getStatus(user.status) === 'ACTIVE').length;
+    const inactiveUsers = userPaginated.filter(
+      (user) => getStatus(user.status) === 'INACTIVE'
+    ).length;
+
+    const lockedUsers = userPaginated.filter((user) => {
+      const status = getStatus(user.status);
+      return status === 'LOCKED';
+    }).length;
+
+    return [
+      {
+        title: 'Tổng người dùng',
+        value: pagination.total,
+        icon: '👥',
+        className: 'from-blue-50 to-white text-blue-600'
+      },
+      {
+        title: 'Đang hoạt động',
+        value: activeUsers,
+        icon: '●',
+        className: 'from-green-50 to-white text-green-600'
+      },
+      {
+        title: 'Không hoạt động',
+        value: inactiveUsers,
+        icon: '●',
+        className: 'from-green-50 to-white text-green-600'
+      },
+      {
+        title: 'Bị khóa',
+        value: lockedUsers,
+        icon: '🔒',
+        className: 'from-red-50 to-white text-red-600'
+      }
+    ];
+  }, [userPaginated, pagination.total]);
+
+  const DashboardCard = useCallback(
+    ({
+      title,
+      value,
+      icon,
+      className
+    }: {
+      title: string;
+      value: number;
+      icon: string;
+      className: string;
+    }) => {
+      return (
+        <div
+          className={clsx(
+            'rounded-radius-l border border-color-400 bg-gradient-to-br p-16 shadow-[0_8px_24px_rgba(16,36,62,0.05)]',
+            className
+          )}
+        >
+          <div className="flex items-center justify-between gap-12">
+            <div>
+              <TextBase text={title} classNames="sub-title4 !text-color-700" />
+              <TextBase
+                text={String(value)}
+                classNames="mt-8 !text-[30px] !font-bold !leading-none !text-color-900"
+              />
+            </div>
+
+            <div className="flex size-44 items-center justify-center rounded-full text-[22px]">
+              {icon}
+            </div>
+          </div>
+        </div>
+      );
+    },
+    []
+  );
   return (
     <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
       <div>
@@ -271,6 +324,11 @@ const ManageUser = () => {
           </Flex>
         </Flex>
         <Divider className={'my-16 '} />
+        <div className="mb-16 grid grid-cols-4 gap-16 tablet:grid-cols-2 mobile:grid-cols-1">
+          {userDashboardCards.map((item) => (
+            <DashboardCard key={item.title} {...item} />
+          ))}
+        </div>
         <TagFilterGroup />
         <div className={'overflow-hidden rounded-radius-l border border-color-400 pb-4'}>
           <AppTable

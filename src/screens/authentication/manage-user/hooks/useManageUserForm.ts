@@ -15,28 +15,37 @@ import { useSelector } from 'react-redux';
 import { DebugUtils } from 'utils/debug-utils';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
 import { z } from 'zod';
+import { GET_LIST_ROLE } from '@redux-action-type/role';
 
-const userSchema = (t: TypedT) => {
+const userSchema = (t: TypedT, isAddMode: boolean) => {
   return z.object({
     username: z
       .string()
       .trim()
       .min(K_SIZE_1, { message: t('validate:required', { name: t('login_screen:username') }) }),
-    password: z
-      .string()
-      .trim()
-      .min(K_SIZE_1, { message: t('validate:required', { name: t('login_screen:username') }) }),
-    fullName: z.string().trim(),
+
+    password: isAddMode
+      ? z
+          .string()
+          .trim()
+          .min(K_SIZE_1, { message: t('validate:required', { name: t('login_screen:password') }) })
+      : z.string().trim().optional(),
+
     email: z.string().trim(),
     status: z.string().trim(),
-    // .min(K_SIZE_1, { message: t('validate:required', { name: t('common:status') }) }),
-    roleId: z.string().trim().optional()
-    // .min(K_SIZE_1, { message: t('validate:required', { name: t('manage_user:role') }) })
+    roleId: z.string().trim().optional(),
+
+    permissions: z
+      .object({
+        permissionId: z.string().trim().min(K_SIZE_1),
+        title: z.string().trim().min(K_SIZE_1),
+        permissionCode: z.string().trim().min(K_SIZE_1)
+      })
+      .array()
   });
 };
 
 export type UserForm = z.infer<ReturnType<typeof userSchema>>;
-
 export interface ManageUserFormProps {
   isAddMode: boolean;
   isView: boolean;
@@ -55,14 +64,20 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
     if (!id) return;
     return userList.find((user) => user?.id === id);
   }, [id, userList]);
-
   const action = useMemo(
     () => (isAddMode ? t('common:add_new') : isView ? t('common:view_detail') : t('common:edit')),
     [t, isAddMode, isView]
   );
-
   const roleOptions = useMemo(
     () => roleList.map((role) => ({ value: role.id, label: role.name })),
+    [roleList]
+  );
+  const getUserPermission = useCallback(
+    (roleId?: string) => {
+      return (roleList.find((role) => role.id === roleId)?.permissions || []).map(
+        (p) => ({ permissionId: p, title: p, permissionCode: p }) as UserForm['permissions'][number]
+      );
+    },
     [roleList]
   );
 
@@ -71,12 +86,12 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
     defaultValues: {
       username: '',
       password: '',
-      fullName: '',
       email: '',
-      // roleId: '',
-      status: ''
+      roleId: '',
+      status: '',
+      permissions: []
     },
-    resolver: zodResolver(userSchema(t))
+    resolver: zodResolver(userSchema(t, isAddMode))
   });
 
   useEffect(() => {
@@ -85,20 +100,16 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
         return router.replace(ROUTES.MANAGE_USER);
       } else {
         userForm.reset({
-          ...userDetail
-          // roleId: userDetail?.roles?.roleId || ''
+          ...userDetail,
+          roleId: userDetail?.roles?.map((r) => r).join(',') || ''
         });
       }
     }
   }, [router, userDetail, isAddMode, userForm]);
 
-  // useEffect(() => {
-  //   const body: GetListRoleReq = {
-  //     page: K_SIZE_0,
-  //     size: MAX_PAGE_SIZE
-  //   };
-  //   dispatch({ type: GET_LIST_ROLE, payload: { body } });
-  // }, []);
+  useEffect(() => {
+    dispatch({ type: GET_LIST_ROLE, payload: {} });
+  }, []);
 
   const onSubmitSuccess = useCallback(
     (res: any) => {
@@ -125,10 +136,9 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
       if (isAddMode) {
         const body: AddUserReq = {
           username: data.username,
-          password: data.password,
+          password: data.password || '',
           email: data.email,
-          // fullName: data.fullName,
-          role: 'ADMIN'
+          role: data.roleId || ''
         };
         dispatch({
           type: ADD_USER,
@@ -172,6 +182,7 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
     loading,
     onBack,
     onEdit,
-    roleOptions
+    roleOptions,
+    getUserPermission
   };
 }

@@ -1,35 +1,37 @@
 import { DEFAULT_PAGE_SIZE, FILE_EXT, K_SIZE_1 } from '@constant';
-import { DOWNLOAD_LIST_USER, GET_LIST_USER, GET_USER_SEARCH_LIST } from '@redux-action-type/user';
-import { dispatch } from '@redux-common';
+import { DELETE_USER, DOWNLOAD_LIST_USER, GET_USER_SEARCH_LIST } from '@redux-action-type/user';
 import { selectRoleList } from '@redux-selector/role';
-import {
-  selectDepartmentList,
-  selectUnitList,
-  selectUserList,
-  selectUserLoadingList
-} from '@redux-selector/user';
+import { selectDepartmentList, selectUnitList, selectUserLoadingList } from '@redux-selector/user';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
-import { DownloadListUserRes, GetListUserReq } from 'model/user';
+import {
+  DeleteUserReq,
+  DownloadListUserRes,
+  GetListUserReq,
+  User,
+  UserSearchItem
+} from 'model/user';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   UserFilterDrawerRef,
   UserFilterForm
 } from 'screens/authentication/manage-user/components/UserFilterDrawer';
 import { DownloadUtils } from 'utils/download.utils';
 import { useAppTranslation } from 'utils/i18n';
+import { userActions } from '@redux-slice/user';
+import { showDialog } from '../../../../components/dialog';
+import { TYPE_ACTION, TYPE_MESSAGE } from '../../../../components/dialog/type';
 
 export default function useManageUser() {
   const { t } = useAppTranslation();
   const router = useRouter();
-  const userList = useSelector(selectUserList);
   const unitList = useSelector(selectUnitList);
   const departmentList = useSelector(selectDepartmentList);
   const loadingUserList = useSelector(selectUserLoadingList);
   const roleList = useSelector(selectRoleList);
-
+  const dispatch = useDispatch();
   const defaultFilter: UserFilterForm = useMemo(
     () => ({
       username: '',
@@ -44,9 +46,10 @@ export default function useManageUser() {
   );
   const [filterApplied, setFilterApplied] = useState<UserFilterForm>(defaultFilter);
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
+  const [userList, setUserList] = useState<UserSearchItem[]>([]);
+  const [totalUser, setTotalUser] = useState<number>(0);
 
   const filterDrawerRef = useRef<UserFilterDrawerRef>(null);
-
   const roleOptions = useMemo(
     () => roleList.map((role) => ({ value: role.id, label: role.name })),
     [roleList]
@@ -55,18 +58,15 @@ export default function useManageUser() {
   const pagination = useMemo(
     () => ({
       current: currentPage,
-      total: 0,
+      total: totalUser,
       pageSize: DEFAULT_PAGE_SIZE,
       onChange: (page: number) => setCurrentPage(page),
       showSizeChanger: false
     }),
-    [currentPage, userList]
+    [currentPage, totalUser]
   );
 
-  const userPaginated = useMemo(() => {
-    const start = (pagination.current - K_SIZE_1) * pagination.pageSize;
-    return userList.slice(start, start + pagination.pageSize);
-  }, [userList, pagination]);
+  const userPaginated = userList;
 
   const buildBodyListUser = useCallback((filter: UserFilterForm, page: number): GetListUserReq => {
     const normalizeFilterApplied = Object.fromEntries(
@@ -79,9 +79,53 @@ export default function useManageUser() {
     };
   }, []);
 
-  useEffect(() => {
-    dispatch({ type: GET_LIST_USER, payload: {} });
+  const onGetUserSearchListSuccess = useCallback((response: any) => {
+    const items = response?.data?.items || [];
+
+    setUserList(
+      items.sort(
+        (a: UserSearchItem, b: UserSearchItem) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+    );
+    dispatch(
+      userActions.setUserList(
+        items.sort(
+          (a: UserSearchItem, b: UserSearchItem) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      )
+    );
+    setTotalUser(response?.data?.total || 0);
   }, []);
+
+  const onGetUserSearchListFailed = useCallback(() => {
+    setUserList([]);
+    setTotalUser(0);
+  }, []);
+
+  const getUserSearchList = useCallback(
+    (page: number) => {
+      dispatch({
+        type: GET_USER_SEARCH_LIST,
+        payload: {
+          body: buildBodyListUser(filterApplied, page),
+          onSuccess: onGetUserSearchListSuccess,
+          onFailed: onGetUserSearchListFailed
+        }
+      });
+    },
+    [
+      dispatch,
+      filterApplied,
+      buildBodyListUser,
+      onGetUserSearchListSuccess,
+      onGetUserSearchListFailed
+    ]
+  );
+  useEffect(() => {
+    getUserSearchList(currentPage);
+  }, [currentPage, getUserSearchList]);
 
   // useEffect(() => {
   //   const body: GetListRoleReq = {
@@ -156,6 +200,43 @@ export default function useManageUser() {
     });
   }, [t, filterApplied, currentPage, buildBodyListUser, onDownloadSuccess]);
 
+  const onDeleteSuccess = useCallback(() => {
+    getUserSearchList(currentPage);
+
+    showToast({
+      type: TYPE_TOAST.SUCCESS,
+      content: 'Xoá người dùng thành công'
+    });
+  }, [currentPage, getUserSearchList]);
+
+  const onDelete = useCallback(
+    (selectedUser: User) => {
+      return showDialog({
+        title: t('common:delete_confirm'),
+        content: (
+          <>
+            Bạn có chắc chắn xoá người dùng <strong>{selectedUser?.username}</strong> này?
+          </>
+        ),
+        type: TYPE_MESSAGE.ALERT,
+        actions: [
+          {
+            title: t('common:agree'),
+            type: TYPE_ACTION.PRIMARY,
+            onPress: () => {
+              const body: DeleteUserReq = { userId: selectedUser?.id || '' };
+              dispatch({ type: DELETE_USER, payload: { body, onSuccess: onDeleteSuccess } });
+            }
+          },
+          {
+            title: t('common:cancel'),
+            type: TYPE_ACTION.SECONDARY
+          }
+        ]
+      });
+    },
+    [t, onDeleteSuccess]
+  );
   return {
     t,
     router,
@@ -170,6 +251,7 @@ export default function useManageUser() {
     filterDrawerRef,
     roleOptions,
     unitList,
-    departmentList
+    departmentList,
+    onDelete
   };
 }

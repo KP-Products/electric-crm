@@ -3,7 +3,8 @@ import { I18nKeys } from 'utils/i18n';
 
 export const USER_STATUS = {
   INACTIVE: 'INACTIVE',
-  ACTIVE: 'ACTIVE'
+  ACTIVE: 'ACTIVE',
+  LOCKED: 'LOCKED'
 };
 
 export const USER_STATUS_UPLOAD = {
@@ -11,19 +12,22 @@ export const USER_STATUS_UPLOAD = {
   SUCCESS: 'SUCCESS'
 };
 
-export const USER_STATUS_LABEL_MAP: Record<string, I18nKeys> = {
-  [USER_STATUS.INACTIVE]: 'manage_user:status_inactive',
-  [USER_STATUS.ACTIVE]: 'manage_user:status_active'
+export const USER_STATUS_LABEL_MAP = {
+  [USER_STATUS.INACTIVE]: 'Không hoạt động',
+  [USER_STATUS.ACTIVE]: 'Hoạt động',
+  [USER_STATUS.LOCKED]: 'Bị khoá'
 };
 
 export const USER_STATUS_TYPE_MAP = {
-  [USER_STATUS.INACTIVE]: TYPE_STATUS.ERROR,
-  [USER_STATUS.ACTIVE]: TYPE_STATUS.SUCCESS
+  [USER_STATUS.INACTIVE]: TYPE_STATUS.DEFAULT,
+  [USER_STATUS.ACTIVE]: TYPE_STATUS.SUCCESS,
+  [USER_STATUS.LOCKED]: TYPE_STATUS.ERROR
 };
 
 export const USER_STATUS_OPTIONS = [
-  { value: USER_STATUS.INACTIVE, label: USER_STATUS_LABEL_MAP[USER_STATUS.INACTIVE] },
-  { value: USER_STATUS.ACTIVE, label: USER_STATUS_LABEL_MAP[USER_STATUS.ACTIVE] }
+  { value: USER_STATUS.INACTIVE, label: 'Không hoạt động' },
+  { value: USER_STATUS.ACTIVE, label: 'Hoạt động' },
+  { value: USER_STATUS.LOCKED, label: 'Bị khoá' }
 ];
 
 export const USER_FILTER_LABEL_MAP: Record<string, I18nKeys> = {

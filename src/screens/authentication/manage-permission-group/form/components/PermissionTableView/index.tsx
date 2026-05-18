@@ -92,7 +92,8 @@ const PermissionTableView = ({ form, isView }: PermissionTableViewProps) => {
                 <AppSwitch
                   checked={isAllPermissionsChecked(allPermissions)}
                   onChange={(checked) => !isView && onToggleAllPermission(checked, allPermissions)}
-                  className={clsx({ 'pointer-events-none': isView })}
+                  className={clsx({ 'pointer-events-none opacity-50 cursor-not-allowed': isView })}
+                  disabled={isView}
                 />
                 <TextBase t18n="manage_role:all_permission" />
               </div>

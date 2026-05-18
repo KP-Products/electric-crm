@@ -5,6 +5,8 @@ import {
   AddListUserRes,
   AddUserReq,
   AddUserRes,
+  AssignUserRoleReq,
+  DeleteUserReq,
   DownloadListUserRes,
   EditUserReq,
   EditUserRes,
@@ -85,6 +87,33 @@ async function editUser(params: EditUserReq): Promise<ApiResponse<EditUserRes>> 
     return error;
   }
 }
+async function deleteUser(params: DeleteUserReq): Promise<ApiResponse<EditUserRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.DELETE_USER, params);
+    const data = rs.data;
+    return data;
+  } catch (error: any) {
+    return error;
+  }
+}
+async function assignRoleUser(params: AssignUserRoleReq): Promise<ApiResponse<EditUserRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.ASSIGN_ROLE_USER, params);
+    const data = rs.data;
+    return data;
+  } catch (error: any) {
+    return error;
+  }
+}
+async function revokeRoleUser(params: AssignUserRoleReq): Promise<ApiResponse<EditUserRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.REVOKE_ROLE_USER, params);
+    const data = rs.data;
+    return data;
+  } catch (error: any) {
+    return error;
+  }
+}
 
 const userServices = {
   getListUser,
@@ -93,7 +122,10 @@ const userServices = {
   uploadUser,
   addListUser,
   editUser,
-  getUserSearchList
+  deleteUser,
+  getUserSearchList,
+  assignRoleUser,
+  revokeRoleUser
 };
 
 export default userServices;

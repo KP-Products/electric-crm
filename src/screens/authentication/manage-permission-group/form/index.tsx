@@ -34,7 +34,7 @@ const ManagePermissionGroupForm = (props: ManagePermissionGroupFormProps) => {
   const breadcrumbList = [
     {
       title: 'Quản trị hệ thống',
-      key: ROUTES.MANAGE_USER
+      key: ROUTES.MANAGE_USER,
     },
     {
       title: <Link href={ROUTES.MANAGE_PERMISSION_GROUP}>{'Quản lý nhóm quyền'}</Link>,

@@ -13,7 +13,7 @@ takeLatestListeners({
       onFailed?.();
       return;
     }
-    // listenerApi.dispatch(roleActions.setRoleList(response?.data || []));
+    listenerApi.dispatch(roleActions.setRoleList(response?.data || []));
     // listenerApi.dispatch(roleActions.setTotal(Number(response?.data?.totalElements || K_SIZE_0)));
     onSuccess?.(response);
   }

@@ -1,6 +1,8 @@
 import {
   ADD_LIST_USER,
   ADD_USER,
+  ASSIGN_ROLE_USER,
+  DELETE_USER,
   DOWNLOAD_LIST_USER,
   EDIT_USER,
   GET_LIST_DEPARTMENT,
@@ -8,6 +10,7 @@ import {
   GET_LIST_USER,
   GET_USER_SEARCH_LIST,
   GET_USER_TEMPLATE,
+  REVOKE_ROLE_USER,
   UPLOAD_USER
 } from '@redux-action-type/user';
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
@@ -25,6 +28,8 @@ import {
   AddListUserRes,
   AddUserReq,
   AddUserRes,
+  AssignUserRoleReq,
+  DeleteUserReq,
   DownloadListUserRes,
   EditUserReq,
   EditUserRes,
@@ -32,14 +37,14 @@ import {
   GetListUserRes,
   UploadUserReq,
   UploadUserRes,
-  User,
+  UserSearchItem,
   UserSearchReq,
   UserSearchRes
 } from 'model/user';
 import { SLICE_NAME } from 'stores/types';
 
 export interface UserState {
-  userList: User[];
+  userList: UserSearchItem[];
   unitList: Unit[];
   departmentList: Department[];
   loadingList: boolean;
@@ -65,7 +70,7 @@ const userSlice = createSlice({
     setLoadingDetail: (state, { payload }: PayloadAction<boolean>) => {
       state.loadingDetail = payload;
     },
-    setUserList: (state, { payload }: PayloadAction<User[]>) => {
+    setUserList: (state, { payload }: PayloadAction<UserSearchItem[]>) => {
       state.userList = payload;
     },
     setUnitList: (state, { payload }: PayloadAction<Unit[]>) => {
@@ -159,6 +164,16 @@ const editUser = createAction(
     payload: { body, onSuccess, onFailed }
   })
 );
+const deleteUser = createAction(
+  DELETE_USER,
+  (
+    body: DeleteUserReq,
+    onSuccess: (data: EditUserRes) => void,
+    onFailed: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
 
 const getListUnit = createAction(
   GET_LIST_UNIT,
@@ -177,6 +192,26 @@ const getListDepartment = createAction(
     payload: { body, onSuccess, onFailed }
   })
 );
+const assignRoleUser = createAction(
+  ASSIGN_ROLE_USER,
+  (
+    body: AssignUserRoleReq,
+    onSuccess: (data: any) => void,
+    onFailed: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
+const revokeRoleUser = createAction(
+  REVOKE_ROLE_USER,
+  (
+    body: AssignUserRoleReq,
+    onSuccess: (data: any) => void,
+    onFailed: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
 
 export const userActions = {
   ...userSlice.actions,
@@ -189,7 +224,10 @@ export const userActions = {
   editUser,
   getListUnit,
   getListDepartment,
-  getUserSearchList
+  getUserSearchList,
+  deleteUser,
+  assignRoleUser,
+  revokeRoleUser
 };
 
 export const userReducer = userSlice.reducer;

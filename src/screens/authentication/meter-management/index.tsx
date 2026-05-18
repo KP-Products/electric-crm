@@ -81,7 +81,7 @@ const MeterManagementScreen = () => {
             <Status
               type={USER_STATUS_TYPE_MAP[status]}
               kind={KIND_STATUS.SECONDARY}
-              content={t(USER_STATUS_LABEL_MAP[status])}
+              content={USER_STATUS_LABEL_MAP[status]}
             />
           );
         }
@@ -143,7 +143,7 @@ const MeterManagementScreen = () => {
     const formatValue = (key: keyof UserFilterForm, value: any) => {
       switch (key) {
         case 'status':
-          return t(USER_STATUS_LABEL_MAP[value]);
+          return USER_STATUS_LABEL_MAP[value];
         default:
           return value;
       }

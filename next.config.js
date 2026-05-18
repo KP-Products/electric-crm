@@ -1,26 +1,27 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // output: "export",
+  output: 'export',
+  trailingSlash: true,
   modularizeImports: {
-    'antd': {
+    antd: {
       transform: 'antd/es/{{member}}',
       style: true
     }
   },
   images: {
-    unoptimized: true,
+    unoptimized: true
   },
   poweredByHeader: false,
   reactStrictMode: false,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' && {
-      exclude: ['error'],
+      exclude: ['error']
     }
   },
   webpack: (config) => {
     config.externals.push({
       bufferutil: 'bufferutil',
-      'utf-8-validate': 'utf-8-validate',
+      'utf-8-validate': 'utf-8-validate'
     });
     config.module.rules.push({
       test: /\.svg$/i,
@@ -28,12 +29,12 @@ const nextConfig = {
       use: {
         loader: '@svgr/webpack',
         options: {
-          dimensions: false,
-        },
-      },
+          dimensions: false
+        }
+      }
     });
     return config;
-  },
+  }
 };
 
 module.exports = nextConfig;

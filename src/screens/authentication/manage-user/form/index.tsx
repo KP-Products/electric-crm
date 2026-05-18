@@ -5,7 +5,7 @@ import { Divider, Flex } from 'antd';
 import clsx from 'clsx';
 import ButtonBase from 'components/button';
 import { IconSvgLocal } from 'components/icon-vec-local';
-import { AppSelect } from 'components/select';
+import { AppSelect, AppSelectControl } from 'components/select';
 import { TextBase } from 'components/text';
 import { AppTextFieldControl } from 'components/text-field';
 import { Controller } from 'react-hook-form';
@@ -15,15 +15,28 @@ import useManageUserForm, {
 import Link from 'next/link';
 import { ROUTES } from '../../../../config/routes';
 import PageWithBreadcrumb from '../../../../layout/AppLayout/PageWithBreadcumb';
+import useManageUserPermission from '../hooks/useManageUserPermission';
+import PermissionTableView from '../../manage-permission-group/form/components/PermissionTableView';
+import React from 'react';
+import { USER_STATUS_OPTIONS } from '../utils/constant';
 
 const ManageUserForm = (props: ManageUserFormProps) => {
   const { isAddMode, isView } = props;
 
-  const { t, action, onSubmit, userForm, onBack, onEdit, roleOptions } = useManageUserForm(props);
+  const {
+    t,
+    action,
+    onSubmit,
+    userForm,
+    onBack,
+    onEdit,
+    roleOptions,
+    getUserPermission
+  } = useManageUserForm(props);
   const breadcrumbList = [
     {
       title: t('menu:system_administration'),
-      key: ROUTES.MANAGE_USER
+      key: ROUTES.MANAGE_USER_ADD
     },
     {
       title: <Link href={ROUTES.MANAGE_USER}>{t('manage_user:manage_user')}</Link>,
@@ -31,13 +44,13 @@ const ManageUserForm = (props: ManageUserFormProps) => {
     },
     {
       title: t('manage_user:title', { action }),
-      key: ROUTES.MANAGE_USER
+      key: ROUTES.MANAGE_USER_EDIT
     }
   ];
-  // const { permission } = useManageUserPermission();
-
+  const { permission } = useManageUserPermission();
   const {
     control,
+    setValue,
     handleSubmit,
     formState: {}
   } = userForm;
@@ -60,24 +73,24 @@ const ManageUserForm = (props: ManageUserFormProps) => {
             />
             <TextBase classNames="title4" text={t('manage_user:title', { action })} />
           </div>
-          {/*{isView && permission.canEdit && (*/}
-          <Flex
-            flex={K_SIZE_1}
-            justify={'end'}
-            gap={K_SIZE_16}
-            className={'mobile:w-full mobile:flex-col'}
-          >
-            <Flex gap={K_SIZE_16}>
-              <ButtonBase
-                type={'ghost'}
-                customContent={t('common:edit')}
-                leftIcon={'ICON_EDIT'}
-                onClick={onEdit}
-                classNames={'mobile:flex-1 mobile:justify-center'}
-              />
+          {isView && permission.canEdit && (
+            <Flex
+              flex={K_SIZE_1}
+              justify={'end'}
+              gap={K_SIZE_16}
+              className={'mobile:w-full mobile:flex-col'}
+            >
+              <Flex gap={K_SIZE_16}>
+                <ButtonBase
+                  type={'ghost'}
+                  customContent={t('common:edit')}
+                  leftIcon={'ICON_EDIT'}
+                  onClick={onEdit}
+                  classNames={'mobile:flex-1 mobile:justify-center'}
+                />
+              </Flex>
             </Flex>
-          </Flex>
-          {/*)}*/}
+          )}
         </Flex>
         <Divider className={'my-16'} />
         <div className="grid grid-cols-3 gap-16 mobile:grid-cols-1">
@@ -89,23 +102,26 @@ const ManageUserForm = (props: ManageUserFormProps) => {
             control={control}
             disabled={!isAddMode}
           />
-          <AppTextFieldControl
-            name="password"
-            label={'Mật khẩu'}
-            placeholder={'Nhập mật khẩu'}
-            isView={isView}
-            control={control}
-            type="password"
-            disabled={!isAddMode}
-          />
-          <AppTextFieldControl
-            name="fullName"
-            label={t('manage_user:fullname')}
-            placeholder={t('manage_user:enter_fullname')}
-            isView={isView}
-            control={control}
-            disabled={!isAddMode}
-          />
+          {isAddMode && (
+            <AppTextFieldControl
+              name="password"
+              label={'Mật khẩu'}
+              placeholder={'Nhập mật khẩu'}
+              isView={isView}
+              control={control}
+              type="password"
+              disabled={!isAddMode}
+            />
+          )}
+
+          {/*<AppTextFieldControl*/}
+          {/*  name="fullName"*/}
+          {/*  label={t('manage_user:fullname')}*/}
+          {/*  placeholder={t('manage_user:enter_fullname')}*/}
+          {/*  isView={isView}*/}
+          {/*  control={control}*/}
+          {/*  disabled={!isAddMode}*/}
+          {/*/>*/}
           <AppTextFieldControl
             name="email"
             label={t('manage_user:email')}
@@ -124,6 +140,7 @@ const ManageUserForm = (props: ManageUserFormProps) => {
                   value={value}
                   onSelectOption={({ key }) => {
                     onChange(key);
+                    setValue('permissions', getUserPermission(key));
                   }}
                   label={t('manage_user:role')}
                   placeholder={t('manage_user:select_role')}
@@ -135,9 +152,20 @@ const ManageUserForm = (props: ManageUserFormProps) => {
               );
             }}
           />
+          {!isAddMode && !isAddMode && (
+            <AppSelectControl
+              name={'status'}
+              label={t('common:status')}
+              placeholder={t('common:select_pla', {
+                label: t('common:status').toLowerCase()
+              })}
+              options={USER_STATUS_OPTIONS}
+              control={control}
+            />
+          )}
         </div>
         <Divider className={'mb-16 mt-20'} />
-        {/*<PermissionTableView form={userForm as any} isView />*/}
+        <PermissionTableView form={userForm as any} isView />
         {!isView && (
           //  eslint-disable-next-line tailwindcss/no-contradicting-classname
           <div className="fixed bottom-0 left-[254px] right-0 z-[9] bg-color-50 shadow-up-m shadow-[rgb(var(--color-black)/0.05)] tablet:left-0">

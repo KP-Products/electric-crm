@@ -43,7 +43,8 @@ const ExpandedTable = ({ data, form, isView }: ExpandedTableProps) => {
         <Checkbox
           checked={isChecked}
           onChange={(e) => !isView && handleChange(e.target.checked)}
-          className={clsx({ 'pointer-events-none': isView })}
+          className={clsx({ 'pointer-events-none opacity-50 cursor-not-allowed': isView })}
+          disabled={isView}
         />
       );
     },

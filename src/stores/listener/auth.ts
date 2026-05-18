@@ -16,9 +16,11 @@ takeLatestListeners({
       onFailed();
       return;
     }
-    const { accessToken, username } = response.data;
+    const { accessToken, username, roles } = response.data;
     listenerApi.dispatch(authActions.setUser({ username } as User));
     listenerApi.dispatch(authActions.setToken(accessToken));
+    listenerApi.dispatch(authActions.setActions(roles));
+
     onSuccess(response);
   }
 });

@@ -26,7 +26,7 @@ const IconHover = ({
 }: Props) => {
   return (
     <Tooltip
-      className={`cursor-pointer text-color-700 hover:text-color-800 ${rootClassName}`}
+      className={`cursor-pointer text-color-700 ${rootClassName}`}
       placement={'bottomLeft'}
       title={title}
       color={'rgb(var(--color-50)'}

@@ -37,7 +37,6 @@ export interface DownloadListUserRes extends ResultBase<string> {}
 export interface AddUserReq {
   username: string;
   email: string;
-  // fullName: string;
   password: string;
   role: string;
 }
@@ -109,5 +108,13 @@ export interface UserSearchList {
 export interface UserSearchRes extends ResultBase<UserSearchList> {}
 export enum STATUS {
   ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE'
+  INACTIVE = 'INACTIVE',
+  LOCKED = 'LOCKED',
+}
+export interface DeleteUserReq {
+  userId: string;
+}
+export interface AssignUserRoleReq {
+  userId: string;
+  roleCodes: string[];
 }

@@ -12,6 +12,9 @@ const ApiEndPoint = {
   ADD_LIST_USER: '/admin/users/create-list',
   UPLOAD_USER: '/admin/users/upload',
   EDIT_USER: '/admin/users/update',
+  DELETE_USER: '/admin/users/delete',
+  ASSIGN_ROLE_USER: '/admin/users/roles/assign',
+  REVOKE_ROLE_USER: '/admin/users/roles/revoke',
   // USER
 
   // ROLE

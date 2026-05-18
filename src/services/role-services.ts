@@ -1,5 +1,5 @@
 import appServices from '@app-services';
-import { ApiResponse } from 'model/common';
+import { ApiResponse, ResultBase } from 'model/common';
 import {
   AddRoleReq,
   AddRoleRes,
@@ -14,11 +14,12 @@ import {
   GetListRoleReq,
   GetListRoleRes,
   GetRoleDetailReq,
-  GetRoleDetailRes
+  GetRoleDetailRes,
+  Role
 } from 'model/role';
 import { ApiConstants } from './networking/app-apis';
 
-async function getListRole(): Promise<ApiResponse<GetListRoleRes>> {
+async function getListRole(): Promise<ApiResponse<ResultBase<Role[]>>> {
   try {
     const rs = await appServices.post(ApiConstants.GET_LIST_ROLE);
     const data = rs.data;

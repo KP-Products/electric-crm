@@ -13,12 +13,12 @@ takeLatestListeners({
       onFailed?.();
       return;
     }
-    const userList = response?.data || [];
-    listenerApi.dispatch(
-      userActions.setUserList(
-        userList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      )
-    );
+    // const userList = response?.data || [];
+    // listenerApi.dispatch(
+    //   userActions.setUserList(
+    //     userList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    //   )
+    // );
     onSuccess?.(response);
   }
 });
@@ -29,16 +29,10 @@ takeLatestListeners({
     listenerApi.dispatch(userActions.setLoadingList(true));
     const response = await userServices.getUserSearchList(body);
     listenerApi.dispatch(userActions.setLoadingList(false));
-    if (!response || !response?.data?.items) {
+    if (!response || !response?.data) {
       onFailed?.();
       return;
     }
-    // const userList = response?.data?.items || [];
-    // listenerApi.dispatch(
-    //   userActions.setUserList(
-    //     userList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    //   )
-    // );
     onSuccess?.(response);
   }
 });
@@ -108,6 +102,48 @@ takeLatestListeners({
     const { body, onSuccess, onFailed } = action.payload;
     listenerApi.dispatch(userActions.setLoadingDetail(true));
     const response = await userServices.editUser(body);
+    listenerApi.dispatch(userActions.setLoadingDetail(false));
+    if (!response || !response?.data) {
+      onFailed?.();
+      return;
+    }
+    onSuccess?.(response);
+  }
+});
+takeLatestListeners({
+  actionCreator: userActions.deleteUser,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(userActions.setLoadingDetail(true));
+    const response = await userServices.deleteUser(body);
+    listenerApi.dispatch(userActions.setLoadingDetail(false));
+    if (!response || !response?.data) {
+      onFailed?.();
+      return;
+    }
+    onSuccess?.(response);
+  }
+});
+takeLatestListeners({
+  actionCreator: userActions.assignRoleUser,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(userActions.setLoadingDetail(true));
+    const response = await userServices.assignRoleUser(body);
+    listenerApi.dispatch(userActions.setLoadingDetail(false));
+    if (!response || !response?.data) {
+      onFailed?.();
+      return;
+    }
+    onSuccess?.(response);
+  }
+});
+takeLatestListeners({
+  actionCreator: userActions.revokeRoleUser,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(userActions.setLoadingDetail(true));
+    const response = await userServices.revokeRoleUser(body);
     listenerApi.dispatch(userActions.setLoadingDetail(false));
     if (!response || !response?.data) {
       onFailed?.();
