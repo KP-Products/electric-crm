@@ -50,7 +50,16 @@ const ApiEndPoint = {
   ADD_METER: '/admin/meters/create',
   EDIT_METER: '/admin/meters/update',
   DELETE_METER: '/admin/meters/delete',
-  METER_DETAIL: '/admin/meters/detail'
+  METER_DETAIL: '/admin/meters/detail',
+  // METER
+
+  // DOCUMENT
+  DOCUMENT_UPLOAD: '/admin/documents/upload',
+  DOCUMENT_UPDATE: '/admin/documents/update',
+  DOCUMENT_SEARCH: '/admin/documents/search',
+  DOCUMENT_LIST: '/admin/documents/list',
+  DOCUMENT_DETAIL: '/admin/documents/get',
+  DOCUMENT_DELETE: '/admin/documents/delete'
 } as const;
 
 const configApi = () => {

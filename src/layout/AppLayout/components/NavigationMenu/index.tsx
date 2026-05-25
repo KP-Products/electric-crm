@@ -1,5 +1,6 @@
 'use client';
 import {
+  FileTextOutlined,
   ReconciliationOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
@@ -86,6 +87,13 @@ const NavigationMenu = () => {
             key: ROUTES.MANAGE_CUSTOMER,
             label: 'Quản lý khách hàng',
             icon: <UsergroupAddOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.MANAGE_DOCUMENT,
+            label: 'Quản lý hồ sơ giấy tờ',
+            icon: <FileTextOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }

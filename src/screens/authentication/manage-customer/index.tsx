@@ -176,7 +176,7 @@ const ManageCustomerScreen = () => {
                   width: K_SIZE_200
                 },
                 {
-                  title: 'Hợp đồng',
+                  title: 'Loại KH',
                   dataIndex: 'contactName',
                   key: 'contactName',
                   render: (text) => <>{text || NULL_VALUE}</>,
@@ -190,13 +190,6 @@ const ManageCustomerScreen = () => {
                   width: K_SIZE_160
                 },
                 {
-                  title: 'Địa chỉ',
-                  dataIndex: 'address',
-                  key: 'address',
-                  render: (text) => <>{text || NULL_VALUE}</>,
-                  width: K_SIZE_160
-                },
-                {
                   title: 'Số điện thoại',
                   dataIndex: 'phone',
                   key: 'phone',
@@ -205,6 +198,13 @@ const ManageCustomerScreen = () => {
                 },
                 {
                   title: 'Email',
+                  dataIndex: 'email',
+                  key: 'email',
+                  render: (text) => <>{text || NULL_VALUE}</>,
+                  width: K_SIZE_160
+                },
+                {
+                  title: 'Công nợ hiện tại',
                   dataIndex: 'email',
                   key: 'email',
                   render: (text) => <>{text || NULL_VALUE}</>,

@@ -4,5 +4,6 @@ export enum SLICE_NAME {
   USER = 'user',
   ROLE = 'role',
   SYSTEM_PARAMETER = 'systemParameter',
-  METER = 'meter'
+  METER = 'meter',
+  DOCUMENT = 'document'
 }

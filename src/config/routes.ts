@@ -37,4 +37,7 @@ export const ROUTES = {
   MANAGE_METER_ADD: '/meter-management/add',
   MANAGE_METER_EDIT: '/meter-management/edit',
   MANAGE_METER_DETAIL: '/meter-management/detail',
+
+  // DOCUMENT
+  MANAGE_DOCUMENT: '/management/document'
 };
