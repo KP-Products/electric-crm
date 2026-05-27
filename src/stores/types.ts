@@ -5,5 +5,7 @@ export enum SLICE_NAME {
   ROLE = 'role',
   SYSTEM_PARAMETER = 'systemParameter',
   METER = 'meter',
-  DOCUMENT = 'document'
+  CONTRACT = 'contract',
+  DOCUMENT = 'document',
+  SERVICE_LOCATION = 'serviceLocation'
 }

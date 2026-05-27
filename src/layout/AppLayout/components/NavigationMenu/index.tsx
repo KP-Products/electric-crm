@@ -1,5 +1,7 @@
 'use client';
 import {
+  AuditOutlined,
+  EnvironmentOutlined,
   FileTextOutlined,
   ReconciliationOutlined,
   SafetyCertificateOutlined,
@@ -21,7 +23,7 @@ import UserMenu from 'layout/AppLayout/components/UserMenu';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { useAppTranslation } from 'utils/i18n';
-import { PERMISSION_VIEW_ACTION, useCheckAction } from 'utils/permission.util';
+import { PERMISSION_VIEW_ACTION } from 'utils/permission.util';
 import { TextBase } from '../../../../components/text';
 
 export const MENU_GROUP_KEYS = {
@@ -37,8 +39,6 @@ const NavigationMenu = () => {
 
   const selectedMenuKeys = useSelector(selectMenuKeys);
   const selectedOpenKeys = useSelector(selectOpenKeys);
-
-  const { hasPermission } = useCheckAction();
 
   const handleClickMenuItem = useCallback(
     (info: MenuInfo) => {
@@ -84,6 +84,13 @@ const NavigationMenu = () => {
         icon: <SettingOutlined />,
         children: [
           {
+            key: ROUTES.MANAGE_CONTRACT,
+            label: 'Quản lý hợp đồng mua bán điện',
+            icon: <AuditOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
             key: ROUTES.MANAGE_CUSTOMER,
             label: 'Quản lý khách hàng',
             icon: <UsergroupAddOutlined />,
@@ -94,6 +101,13 @@ const NavigationMenu = () => {
             key: ROUTES.MANAGE_DOCUMENT,
             label: 'Quản lý hồ sơ giấy tờ',
             icon: <FileTextOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.MANAGE_SERVICE_LOCATION,
+            label: 'Quản lý địa điểm sử dụng điện',
+            icon: <EnvironmentOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
@@ -117,25 +131,22 @@ const NavigationMenu = () => {
     [t]
   );
 
-  const filterMenu = useCallback(
-    (items: any[]): ItemType[] => {
-      return items
-        .map((item) => {
-          if (item.children) {
-            const children = filterMenu(item.children);
-            if (!children.length) return null;
+  const filterMenu = useCallback((items: any[]): ItemType[] => {
+    return items
+      .map((item) => {
+        if (item.children) {
+          const children = filterMenu(item.children);
+          if (!children.length) return null;
 
-            return { ...item, children };
-          }
-          // if (item.permission && !hasPermission(item.permission)) {
-          //   return null;
-          // }
-          return item;
-        })
-        .filter(Boolean) as ItemType[];
-    },
-    [hasPermission]
-  );
+          return { ...item, children };
+        }
+        // if (item.permission && !hasPermission(item.permission)) {
+        //   return null;
+        // }
+        return item;
+      })
+      .filter(Boolean) as ItemType[];
+  }, []);
 
   const menuItems = useMemo(() => {
     return filterMenu(rawMenuItems);

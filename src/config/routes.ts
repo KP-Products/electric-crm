@@ -38,6 +38,12 @@ export const ROUTES = {
   MANAGE_METER_EDIT: '/meter-management/edit',
   MANAGE_METER_DETAIL: '/meter-management/detail',
 
+  // CONTRACT
+  MANAGE_CONTRACT: '/management/contract',
+
   // DOCUMENT
-  MANAGE_DOCUMENT: '/management/document'
+  MANAGE_DOCUMENT: '/management/document',
+
+  // SERVICE LOCATION
+  MANAGE_SERVICE_LOCATION: '/management/service-location'
 };

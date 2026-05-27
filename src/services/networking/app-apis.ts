@@ -44,6 +44,15 @@ const ApiEndPoint = {
   CUSTOMER_DOWNLOAD: '/admin/customers/download',
   // MANAGE CUSTOMERS
 
+  // CONTRACT
+  CONTRACT_CREATE: '/contracts/create',
+  CONTRACT_UPDATE: '/contracts/update',
+  CONTRACT_SEARCH: '/contracts/search',
+  CONTRACT_LIST: '/contracts/list',
+  CONTRACT_DETAIL: '/contracts/detail',
+  CONTRACT_DELETE: '/contracts/delete',
+  // CONTRACT
+
   // METER
   GET_LIST_METER: '/admin/meters/list',
   GET_METER_SEARCH_LIST: '/admin/meters/search',
@@ -59,7 +68,16 @@ const ApiEndPoint = {
   DOCUMENT_SEARCH: '/admin/documents/search',
   DOCUMENT_LIST: '/admin/documents/list',
   DOCUMENT_DETAIL: '/admin/documents/get',
-  DOCUMENT_DELETE: '/admin/documents/delete'
+  DOCUMENT_DELETE: '/admin/documents/delete',
+  // DOCUMENT
+
+  // SERVICE LOCATION
+  SERVICE_LOCATION_CREATE: '/admin/locations/create',
+  SERVICE_LOCATION_UPDATE: '/admin/locations/update',
+  SERVICE_LOCATION_SEARCH: '/admin/locations/search',
+  SERVICE_LOCATION_LIST: '/admin/locations/list',
+  SERVICE_LOCATION_DETAIL: '/admin/locations/get',
+  SERVICE_LOCATION_DELETE: '/admin/locations/delete'
 } as const;
 
 const configApi = () => {

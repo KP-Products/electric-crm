@@ -5,4 +5,6 @@ export * from './role';
 export * from './sys-parameter-listener';
 export * from './user';
 export * from './meter';
+export * from './contract';
 export * from './document';
+export * from './service-location';
