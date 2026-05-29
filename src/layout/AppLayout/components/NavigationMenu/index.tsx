@@ -1,5 +1,6 @@
 'use client';
 import {
+  ApartmentOutlined,
   AuditOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
@@ -75,6 +76,13 @@ const NavigationMenu = () => {
             icon: <ReconciliationOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_DEFAULT_PARAMETER_VIEW_ACTION
+          },
+          {
+            key: ROUTES.APPROVAL_MATRIX,
+            label: t('menu:approval_matrix'),
+            icon: <ApartmentOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_APPROVAL_MATRIX_VIEW_ACTION
           }
         ]
       },

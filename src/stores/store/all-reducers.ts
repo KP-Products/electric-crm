@@ -9,6 +9,7 @@ import { meterReducer } from '@redux-slice/meter';
 import { contractReducer } from '@redux-slice/contract';
 import { documentReducer } from '@redux-slice/document';
 import { serviceLocationReducer } from '@redux-slice/service-location';
+import { approvalMatrixReducer } from '@redux-slice/approval-matrix';
 
 export const allReducer = combineReducers({
   app: appReducer,
@@ -20,7 +21,8 @@ export const allReducer = combineReducers({
   meter: meterReducer,
   contract: contractReducer,
   document: documentReducer,
-  serviceLocation: serviceLocationReducer
+  serviceLocation: serviceLocationReducer,
+  approvalMatrix: approvalMatrixReducer
 });
 
 export type RootState = ReturnType<typeof allReducer>;

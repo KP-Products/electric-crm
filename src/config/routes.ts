@@ -45,5 +45,9 @@ export const ROUTES = {
   MANAGE_DOCUMENT: '/management/document',
 
   // SERVICE LOCATION
-  MANAGE_SERVICE_LOCATION: '/management/service-location'
+  MANAGE_SERVICE_LOCATION: '/management/service-location',
+
+  APPROVAL_MATRIX: '/approval-matrix',
+  APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
+  APPROVAL_MATRIX_EDIT: '/approval-matrix/edit'
 };

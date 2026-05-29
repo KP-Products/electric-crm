@@ -77,7 +77,12 @@ const ApiEndPoint = {
   SERVICE_LOCATION_SEARCH: '/admin/locations/search',
   SERVICE_LOCATION_LIST: '/admin/locations/list',
   SERVICE_LOCATION_DETAIL: '/admin/locations/get',
-  SERVICE_LOCATION_DELETE: '/admin/locations/delete'
+  SERVICE_LOCATION_DELETE: '/admin/locations/delete',
+
+  // APPROVAL MATRIX
+  APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
+  EDIT_APPROVAL_MATRIX: '/approval-matrix'
+  // APPROVAL MATRIX
 } as const;
 
 const configApi = () => {

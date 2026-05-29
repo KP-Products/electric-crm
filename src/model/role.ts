@@ -37,6 +37,9 @@ export interface Permission {
   actionSubGroupName: string;
   updatedBy: string;
   updatedAt: string;
+  permissionId: string;
+  action: string;
+  isApproval?: string | number | boolean;
 }
 
 export interface GetListPermissionRes extends ResultBase<Permission[]> {}
