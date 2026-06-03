@@ -2,8 +2,10 @@
 import {
   ApartmentOutlined,
   AuditOutlined,
+  CalculatorOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
+  FundProjectionScreenOutlined,
   ReconciliationOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
@@ -30,7 +32,8 @@ import { TextBase } from '../../../../components/text';
 export const MENU_GROUP_KEYS = {
   SYSTEM_ADMINISTRATION: K_SIZE_1.toString(),
   CONTRACT: K_SIZE_2.toString(),
-  DEVICE: K_SIZE_3.toString()
+  DEVICE: K_SIZE_3.toString(),
+  BILLING: '4'
 };
 
 const NavigationMenu = () => {
@@ -130,6 +133,20 @@ const NavigationMenu = () => {
             key: ROUTES.METER_MANAGEMENT,
             label: 'Quản lý công tơ',
             icon: <SettingOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.BILLING,
+        label: 'Chỉ số - Hoá đơn',
+        icon: <CalculatorOutlined />,
+        children: [
+          {
+            key: ROUTES.MANUAL_METER_READING,
+            label: 'Nhập chỉ số thủ công',
+            icon: <FundProjectionScreenOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }

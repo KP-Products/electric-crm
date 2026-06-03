@@ -22,6 +22,7 @@ import { useCallback, useMemo } from 'react';
 import useApprovalMatrix from 'screens/authentication/approval-matrix/hooks/useApprovalMatrix';
 import useApprovalMatrixPermission from 'screens/authentication/approval-matrix/hooks/useApprovalMatrixPermission';
 import { displayDateTimeFromServer } from 'utils/date';
+import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
 
 const ApprovalMatrix = () => {
   const { t, router, functionList, loadingFunctionList, pagination } = useApprovalMatrix();
@@ -55,9 +56,7 @@ const ApprovalMatrix = () => {
             <TextBase
               text={text || record.action}
               classNames={'sub-title4 !text-secondary-500 cursor-pointer hover:!text-secondary-700'}
-              onClick={() =>
-                router.push(`${ROUTES.APPROVAL_MATRIX_DETAIL}?id=${record.permissionId}`)
-              }
+              onClick={() => router.push(`${ROUTES.APPROVAL_MATRIX_DETAIL}?id=${record.id}`)}
             />
           );
         }
@@ -90,9 +89,7 @@ const ApprovalMatrix = () => {
               title={t('common:edit')}
               icon={'ICON_EDIT'}
               iconHeight={K_SIZE_18}
-              onClick={() =>
-                router.push(`${ROUTES.APPROVAL_MATRIX_EDIT}?id=${record.id}`)
-              }
+              onClick={() => router.push(`${ROUTES.APPROVAL_MATRIX_EDIT}?id=${record.id}`)}
             />
           </div>
         )
@@ -100,36 +97,46 @@ const ApprovalMatrix = () => {
     }
     return cols;
   }, [t, router, renderColumn, pagination, permission]);
-
+  const breadcrumbList = [
+    {
+      title: 'Hợp đồng'
+    },
+    {
+      title: 'Ma trận phê duyệt',
+      key: ROUTES.APPROVAL_MATRIX
+    }
+  ];
   return (
-    <div>
-      <Flex
-        justify={'space-between'}
-        align={'center'}
-        gap={K_SIZE_8}
-        className={'min-h-44 tablet:flex-col tablet:items-start'}
-      >
-        <TextBase classNames="title4" t18n={'menu:approval_matrix'} />
-      </Flex>
-      <Divider className={'my-16 '} />
-      <div className={'overflow-hidden rounded-radius-l border border-color-400 pb-4'}>
-        <AppTable
-          rootClassName={'w-full'}
-          className={'[&_.ant-pagination]:hidden'}
-          scroll={{ x: 'max-content', y: '75vh' }}
-          dataSource={functionList}
-          loading={loadingFunctionList}
-          columns={[...columns]}
-          rowKey={'permissionId'}
+    <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
+      <div>
+        <Flex
+          justify={'space-between'}
+          align={'center'}
+          gap={K_SIZE_8}
+          className={'min-h-44 tablet:flex-col tablet:items-start'}
+        >
+          <TextBase classNames="title4" t18n={'menu:approval_matrix'} />
+        </Flex>
+        <Divider className={'my-16 '} />
+        <div className={'overflow-hidden rounded-radius-l border border-color-400 pb-4'}>
+          <AppTable
+            rootClassName={'w-full'}
+            className={'[&_.ant-pagination]:hidden'}
+            scroll={{ x: 'max-content', y: '75vh' }}
+            dataSource={functionList}
+            loading={loadingFunctionList}
+            columns={[...columns]}
+            rowKey={'permissionId'}
+            pagination={pagination}
+          />
+        </div>
+        <AppPagination
+          currentPage={pagination.current}
+          total={pagination.total}
           pagination={pagination}
         />
       </div>
-      <AppPagination
-        currentPage={pagination.current}
-        total={pagination.total}
-        pagination={pagination}
-      />
-    </div>
+    </PageWithBreadcrumb>
   );
 };
 

@@ -79,6 +79,13 @@ const ApiEndPoint = {
   SERVICE_LOCATION_DETAIL: '/admin/locations/get',
   SERVICE_LOCATION_DELETE: '/admin/locations/delete',
 
+  // BILLING 5.1 - NHAP CHI SO
+  BILLING_READING_PERIOD_UPDATE: '/admin/billing/reading-periods/update',
+  BILLING_READING_PERIOD_SEARCH: '/admin/billing/reading-periods/search',
+  BILLING_READING_PERIOD_GET: '/admin/billing/reading-periods/get',
+  BILLING_READING_PERIOD_DELETE: '/admin/billing/reading-periods/delete',
+  BILLING_READING_PERIOD_CREATE: '/admin/billing/reading-periods/create',
+
   // APPROVAL MATRIX
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
   EDIT_APPROVAL_MATRIX: '/approval-matrix'

@@ -118,7 +118,7 @@ export default function useApprovalMatrixForm({ isView }: ApprovalMatrixFormProp
     (data: ApprovalMatrixForm) => {
       DebugUtils.logS(data);
       const body: EditApprovalMatrixReq = {
-        actionId: data.function.action,
+        actionId: data.function.actionCode,
         levels: data.approvalLevel.map(mapLevelToServer)
       };
       dispatch({
@@ -175,8 +175,9 @@ export default function useApprovalMatrixForm({ isView }: ApprovalMatrixFormProp
     }
     if (userList.length === K_SIZE_0) return;
     const body: GetApprovalMatrixDetailReq = {
-      actionId: functionDetail?.action || ''
+      actionId: functionDetail?.actionCode || ''
     };
+
     dispatch({
       type: GET_APPROVAL_MATRIX_DETAIL,
       payload: {

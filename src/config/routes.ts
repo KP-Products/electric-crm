@@ -47,6 +47,9 @@ export const ROUTES = {
   // SERVICE LOCATION
   MANAGE_SERVICE_LOCATION: '/management/service-location',
 
+  // BILLING
+  MANUAL_METER_READING: '/billing/manual-meter-reading',
+
   APPROVAL_MATRIX: '/approval-matrix',
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
   APPROVAL_MATRIX_EDIT: '/approval-matrix/edit'
