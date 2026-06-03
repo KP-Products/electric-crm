@@ -39,7 +39,7 @@ export const initialPending: PendingTaskState = {
 };
 
 const pendingTaskSlice = createSlice({
-  name: SLICE_NAME.FEE_CODE,
+  name: SLICE_NAME.PENDING_TASK,
   initialState: initialPending,
   reducers: {
     reset: () => initialPending,

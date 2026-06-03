@@ -8,5 +8,6 @@ export enum SLICE_NAME {
   CONTRACT = 'contract',
   DOCUMENT = 'document',
   SERVICE_LOCATION = 'serviceLocation',
-  APPROVAL_MATRIX = 'approvalMatrix'
+  APPROVAL_MATRIX = 'approvalMatrix',
+  PENDING_TASK = 'pendingTask',
 }

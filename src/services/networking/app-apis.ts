@@ -81,8 +81,16 @@ const ApiEndPoint = {
 
   // APPROVAL MATRIX
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
-  EDIT_APPROVAL_MATRIX: '/approval-matrix'
+  EDIT_APPROVAL_MATRIX: '/approval-matrix',
   // APPROVAL MATRIX
+
+  MY_REQUEST_LIST: '/pending-task/my-request/list',
+  TASK_APPROVE_LIST: '/pending-task/approvals/list',
+  TASK_DETAIL: '/pending-task/detail',
+  APPROVE_TASK: '/approval-matrix/approve',
+  REJECT_TASK: '/approval-matrix/reject',
+  DELETE_TASK: '/approval-matrix/delete-bbrequest',
+  HISTORY_TASK: '/user-action-log/get-list',
 } as const;
 
 const configApi = () => {
