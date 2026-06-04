@@ -3,6 +3,7 @@ import {
   ApartmentOutlined,
   AuditOutlined,
   CalculatorOutlined,
+  CloudSyncOutlined,
   CarryOutOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
@@ -163,6 +164,13 @@ const NavigationMenu = () => {
             key: ROUTES.MANUAL_METER_READING,
             label: 'Nhập chỉ số thủ công',
             icon: <FundProjectionScreenOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.REMOTE_METER_READING,
+            label: 'Nhập chỉ số đo xa',
+            icon: <CloudSyncOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }

@@ -86,6 +86,10 @@ const ApiEndPoint = {
   BILLING_READING_PERIOD_DELETE: '/admin/billing/reading-periods/delete',
   BILLING_READING_PERIOD_CREATE: '/admin/billing/reading-periods/create',
 
+  // BILLING 5.2 - NHAP CHI SO TU FILE
+  BILLING_REMOTE_READING_IMPORT_UPLOAD: '/admin/billing/readings/import/upload',
+  BILLING_REMOTE_READING_IMPORT_TEMPLATE: '/admin/billing/readings/import/template',
+
   // APPROVAL MATRIX
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
   EDIT_APPROVAL_MATRIX: '/approval-matrix',
@@ -97,7 +101,7 @@ const ApiEndPoint = {
   APPROVE_TASK: '/approval-matrix/approve',
   REJECT_TASK: '/approval-matrix/reject',
   DELETE_TASK: '/approval-matrix/delete-bbrequest',
-  HISTORY_TASK: '/user-action-log/get-list',
+  HISTORY_TASK: '/user-action-log/get-list'
 } as const;
 
 const configApi = () => {

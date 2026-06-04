@@ -49,6 +49,7 @@ export const ROUTES = {
 
   // BILLING
   MANUAL_METER_READING: '/billing/manual-meter-reading',
+  REMOTE_METER_READING: '/billing/remote-meter-reading',
 
   APPROVAL_MATRIX: '/approval-matrix',
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
