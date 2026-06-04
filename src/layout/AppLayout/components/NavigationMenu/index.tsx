@@ -3,11 +3,13 @@ import {
   ApartmentOutlined,
   AuditOutlined,
   CalculatorOutlined,
+  CarryOutOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
   FundProjectionScreenOutlined,
   ReconciliationOutlined,
   SafetyCertificateOutlined,
+  ScheduleOutlined,
   SettingOutlined,
   TeamOutlined,
   UsergroupAddOutlined
@@ -86,6 +88,20 @@ const NavigationMenu = () => {
             icon: <ApartmentOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_APPROVAL_MATRIX_VIEW_ACTION
+          },
+          {
+            key: ROUTES.PENDING_TASK,
+            label: t('menu:pending_tasks'),
+            icon: <ScheduleOutlined />,
+            type: 'item'
+            // permission: PERMISSION_VIEW_ACTION.OTHER_FEATURE_WAITING_APPROVE_TASK_VIEW_ACTION
+          },
+          {
+            key: ROUTES.MY_PENDING,
+            label: t('menu:my_pending_tasks'),
+            icon: <CarryOutOutlined />,
+            type: 'item',
+            // permission: PERMISSION_VIEW_ACTION.OTHER_FEATURE_MY_PENDING_TASK_VIEW_ACTION
           }
         ]
       },

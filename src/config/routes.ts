@@ -52,5 +52,8 @@ export const ROUTES = {
 
   APPROVAL_MATRIX: '/approval-matrix',
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
-  APPROVAL_MATRIX_EDIT: '/approval-matrix/edit'
+  APPROVAL_MATRIX_EDIT: '/approval-matrix/edit',
+
+  PENDING_TASK: '/pending-task',
+  MY_PENDING: '/my-pending'
 };

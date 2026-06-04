@@ -140,7 +140,7 @@ export enum FEE_CODE_STATUS {
   DELETED = 'DELETED',
   AWAIT_APPROVE = 'AWAIT_APPROVE',
   REJECTED = 'REJECTED',
-  APPROVE = 'APPROVE'
+  APPROVED = 'APPROVED'
 }
 
 export const FEE_CODE_STATUS_OPTION = [
@@ -157,7 +157,7 @@ export const FEE_CODE_STATUS_OPTION = [
     label: i18next.t('common:status_reject_approve')
   },
   {
-    value: FEE_CODE_STATUS.APPROVE,
+    value: FEE_CODE_STATUS.APPROVED,
     label: i18next.t('common:status_approved')
   }
 ];
