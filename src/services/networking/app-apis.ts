@@ -86,6 +86,13 @@ const ApiEndPoint = {
   BILLING_READING_PERIOD_DELETE: '/admin/billing/reading-periods/delete',
   BILLING_READING_PERIOD_CREATE: '/admin/billing/reading-periods/create',
 
+  // BILLING 2.1 - DANH MUC GIA DIEN
+  BILLING_TARIFF_LIST: '/admin/billing/tariffs/list',
+  BILLING_TARIFF_DETAIL: '/admin/billing/tariffs/detail',
+  BILLING_TARIFF_CREATE: '/admin/billing/tariffs/create',
+  BILLING_TARIFF_TOU_LIST: '/admin/billing/tariffs/tou/list',
+  BILLING_TARIFF_TOU_CREATE: '/admin/billing/tariffs/tou/create',
+
   // BILLING 5.2 - NHAP CHI SO TU FILE
   BILLING_REMOTE_READING_IMPORT_UPLOAD: '/admin/billing/readings/import/upload',
   BILLING_REMOTE_READING_IMPORT_TEMPLATE: '/admin/billing/readings/import/template',

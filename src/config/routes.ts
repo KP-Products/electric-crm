@@ -48,6 +48,7 @@ export const ROUTES = {
   MANAGE_SERVICE_LOCATION: '/management/service-location',
 
   // BILLING
+  ELECTRIC_TARIFF: '/billing/electric-tariff',
   MANUAL_METER_READING: '/billing/manual-meter-reading',
   REMOTE_METER_READING: '/billing/remote-meter-reading',
 

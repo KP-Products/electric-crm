@@ -1,0 +1,697 @@
+'use client';
+
+import { CalculatorOutlined, PlusOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
+import {
+  K_SIZE_0,
+  K_SIZE_108,
+  K_SIZE_130,
+  K_SIZE_160,
+  K_SIZE_18,
+  K_SIZE_200,
+  K_SIZE_220,
+  K_SIZE_8,
+  NULL_VALUE,
+  REQUIRED_MARK
+} from '@constant';
+import { Divider, Drawer, Flex, Spin } from 'antd';
+import ButtonBase from 'components/button';
+import { AppDatePickerControl } from 'components/date-picker';
+import IconHover from 'components/icon-vec-local/icon-hover';
+import { AppSelect } from 'components/select';
+import { AppSelectControl } from 'components/select';
+import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
+import AppTable from 'components/table';
+import AppPagination from 'components/table/pagination';
+import { TextBase } from 'components/text';
+import { AppTextField, AppTextFieldControl } from 'components/text-field';
+import { ROUTES } from 'config/routes';
+import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import { ElectricTariff, ElectricTariffTouPrice } from 'model/electric-tariff';
+import { useMemo } from 'react';
+import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
+import { useResponsive } from 'utils/responsive';
+import useElectricTariff, {
+  ElectricTariffFilter,
+  getPriceWithVat,
+  TARIFF_STATUS
+} from './useElectricTariff';
+
+const DATE_API_FORMAT = 'YYYY-MM-DD';
+
+const CUSTOMER_TYPE_OPTIONS = [
+  { value: 'SINH_HOAT', label: 'Sinh hoạt' },
+  { value: 'SAN_XUAT', label: 'Sản xuất' },
+  { value: 'KINH_DOANH', label: 'Kinh doanh' },
+  { value: 'HANH_CHINH', label: 'Hành chính' }
+];
+
+const VOLTAGE_LEVEL_OPTIONS = [
+  { value: 'V_0_4_KV', label: '0.4kV' },
+  { value: 'V_6_KV', label: '6kV' },
+  { value: 'V_22_KV', label: '22kV' },
+  { value: 'V_35_KV', label: '35kV' },
+  { value: 'V_110_KV', label: '110kV' }
+];
+
+const STATUS_OPTIONS = [
+  { value: TARIFF_STATUS.ACTIVE, label: 'Hiệu lực' },
+  { value: TARIFF_STATUS.INACTIVE, label: 'Ngưng áp dụng' }
+];
+
+const CUSTOMER_TYPE_LABEL_MAP: Record<string, string> = {
+  SINH_HOAT: 'Sinh hoạt',
+  SAN_XUAT: 'Sản xuất',
+  KINH_DOANH: 'Kinh doanh',
+  HANH_CHINH: 'Hành chính',
+  HC: 'Hành chính',
+  'Sinh hoạt': 'Sinh hoạt',
+  'Sản xuất': 'Sản xuất',
+  'Kinh doanh': 'Kinh doanh',
+  'Hành chính': 'Hành chính'
+};
+
+const VOLTAGE_LEVEL_LABEL_MAP: Record<string, string> = {
+  V_0_4_KV: '0.4kV',
+  V_6_KV: '6kV',
+  V_22_KV: '22kV',
+  V_35_KV: '35kV',
+  V_110_KV: '110kV',
+  '0.4kV': '0.4kV',
+  '6kV': '6kV',
+  '22kV': '22kV',
+  '35kV': '35kV',
+  '110kV': '110kV'
+};
+
+const TOU_LABEL_MAP: Record<string, string> = {
+  BAC_1: 'Bậc 1',
+  BAC_2: 'Bậc 2',
+  BAC_3: 'Bậc 3',
+  BAC_4: 'Bậc 4',
+  BAC_5: 'Bậc 5',
+  BAC_6: 'Bậc 6',
+  BT: 'Bình thường',
+  CD: 'Cao điểm',
+  TD: 'Thấp điểm'
+};
+
+const FILTER_LABEL_MAP: Record<keyof ElectricTariffFilter, string> = {
+  tariffCode: 'Mã giá',
+  tariffName: 'Tên giá',
+  customerType: 'Mục đích',
+  voltageLevel: 'Cấp điện áp',
+  status: 'Trạng thái'
+};
+
+const getStatusMeta = (status?: string) => {
+  if (status === TARIFF_STATUS.ACTIVE || status === 'HIEU_LUC') {
+    return { label: 'Hiệu lực', type: TYPE_STATUS.SUCCESS };
+  }
+
+  if (status === TARIFF_STATUS.INACTIVE || status === 'NGUNG_AP_DUNG') {
+    return { label: 'Ngưng áp dụng', type: TYPE_STATUS.DISABLED };
+  }
+
+  return { label: status || NULL_VALUE, type: TYPE_STATUS.PENDING };
+};
+
+const formatCurrency = (value?: number) => {
+  if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: K_SIZE_0
+  }).format(value);
+};
+
+const formatFilterValue = (key: keyof ElectricTariffFilter, value: string) => {
+  if (key === 'customerType') return CUSTOMER_TYPE_LABEL_MAP[value] || value;
+  if (key === 'voltageLevel') return VOLTAGE_LEVEL_LABEL_MAP[value] || value;
+  if (key === 'status') return getStatusMeta(value).label;
+  return value;
+};
+
+const ElectricTariffScreen = () => {
+  const { isMobile, isTablet } = useResponsive();
+  const {
+    tariffList,
+    total,
+    currentPage,
+    pagination,
+    filterDraft,
+    filterApplied,
+    listLoading,
+    detailLoading,
+    openCreate,
+    openDetail,
+    openTouForm,
+    selectedDetail,
+    touTargetTariff,
+    touPrices,
+    tariffForm,
+    touPriceForm,
+    onChangeFilter,
+    onApplyFilter,
+    onResetFilter,
+    onOpenCreate,
+    onCloseCreate,
+    handleCreateTariff,
+    onOpenDetail,
+    onCloseDetail,
+    onOpenTouCreate,
+    onCloseTouForm,
+    handleCreateTouPrice
+  } = useElectricTariff();
+
+  const {
+    control: tariffControl,
+    handleSubmit: handleTariffFormSubmit,
+    formState: { isValid: isTariffValid }
+  } = tariffForm;
+
+  const {
+    control: touControl,
+    handleSubmit: handleTouFormSubmit,
+    formState: { isValid: isTouValid }
+  } = touPriceForm;
+
+  const activeFilters = useMemo(
+    () =>
+      (Object.entries(filterApplied) as [keyof ElectricTariffFilter, string][]).filter(
+        ([, value]) => Boolean(value)
+      ),
+    [filterApplied]
+  );
+
+  const columns = useMemo<any[]>(
+    () => [
+      {
+        title: 'Mã giá',
+        dataIndex: 'tariffCode',
+        key: 'tariffCode',
+        width: K_SIZE_160,
+        render: (text: string, record: ElectricTariff) => (
+          <TextBase
+            classNames="sub-title4 cursor-pointer !text-secondary-500 hover:!text-secondary-700"
+            text={text || NULL_VALUE}
+            onClick={() => onOpenDetail(record)}
+          />
+        )
+      },
+      {
+        title: 'Tên giá',
+        dataIndex: 'tariffName',
+        key: 'tariffName',
+        width: K_SIZE_220,
+        render: (text: string) => (
+          <div title={text} className="max-w-[260px] truncate">
+            {text || NULL_VALUE}
+          </div>
+        )
+      },
+      {
+        title: 'Mục đích sử dụng',
+        dataIndex: 'customerType',
+        key: 'customerType',
+        width: K_SIZE_160,
+        render: (text: string) => CUSTOMER_TYPE_LABEL_MAP[text] || text || NULL_VALUE
+      },
+      {
+        title: 'Cấp điện áp',
+        dataIndex: 'voltageLevel',
+        key: 'voltageLevel',
+        width: K_SIZE_130,
+        render: (text: string) => VOLTAGE_LEVEL_LABEL_MAP[text] || text || NULL_VALUE
+      },
+      {
+        title: 'Hiệu lực từ',
+        dataIndex: 'effectiveFrom',
+        key: 'effectiveFrom',
+        width: K_SIZE_130,
+        render: (text: string) => displayDateFromServer(text)
+      },
+      {
+        title: 'Hiệu lực đến',
+        dataIndex: 'effectiveTo',
+        key: 'effectiveTo',
+        width: K_SIZE_130,
+        render: (text: string) => displayDateFromServer(text)
+      },
+      {
+        title: 'Trạng thái',
+        dataIndex: 'status',
+        key: 'status',
+        width: K_SIZE_130,
+        render: (status: string) => {
+          const meta = getStatusMeta(status);
+          return <Status type={meta.type} kind={KIND_STATUS.SECONDARY} content={meta.label} />;
+        }
+      },
+      {
+        title: 'Ngày tạo',
+        dataIndex: 'createdAt',
+        key: 'createdAt',
+        width: K_SIZE_200,
+        render: (text: string) => displayDateTimeFromServer(text)
+      },
+      {
+        title: 'Thao tác',
+        fixed: 'right',
+        align: 'center',
+        width: K_SIZE_108,
+        render: (_: unknown, record: ElectricTariff) => (
+          <div className="flex justify-center gap-8">
+            <IconHover
+              rootClassName="text-color-800"
+              title="Xem chi tiết"
+              icon="ICON_EYE_OPEN"
+              iconHeight={K_SIZE_18}
+              onClick={() => onOpenDetail(record)}
+            />
+            <IconHover
+              rootClassName="text-color-800"
+              title="Thêm bậc giá"
+              icon="IC_ADD_OUTLINE2"
+              iconHeight={K_SIZE_18}
+              onClick={() => onOpenTouCreate(record)}
+            />
+          </div>
+        )
+      }
+    ],
+    [onOpenDetail, onOpenTouCreate]
+  );
+
+  const touColumns = useMemo<any[]>(
+    () => [
+      {
+        title: 'Bậc/TOU',
+        dataIndex: 'tou',
+        key: 'tou',
+        width: K_SIZE_160,
+        render: (text: string) => TOU_LABEL_MAP[text] || text || NULL_VALUE
+      },
+      {
+        title: 'Đơn giá',
+        dataIndex: 'unitPrice',
+        key: 'unitPrice',
+        align: 'right',
+        width: K_SIZE_160,
+        render: (value: number) => formatCurrency(value)
+      },
+      {
+        title: 'VAT 10%',
+        dataIndex: 'unitPrice',
+        key: 'vat',
+        align: 'right',
+        width: K_SIZE_130,
+        render: (value: number) => formatCurrency(value ? value * 0.1 : undefined)
+      },
+      {
+        title: 'Đơn giá sau VAT',
+        dataIndex: 'unitPrice',
+        key: 'priceWithVat',
+        align: 'right',
+        width: K_SIZE_160,
+        render: (value: number) => formatCurrency(getPriceWithVat(value))
+      },
+      {
+        title: 'Cấp điện áp',
+        dataIndex: 'voltageLevel',
+        key: 'voltageLevel',
+        width: K_SIZE_130,
+        render: (text: string) => VOLTAGE_LEVEL_LABEL_MAP[text] || text || NULL_VALUE
+      },
+      {
+        title: 'Hiệu lực',
+        key: 'effective',
+        width: K_SIZE_200,
+        render: (_: unknown, record: ElectricTariffTouPrice) =>
+          `${displayDateFromServer(record.effectiveFrom || '')} - ${displayDateFromServer(
+            record.effectiveTo || ''
+          )}`
+      }
+    ],
+    []
+  );
+
+  const breadcrumbList = [
+    {
+      title: 'Chỉ số - Hoá đơn'
+    },
+    {
+      title: 'Danh mục giá điện',
+      key: ROUTES.ELECTRIC_TARIFF
+    }
+  ];
+
+  return (
+    <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
+      <section>
+        <Flex
+          justify="space-between"
+          align="center"
+          gap={K_SIZE_8}
+          className="mobile:flex-col mobile:items-start"
+        >
+          <div>
+            <TextBase classNames="title4" text="Danh Mục Giá Điện" />
+            <TextBase
+              classNames="body3 !text-color-700"
+              text="Quản lý biểu giá theo mục đích sử dụng, cấp điện áp và thời kỳ hiệu lực"
+            />
+          </div>
+          <ButtonBase
+            type="ghost"
+            customContent={
+              <div className="flex items-center gap-8">
+                <PlusOutlined />
+                <span>Thêm biểu giá</span>
+              </div>
+            }
+            onClick={onOpenCreate}
+            classNames="mobile:w-full mobile:justify-center"
+          />
+        </Flex>
+
+        <Divider className="my-16" />
+
+        <div className="mb-12 grid grid-cols-[1fr_1fr_150px_150px_150px_auto_auto] gap-8 tablet:grid-cols-2 mobile:grid-cols-1">
+          <AppTextField
+            name="tariffCode"
+            value={filterDraft.tariffCode}
+            onChange={(event) => onChangeFilter('tariffCode', event.target.value)}
+            placeholder="Mã giá"
+            size="middle"
+          />
+          <AppTextField
+            name="tariffName"
+            value={filterDraft.tariffName}
+            onChange={(event) => onChangeFilter('tariffName', event.target.value)}
+            placeholder="Tên giá"
+            size="middle"
+          />
+          <AppSelect
+            name="customerType"
+            value={filterDraft.customerType}
+            options={CUSTOMER_TYPE_OPTIONS}
+            placeholder="Mục đích"
+            size="middle"
+            onSelectOption={({ key }) => onChangeFilter('customerType', String(key))}
+          />
+          <AppSelect
+            name="voltageLevel"
+            value={filterDraft.voltageLevel}
+            options={VOLTAGE_LEVEL_OPTIONS}
+            placeholder="Cấp điện áp"
+            size="middle"
+            onSelectOption={({ key }) => onChangeFilter('voltageLevel', String(key))}
+          />
+          <AppSelect
+            name="status"
+            value={filterDraft.status}
+            options={STATUS_OPTIONS}
+            placeholder="Trạng thái"
+            size="middle"
+            onSelectOption={({ key }) => onChangeFilter('status', String(key))}
+          />
+          <ButtonBase
+            type="primary"
+            size={40}
+            onClick={onApplyFilter}
+            customContent={
+              <div className="flex items-center justify-center gap-8">
+                <SearchOutlined />
+                <span>Tìm</span>
+              </div>
+            }
+            classNames="justify-center"
+          />
+          <ButtonBase
+            type="ghost"
+            size={40}
+            onClick={onResetFilter}
+            customContent={
+              <div className="flex items-center justify-center gap-8">
+                <SyncOutlined />
+                <span>Đặt lại</span>
+              </div>
+            }
+            classNames="justify-center"
+          />
+        </div>
+
+        {activeFilters.length > K_SIZE_0 && (
+          <div className="mb-8 flex flex-wrap gap-8 text-12 text-color-700">
+            {activeFilters.map(([key, value]) => (
+              <span key={key} className="rounded-[4px] bg-color-200 px-8 py-4">
+                {FILTER_LABEL_MAP[key]}: {formatFilterValue(key, value)}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <Spin spinning={listLoading && tariffList.length > K_SIZE_0}>
+          <div className="overflow-hidden rounded-radius-l border border-color-400 duration-500">
+            <AppTable
+              loading={listLoading}
+              rootClassName="w-full"
+              className="[&_.ant-pagination]:hidden"
+              scroll={{ x: 'max-content', y: '70vh' }}
+              dataSource={tariffList}
+              columns={columns}
+              rowKey="id"
+              pagination={pagination}
+            />
+          </div>
+          <AppPagination currentPage={currentPage} total={total} pagination={pagination} />
+        </Spin>
+
+        <form id="electric-tariff-form" onSubmit={handleTariffFormSubmit(handleCreateTariff)}>
+          <Drawer
+            open={openCreate}
+            title="Thêm biểu giá điện"
+            destroyOnClose
+            placement="right"
+            onClose={onCloseCreate}
+            width={isTablet || isMobile ? '82vw' : '42vw'}
+            footer={
+              <Flex justify="end" gap={K_SIZE_8}>
+                <ButtonBase type="ghost" customContent="Đóng" onClick={onCloseCreate} />
+                <ButtonBase
+                  type="primary"
+                  form="electric-tariff-form"
+                  htmlType="submit"
+                  disabled={!isTariffValid || detailLoading}
+                  customContent="Lưu"
+                />
+              </Flex>
+            }
+          >
+            <div className="grid gap-12">
+              <AppTextFieldControl
+                name="tariffCode"
+                control={tariffControl}
+                label="Mã giá"
+                labelSuffix={REQUIRED_MARK}
+                labelSuffixClassName="text-error-600"
+                placeholder="VD: SH-BT-2026"
+              />
+              <AppTextFieldControl
+                name="tariffName"
+                control={tariffControl}
+                label="Tên giá"
+                labelSuffix={REQUIRED_MARK}
+                labelSuffixClassName="text-error-600"
+                placeholder="VD: Giá sinh hoạt bậc thang"
+              />
+              <AppSelectControl
+                name="customerType"
+                control={tariffControl}
+                label="Mục đích sử dụng"
+                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                options={CUSTOMER_TYPE_OPTIONS}
+              />
+              <AppSelectControl
+                name="voltageLevel"
+                control={tariffControl}
+                label="Cấp điện áp"
+                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                options={VOLTAGE_LEVEL_OPTIONS}
+              />
+              <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
+                <AppDatePickerControl
+                  name="effectiveFrom"
+                  control={tariffControl}
+                  backendFormat={DATE_API_FORMAT}
+                  label="Hiệu lực từ"
+                  labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
+                />
+                <AppDatePickerControl
+                  name="effectiveTo"
+                  control={tariffControl}
+                  backendFormat={DATE_API_FORMAT}
+                  label="Hiệu lực đến"
+                  allowClear
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
+                />
+              </div>
+              <AppSelectControl
+                name="status"
+                control={tariffControl}
+                label="Trạng thái"
+                options={STATUS_OPTIONS}
+              />
+            </div>
+          </Drawer>
+        </form>
+
+        <Drawer
+          open={openDetail}
+          title="Chi tiết biểu giá điện"
+          destroyOnClose
+          placement="right"
+          onClose={onCloseDetail}
+          width={isTablet || isMobile ? '90vw' : '62vw'}
+          extra={
+            <ButtonBase
+              type="ghost"
+              customContent={
+                <div className="flex items-center gap-8">
+                  <PlusOutlined />
+                  <span>Thêm bậc giá</span>
+                </div>
+              }
+              onClick={() => onOpenTouCreate()}
+            />
+          }
+        >
+          <Spin spinning={detailLoading}>
+            <div className="mb-16 grid grid-cols-2 gap-12 mobile:grid-cols-1">
+              <AppTextField
+                name="detailTariffCode"
+                label="Mã giá"
+                value={selectedDetail?.tariff?.tariffCode || ''}
+                isView
+              />
+              <AppTextField
+                name="detailTariffName"
+                label="Tên giá"
+                value={selectedDetail?.tariff?.tariffName || ''}
+                isView
+              />
+              <AppTextField
+                name="detailCustomerType"
+                label="Mục đích sử dụng"
+                value={
+                  CUSTOMER_TYPE_LABEL_MAP[selectedDetail?.tariff?.customerType || ''] ||
+                  selectedDetail?.tariff?.customerType ||
+                  ''
+                }
+                isView
+              />
+              <AppTextField
+                name="detailVoltageLevel"
+                label="Cấp điện áp"
+                value={
+                  VOLTAGE_LEVEL_LABEL_MAP[selectedDetail?.tariff?.voltageLevel || ''] ||
+                  selectedDetail?.tariff?.voltageLevel ||
+                  ''
+                }
+                isView
+              />
+            </div>
+
+            <div className="mb-8 flex items-center gap-8 text-14 font-semibold text-color-900">
+              <CalculatorOutlined />
+              <span>Danh sách giá theo bậc/khung giờ</span>
+            </div>
+            <div className="overflow-hidden rounded-radius-l border border-color-400">
+              <AppTable
+                rootClassName="w-full"
+                scroll={{ x: 'max-content' }}
+                dataSource={touPrices}
+                columns={touColumns}
+                rowKey="id"
+                pagination={false}
+              />
+            </div>
+          </Spin>
+        </Drawer>
+
+        <form id="tou-price-form" onSubmit={handleTouFormSubmit(handleCreateTouPrice)}>
+          <Drawer
+            open={openTouForm}
+            title={`Thêm bậc giá${touTargetTariff?.tariffCode ? ` - ${touTargetTariff.tariffCode}` : ''}`}
+            destroyOnClose
+            placement="right"
+            onClose={onCloseTouForm}
+            width={isTablet || isMobile ? '82vw' : '38vw'}
+            footer={
+              <Flex justify="end" gap={K_SIZE_8}>
+                <ButtonBase type="ghost" customContent="Đóng" onClick={onCloseTouForm} />
+                <ButtonBase
+                  type="primary"
+                  form="tou-price-form"
+                  htmlType="submit"
+                  disabled={!isTouValid || detailLoading}
+                  customContent="Lưu"
+                />
+              </Flex>
+            }
+          >
+            <div className="grid gap-12">
+              <AppTextFieldControl
+                name="tou"
+                control={touControl}
+                label="Bậc/TOU"
+                labelSuffix={REQUIRED_MARK}
+                labelSuffixClassName="text-error-600"
+                placeholder="VD: BAC_1 hoặc BT"
+              />
+              <AppTextFieldControl
+                name="unitPrice"
+                control={touControl}
+                label="Đơn giá"
+                labelSuffix={REQUIRED_MARK}
+                labelSuffixClassName="text-error-600"
+                placeholder="VD: 1806"
+              />
+              <AppSelectControl
+                name="voltageLevel"
+                control={touControl}
+                label="Cấp điện áp"
+                options={VOLTAGE_LEVEL_OPTIONS}
+              />
+              <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
+                <AppDatePickerControl
+                  name="effectiveFrom"
+                  control={touControl}
+                  backendFormat={DATE_API_FORMAT}
+                  label="Hiệu lực từ"
+                  allowClear
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
+                />
+                <AppDatePickerControl
+                  name="effectiveTo"
+                  control={touControl}
+                  backendFormat={DATE_API_FORMAT}
+                  label="Hiệu lực đến"
+                  allowClear
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
+                />
+              </div>
+            </div>
+          </Drawer>
+        </form>
+      </section>
+    </PageWithBreadcrumb>
+  );
+};
+
+export default ElectricTariffScreen;

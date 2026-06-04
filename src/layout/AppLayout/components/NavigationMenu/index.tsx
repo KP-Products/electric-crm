@@ -5,9 +5,11 @@ import {
   CalculatorOutlined,
   CloudSyncOutlined,
   CarryOutOutlined,
+  DollarCircleOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
   FundProjectionScreenOutlined,
+  ProfileOutlined,
   ReconciliationOutlined,
   SafetyCertificateOutlined,
   ScheduleOutlined,
@@ -36,7 +38,8 @@ export const MENU_GROUP_KEYS = {
   SYSTEM_ADMINISTRATION: K_SIZE_1.toString(),
   CONTRACT: K_SIZE_2.toString(),
   DEVICE: K_SIZE_3.toString(),
-  BILLING: '4'
+  BILLING: '4',
+  CATALOG: '5'
 };
 
 const NavigationMenu = () => {
@@ -103,6 +106,20 @@ const NavigationMenu = () => {
             icon: <CarryOutOutlined />,
             type: 'item',
             // permission: PERMISSION_VIEW_ACTION.OTHER_FEATURE_MY_PENDING_TASK_VIEW_ACTION
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.CATALOG,
+        label: 'Danh mục',
+        icon: <ProfileOutlined />,
+        children: [
+          {
+            key: ROUTES.ELECTRIC_TARIFF,
+            label: 'Danh mục giá điện',
+            icon: <DollarCircleOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
         ]
       },
@@ -175,7 +192,7 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
         ]
-      }
+      },
     ],
     [t]
   );
