@@ -47,7 +47,6 @@ const PendingTaskScreen = () => {
     defaultFilterCode,
     optionFeature,
     optionAction,
-    renderInfoTask,
     ACTION_KEYS,
     columns,
     statusOptions,
@@ -281,7 +280,6 @@ const PendingTaskScreen = () => {
           </Flex>
         </Drawer>
 
-        {renderInfoTask()}
       </section>
     </PageWithBreadcrumb>
   );

@@ -2,6 +2,7 @@
 import {
   ApartmentOutlined,
   AuditOutlined,
+  CarryOutOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
   ReconciliationOutlined,
@@ -89,8 +90,15 @@ const NavigationMenu = () => {
             key: ROUTES.PENDING_TASK,
             label: t('menu:pending_tasks'),
             icon: <ScheduleOutlined />,
-            type: 'item',
+            type: 'item'
             // permission: PERMISSION_VIEW_ACTION.OTHER_FEATURE_WAITING_APPROVE_TASK_VIEW_ACTION
+          },
+          {
+            key: ROUTES.MY_PENDING,
+            label: t('menu:my_pending_tasks'),
+            icon: <CarryOutOutlined />,
+            type: 'item',
+            // permission: PERMISSION_VIEW_ACTION.OTHER_FEATURE_MY_PENDING_TASK_VIEW_ACTION
           }
         ]
       },

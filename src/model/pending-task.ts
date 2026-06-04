@@ -19,6 +19,13 @@ export interface PendingTaskDetail extends PendingTask {
   dataDetail?: any;
 }
 
+export interface PendingTaskListRes {
+  content?: PendingTask[];
+  items?: PendingTask[];
+  totalElements?: number;
+  total?: number;
+}
+
 export interface FilterMyTask extends PaginationReq, Omit<PendingTask, 'transactionId' | 'status'> {
   status?: string[];
 }

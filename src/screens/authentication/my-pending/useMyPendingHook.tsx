@@ -1,6 +1,5 @@
 import {
   DEFAULT_PAGE_SIZE,
-  FEATURES,
   K_SIZE_0,
   K_SIZE_1,
   K_SIZE_120,
@@ -16,8 +15,7 @@ import {
   DELETE_TASK,
   MY_REQUEST_LIST,
   REJECT_TASK,
-  TASK_APPROVE_LIST,
-  TASK_DETAIL
+  TASK_APPROVE_LIST
 } from '@redux-action-type/pending-task-type';
 import { dispatch } from '@redux-common';
 import { selectPendingTaskOptionFeature } from '@redux-selector/pending-task-selector';
@@ -31,20 +29,17 @@ import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import _ from 'lodash';
 import { GetListApprovalFunctionRes } from 'model/approval-matrix';
-import { ErrorBase, PaginationRes } from 'model/common';
-import { FEE_CODE_STATUS, FEE_CODE_STATUS_OPTION, FeeCode } from 'model/fee-code';
+import { ErrorBase } from 'model/common';
+import { FEE_CODE_STATUS, FEE_CODE_STATUS_OPTION } from 'model/fee-code';
 import {
   ACTION_TYPES,
   FilterMyTask,
   PendingTask,
-  PendingTaskDetail,
-  RejectTaskReq,
-  TaskDetailReq
+  PendingTaskListRes,
+  RejectTaskReq
 } from 'model/pending-task';
-import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import CreateEditProductPending from 'screens/authentication/my-pending/components/CreateEditProductPending';
 // import FeeCodeStatus from 'screens/authentication/products-and-code-fee/components/FeeCodeStatus';
 import { appCodes } from 'utils/constant/appCodes';
 import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
@@ -58,7 +53,6 @@ import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
   const { isPendingTask } = props || {};
   const { t } = useAppTranslation();
-  const router = useRouter();
   const reasonRef = useRef<InputRef>(null);
 
   const defaultFilterCode: FilterMyTask = {
@@ -117,19 +111,11 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
     }
   ];
 
-  const LIST_DRAWER = [
-    PERMISSION_APPROVE_ACTION.PARAMETER_PRODUCT_APPROVE_ACTION,
-    PERMISSION_APPROVE_ACTION.PARAMETER_PRODUCT_CONVERT_APPROVE_ACTION,
-    PERMISSION_APPROVE_ACTION.PARAMETER_FORMULA_FEE_APPROVE_ACTION
-  ];
-
   const [openFilter, setOpenFilter] = useState<boolean>(false);
   const [filter, setFilter] = useState<FilterMyTask>(defaultFilterCode);
   const [filterApplied, setFilterApplied] = useState<FilterMyTask>(defaultFilterCode);
   const [total, setTotal] = useState<number>(K_SIZE_0);
   const [dataFilter, setDataFilter] = useState<PendingTask[]>([]);
-  const [selectedItem, setSelectedItem] = useState<PendingTaskDetail>();
-  const [isView, setIsView] = useState<boolean>(false);
 
   const setFieldFilter = (key: keyof FilterMyTask | string, value: string | number | string[]) => {
     setFilter((pre) => ({ ...pre, [key]: value }));
@@ -176,14 +162,14 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
       type: isPendingTask ? TASK_APPROVE_LIST : MY_REQUEST_LIST,
       payload: {
         body: body,
-        onSuccess: (res: PaginationRes<PendingTask>) => {
+        onSuccess: (res: PendingTaskListRes) => {
           DebugUtils.logS([
             `${isPendingTask ? 'TASK_APPROVE_LIST' : 'MY_REQUEST_LIST'} data:`,
             res
           ]);
 
-          setDataFilter(_.uniqBy(res?.content || [], 'requestId'));
-          setTotal(res?.totalElements || K_SIZE_0);
+          setDataFilter(_.uniqBy(res?.content || res?.items || [], 'requestId'));
+          setTotal(res?.totalElements || res?.total || K_SIZE_0);
         },
         onFailed: (error?: ErrorBase) => {
           DebugUtils.logS([
@@ -197,162 +183,6 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
         }
       }
     });
-  };
-
-  const getDetailTask = (record: PendingTask, isEdit?: boolean) => {
-    const body: TaskDetailReq = {
-      transactionId: record?.transactionId || record.requestId || '',
-      taskType: record?.actionId || '',
-      operationType: record.operationType || ''
-    };
-
-    const onSuccess = (res: any) => {
-      DebugUtils.logS(['TASK_DETAIL data:', res]);
-      const item: PendingTaskDetail = { ...record, dataDetail: res };
-      if (LIST_DRAWER.includes(record.actionId || '')) {
-        setIsView(!isEdit);
-        setSelectedItem(item);
-        return;
-      }
-      navigatePage(item, isEdit);
-    };
-
-    if (record.requestId === selectedItem?.requestId && selectedItem?.dataDetail) {
-      onSuccess(selectedItem?.dataDetail);
-      return;
-    }
-    dispatch({
-      type: TASK_DETAIL,
-      payload: {
-        body: body,
-        onSuccess,
-        onFailed: (error?: ErrorBase) => {
-          DebugUtils.logS(['TASK_DETAIL error:', error]);
-          showToast({
-            type: TYPE_TOAST.ERROR,
-            content: t('common:msg_failed', {
-              action: `${t('common:get')} ${t('fee_schedule:detail_info').toLowerCase()}`
-            })
-          });
-        }
-      }
-    });
-  };
-
-  const onCloseEdit = () => {
-    setIsView(false);
-    setSelectedItem(undefined);
-  };
-
-  // case: render drawer và xử lý edit
-  const checkActionEdit = (actionType?: string) => {
-    return [ACTION_TYPES.CREATE, ACTION_TYPES.UPDATE, ACTION_TYPES.CONVERT_FEE_CODE].includes(
-      actionType || ''
-    );
-  };
-  const renderInfoTask = () => {
-    if (selectedItem) {
-      switch (selectedItem.actionId) {
-        case PERMISSION_APPROVE_ACTION.PARAMETER_PRODUCT_APPROVE_ACTION:
-        // case PERMISSION_APPROVE_ACTION.PARAMETER_PRODUCT_CONVERT_APPROVE_ACTION:
-        //   return (
-        //     <CreateEditProductPending
-        //       infoTask={selectedItem}
-        //       isView={isView}
-        //       onClose={onCloseEdit}
-        //       onDone={() => {
-        //         onCloseEdit();
-        //         fetchTasks();
-        //       }}
-        //       canEdit={
-        //         isPendingTask
-        //           ? false
-        //           : selectedItem.status === FEE_CODE_STATUS.REJECTED &&
-        //             checkActionEdit(selectedItem.operationType)
-        //       }
-        //       onDelete={
-        //         !isPendingTask &&
-        //         [FEE_CODE_STATUS.REJECTED, FEE_CODE_STATUS.AWAIT_APPROVE].includes(
-        //           (selectedItem.status || '') as FEE_CODE_STATUS
-        //         )
-        //           ? (onDone?: () => void) => {
-        //               if (selectedItem.requestId)
-        //                 showDialogConfirm(ACTION_KEYS.DELETE, selectedItem, onDone);
-        //             }
-        //           : undefined
-        //       }
-        //       onApprove={
-        //         isPendingTask && selectedItem.status === FEE_CODE_STATUS.AWAIT_APPROVE
-        //           ? (onDone?: () => void) => {
-        //               showDialogConfirm(ACTION_KEYS.APPROVE, selectedItem, onDone);
-        //             }
-        //           : undefined
-        //       }
-        //       onReject={
-        //         isPendingTask && selectedItem.status === FEE_CODE_STATUS.AWAIT_APPROVE
-        //           ? (onDone?: () => void) => {
-        //               showDialogConfirm(ACTION_KEYS.REJECT, selectedItem, onDone);
-        //             }
-        //           : undefined
-        //       }
-        //     />
-        //   );
-        case PERMISSION_APPROVE_ACTION.PARAMETER_FORMULA_FEE_APPROVE_ACTION:
-          return <div></div>;
-        default:
-          return null;
-      }
-    }
-    return <div />;
-  };
-
-  // case: chuyển màn mới
-  const navigatePage = (record: PendingTaskDetail, isEdit?: boolean) => {
-    switch (record.actionId) {
-      case PERMISSION_APPROVE_ACTION.PARAMETER_FEE_CODE_APPROVE_ACTION:
-        const feeCode: FeeCode = {
-          ...record.dataDetail,
-          statusApprove: record.status,
-          requestId: record.requestId,
-          isMyTask: !isPendingTask,
-          operationType: record.operationType
-        };
-        // dispatch(feeCodeActions.setFeeCodeDetail(feeCode));
-        if (isEdit) {
-          // router.push(`${ROUTES.CODE_FEE_DETAIL}?action=${ACTION_FEE_CODE.EDIT}`);
-          return;
-        }
-        // router.push(`${ROUTES.CODE_FEE_DETAIL}`);
-
-        break;
-      case FEATURES.PARAMETER_FEE_SCHEDULE_APPROVE_ACTION:
-        if (isEdit) {
-          // router.push(
-          //   `${ROUTES.FEE_SCHEDULE_DETAIL}?id=${record?.dataDetail?.feeScheduleId}&action=edit&sourcePage=approval`
-          // );
-          return;
-        }
-        if (record.operationType === ACTION_TYPES.CONVERT_FEE_CODE) {
-          // router.push(
-          //   `${ROUTES.CHANGE_FEE_SCHEDULE}?requestId=${record?.requestId}&action=see&sourcePage=approval`
-          // );
-          return;
-        }
-        // router.push(
-        //   `${ROUTES.FEE_SCHEDULE_DETAIL}?id=${record?.dataDetail?.feeScheduleId}&action=see&sourcePage=approval`
-        // );
-        break;
-      case FEATURES.PARAMETER_PROMOTION_APPROVE_ACTION:
-        if (isEdit) {
-          // router.push(`${ROUTES.MY_PENDING_PROMOTION_EDIT}?id=${record?.dataDetail?.id}`);
-        } else {
-          // router.push(
-          //   `${isPendingTask ? ROUTES.PENDING_PROMOTION_DETAIL : ROUTES.MY_PENDING_PROMOTION_DETAIL}?id=${record?.dataDetail?.id}`
-          // );
-        }
-        break;
-      default:
-    }
   };
 
   const onApprove = ({
@@ -458,7 +288,7 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
     });
   };
 
-  const showDialogConfirm = (action: string, data: PendingTaskDetail, onDone?: () => void) => {
+  const showDialogConfirm = (action: string, data: PendingTask, onDone?: () => void) => {
     if (action === ACTION_KEYS.REJECT) {
       showDialog({
         title: t('approve:reject_confirm'),
@@ -622,16 +452,8 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
       dataIndex: 'requestId',
       key: 'requestId',
       width: K_SIZE_200,
-      render: (text: string, record: PendingTaskDetail) => {
-        return (
-          <TextBase
-            text={text}
-            classNames={'sub-title4 !text-secondary-500 cursor-pointer hover:!text-secondary-700'}
-            onClick={() => {
-              getDetailTask(record);
-            }}
-          />
-        );
+      render: (text: string) => {
+        return <TextBase text={text} classNames={'sub-title4 !text-color-900'} />;
       }
       // sorter: true,
     },
@@ -697,7 +519,6 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
 
   return {
     t,
-    router,
     filter,
     setFilter,
     setFieldFilter,
@@ -714,15 +535,6 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
     defaultFilterCode,
     optionFeature,
     optionAction,
-    selectedItem,
-    setSelectedItem,
-    isView,
-    setIsView,
-    onCloseEdit,
-    renderInfoTask,
-    navigatePage,
-    LIST_DRAWER,
-    getDetailTask,
     onApprove,
     onReject,
     onDelete,
@@ -731,7 +543,6 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
     columns,
     statusOptions,
     renderFilterTags,
-    checkActionEdit,
     showDialogConfirm
   };
 }

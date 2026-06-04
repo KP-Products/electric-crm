@@ -1,12 +1,13 @@
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { SLICE_NAME } from 'stores/types';
-import { ErrorBase, PaginationRes } from 'model/common';
+import { ErrorBase } from 'model/common';
 import { DEFAULT_PAGE_SIZE, K_SIZE_1 } from '@constant';
 import {
   FilterMyTask,
   HistoryTaskData,
   HistoryTaskReq,
   PendingTask,
+  PendingTaskListRes,
   RejectTaskReq,
   TaskDetailReq
 } from 'model/pending-task';
@@ -81,7 +82,7 @@ const getMyRequests = createAction(
   MY_REQUEST_LIST,
   (
     body: FilterMyTask,
-    onSuccess?: (data: PaginationRes<PendingTask>) => void,
+    onSuccess?: (data: PendingTaskListRes) => void,
     onFailed?: (error?: ErrorBase) => void
   ) => ({
     payload: { body, onSuccess, onFailed }
@@ -92,7 +93,7 @@ const getApprovalList = createAction(
   TASK_APPROVE_LIST,
   (
     body: FilterMyTask,
-    onSuccess?: (data: PaginationRes<PendingTask>) => void,
+    onSuccess?: (data: PendingTaskListRes) => void,
     onFailed?: (error?: ErrorBase) => void
   ) => ({
     payload: { body, onSuccess, onFailed }

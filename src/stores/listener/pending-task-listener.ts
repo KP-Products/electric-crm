@@ -12,7 +12,9 @@ takeLatestListeners({
     listenerApi.dispatch(pendingTaskActions.setMyRequestLoading(false));
     if (isSuccess(response) && response.data) {
       onSuccess?.(response.data);
-      listenerApi.dispatch(pendingTaskActions.setMyRequests(response.data?.content || []));
+      listenerApi.dispatch(
+        pendingTaskActions.setMyRequests(response.data?.content || response.data?.items || [])
+      );
       return;
     }
     onFailed?.(response);

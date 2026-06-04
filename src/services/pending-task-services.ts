@@ -1,10 +1,11 @@
 import appServices from '@app-services';
-import { ApiResponse, PaginationRes, ResultBase } from 'model/common';
+import { ApiResponse, ResultBase } from 'model/common';
 import {
   FilterMyTask,
   HistoryTaskData,
   HistoryTaskReq,
   PendingTask,
+  PendingTaskListRes,
   RejectTaskReq,
   TaskDetailReq
 } from 'model/pending-task';
@@ -12,7 +13,7 @@ import { ApiConstants } from 'services/networking/app-apis';
 
 async function getMyRequest(
   param: FilterMyTask
-): Promise<ApiResponse<ResultBase<PaginationRes<PendingTask>>>> {
+): Promise<ApiResponse<ResultBase<PendingTaskListRes>>> {
   try {
     const rs = await appServices.post(ApiConstants.MY_REQUEST_LIST, param);
     const data = rs.data;
@@ -24,7 +25,7 @@ async function getMyRequest(
 
 async function getTaskPendings(
   param: FilterMyTask
-): Promise<ApiResponse<ResultBase<PaginationRes<PendingTask>>>> {
+): Promise<ApiResponse<ResultBase<PendingTaskListRes>>> {
   try {
     const rs = await appServices.post(ApiConstants.TASK_APPROVE_LIST, param);
     const data = rs.data;
