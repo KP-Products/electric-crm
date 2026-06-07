@@ -8,5 +8,6 @@ export * from './meter';
 export * from './contract';
 export * from './document';
 export * from './service-location';
+export * from './branch';
 export * from './approval-matrix';
 export * from './pending-task-listener';

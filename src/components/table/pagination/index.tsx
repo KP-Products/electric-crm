@@ -22,22 +22,21 @@ const AppPagination = ({ currentPage, total, pagination, className = '' }: Props
   }, [currentPage, total, pageSize]);
 
   return (
-    <div className={clsx('relative mt-20 flex w-full justify-center', className)}>
-      <div
-        className={
-          'absolute inset-y-0 left-0 flex items-center duration-500 mobile:left-1/2 mobile:top-[56px] mobile:-translate-x-1/2'
-        }
-      >
-        <TextBase
-          t18n={'common:display_records'}
-          t18nOptions={{
-            from: showingRange,
-            total: total
-          }}
-          classNames={'body2 !text-color-700'}
-        />
-      </div>
-      <Pagination {...pagination} />
+    <div
+      className={clsx(
+        'mt-20 grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-8 mobile:grid-cols-1 mobile:justify-items-center',
+        className
+      )}
+    >
+      <TextBase
+        t18n={'common:display_records'}
+        t18nOptions={{
+          from: showingRange,
+          total: total
+        }}
+        classNames={'body2 !text-color-700 justify-self-start mobile:justify-self-center'}
+      />
+      <Pagination className="justify-self-center" {...pagination} />
     </div>
   );
 };

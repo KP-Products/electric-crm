@@ -17,6 +17,7 @@ export const ROUTES = {
   MANAGE_USER_UPLOAD: '/manage-user/upload',
   MANAGE_USER_DETAIL: '/manage-user/detail',
   MANAGE_USER_EDIT: '/manage-user/edit',
+  MANAGE_BRANCH: '/manage-branch',
 
   //PERMISSION
   MANAGE_PERMISSION_GROUP: '/manage-permission-group',

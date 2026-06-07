@@ -79,6 +79,15 @@ const ApiEndPoint = {
   SERVICE_LOCATION_DETAIL: '/admin/locations/get',
   SERVICE_LOCATION_DELETE: '/admin/locations/delete',
 
+  // BRANCH
+  BRANCH_CREATE: '/admin/branches/create',
+  BRANCH_UPDATE: '/admin/branches/update',
+  BRANCH_SEARCH: '/admin/branches/search',
+  BRANCH_LIST: '/admin/branches/list',
+  BRANCH_DETAIL: '/admin/branches/detail',
+  BRANCH_DELETE: '/admin/branches/delete',
+  BRANCH_USERS: '/admin/branches/users',
+
   // BILLING 5.1 - NHAP CHI SO
   BILLING_READING_PERIOD_UPDATE: '/admin/billing/reading-periods/update',
   BILLING_READING_PERIOD_SEARCH: '/admin/billing/reading-periods/search',

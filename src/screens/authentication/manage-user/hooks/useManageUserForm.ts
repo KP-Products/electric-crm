@@ -1,21 +1,27 @@
-import { K_SIZE_1 } from '@constant';
+import { K_SIZE_1, MAX_PAGE_SIZE } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { SEARCH_BRANCH } from '@redux-action-type/branch';
 import { ADD_USER, EDIT_USER } from '@redux-action-type/user';
 import { dispatch } from '@redux-common';
+import { selectBranchList } from '@redux-selector/branch';
 import { selectRoleList } from '@redux-selector/role';
 import { selectUserList, selectUserLoadingDetail } from '@redux-selector/user';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
-import { AddUserReq, EditUserReq } from 'model/user';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { DebugUtils } from 'utils/debug-utils';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
 import { z } from 'zod';
 import { GET_LIST_ROLE } from '@redux-action-type/role';
+import {
+  buildBranchOptions,
+  buildCreateUserBody,
+  buildEditUserBody
+} from 'screens/authentication/manage-user/utils/method';
 
 const userSchema = (t: TypedT, isAddMode: boolean) => {
   return z.object({
@@ -34,6 +40,7 @@ const userSchema = (t: TypedT, isAddMode: boolean) => {
     email: z.string().trim(),
     status: z.string().trim(),
     roleId: z.string().trim().optional(),
+    branchId: z.string().trim(),
 
     permissions: z
       .object({
@@ -56,7 +63,9 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
   const searchParams = useSearchParams();
   const userList = useSelector(selectUserList);
   const roleList = useSelector(selectRoleList);
+  const branchList = useSelector(selectBranchList);
   const loading = useSelector(selectUserLoadingDetail);
+  const submittingRef = useRef<boolean>(false);
 
   const id = searchParams.get('id');
 
@@ -71,6 +80,10 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
   const roleOptions = useMemo(
     () => roleList.map((role) => ({ value: role.id, label: role.name })),
     [roleList]
+  );
+  const branchOptions = useMemo(
+    () => buildBranchOptions(branchList, userDetail),
+    [branchList, userDetail]
   );
   const getUserPermission = useCallback(
     (roleId?: string) => {
@@ -88,6 +101,7 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
       password: '',
       email: '',
       roleId: '',
+      branchId: '',
       status: '',
       permissions: []
     },
@@ -109,10 +123,20 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
 
   useEffect(() => {
     dispatch({ type: GET_LIST_ROLE, payload: {} });
+    dispatch({
+      type: SEARCH_BRANCH,
+      payload: {
+        body: {
+          page: 0,
+          size: MAX_PAGE_SIZE
+        }
+      }
+    });
   }, []);
 
   const onSubmitSuccess = useCallback(
     (res: any) => {
+      submittingRef.current = false;
       DebugUtils.logS(res);
       router.push(ROUTES.MANAGE_USER);
       showToast({
@@ -124,6 +148,7 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
   );
 
   const onSubmitFailed = useCallback(() => {
+    submittingRef.current = false;
     showToast({
       type: TYPE_TOAST.ERROR,
       content: t('manage_user:action_failed', { action })
@@ -132,32 +157,25 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
 
   const onSubmit = useCallback(
     (data: UserForm) => {
+      if (submittingRef.current) return;
+
       DebugUtils.logS(data);
       if (isAddMode) {
-        const body: AddUserReq = {
-          username: data.username,
-          password: data.password || '',
-          email: data.email,
-          role: data.roleId || ''
-        };
+        submittingRef.current = true;
         dispatch({
           type: ADD_USER,
           payload: {
-            body,
+            body: buildCreateUserBody(data),
             onSuccess: onSubmitSuccess,
             onFailed: onSubmitFailed
           }
         });
       } else if (id) {
-        const body: EditUserReq = {
-          userId: id,
-          status: data.status
-          // roleId: data.roleId
-        };
+        submittingRef.current = true;
         dispatch({
           type: EDIT_USER,
           payload: {
-            body,
+            body: buildEditUserBody(id, data),
             onSuccess: onSubmitSuccess,
             onFailed: onSubmitFailed
           }
@@ -183,6 +201,7 @@ export default function useManageUserForm({ isAddMode, isView }: ManageUserFormP
     onBack,
     onEdit,
     roleOptions,
+    branchOptions,
     getUserPermission
   };
 }

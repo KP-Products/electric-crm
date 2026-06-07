@@ -79,25 +79,20 @@ export default function useManageUser() {
     };
   }, []);
 
-  const onGetUserSearchListSuccess = useCallback((response: any) => {
-    const items = response?.data?.items || [];
-
-    setUserList(
-      items.sort(
+  const onGetUserSearchListSuccess = useCallback(
+    (response: any) => {
+      const items = Array.isArray(response?.data?.items) ? response.data.items : [];
+      const sortedItems = [...items].sort(
         (a: UserSearchItem, b: UserSearchItem) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-    );
-    dispatch(
-      userActions.setUserList(
-        items.sort(
-          (a: UserSearchItem, b: UserSearchItem) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )
-      )
-    );
-    setTotalUser(response?.data?.total || 0);
-  }, []);
+          new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
+      );
+
+      setUserList(sortedItems);
+      dispatch(userActions.setUserList(sortedItems));
+      setTotalUser(response?.data?.total || 0);
+    },
+    [dispatch]
+  );
 
   const onGetUserSearchListFailed = useCallback(() => {
     setUserList([]);
@@ -135,26 +130,29 @@ export default function useManageUser() {
   //   dispatch({ type: GET_LIST_ROLE, payload: { body } });
   // }, []);
 
-  const onApplyFilter = useCallback((data: UserFilterForm) => {
-    setFilterApplied(data);
-    setCurrentPage(K_SIZE_1);
-    const body = {
-      usernameContains: data?.username,
-      emailContains: '',
-      fullNameContains: '',
-      status: '',
-      enabled: true,
-      roleCode: '',
-      page: 0,
-      size: 0
-    };
-    dispatch({
-      type: GET_USER_SEARCH_LIST,
-      payload: {
-        body
-      }
-    });
-  }, []);
+  const onApplyFilter = useCallback(
+    (data: UserFilterForm) => {
+      setFilterApplied(data);
+      setCurrentPage(K_SIZE_1);
+      const body = {
+        usernameContains: data?.username,
+        emailContains: '',
+        fullNameContains: '',
+        status: '',
+        enabled: true,
+        roleCode: '',
+        page: 0,
+        size: 0
+      };
+      dispatch({
+        type: GET_USER_SEARCH_LIST,
+        payload: {
+          body
+        }
+      });
+    },
+    [dispatch]
+  );
 
   const onResetFilter = useCallback(
     (key?: string) => {
@@ -198,7 +196,7 @@ export default function useManageUser() {
         }
       }
     });
-  }, [t, filterApplied, currentPage, buildBodyListUser, onDownloadSuccess]);
+  }, [t, dispatch, filterApplied, currentPage, buildBodyListUser, onDownloadSuccess]);
 
   const onDeleteSuccess = useCallback(() => {
     getUserSearchList(currentPage);
@@ -235,7 +233,7 @@ export default function useManageUser() {
         ]
       });
     },
-    [t, onDeleteSuccess]
+    [t, dispatch, onDeleteSuccess]
   );
   return {
     t,

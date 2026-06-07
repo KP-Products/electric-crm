@@ -30,7 +30,9 @@ const ManageUserForm = (props: ManageUserFormProps) => {
     userForm,
     onBack,
     onEdit,
+    loading,
     roleOptions,
+    branchOptions,
     getUserPermission
   } = useManageUserForm(props);
   const breadcrumbList = [
@@ -152,6 +154,14 @@ const ManageUserForm = (props: ManageUserFormProps) => {
               );
             }}
           />
+          <AppSelectControl
+            name="branchId"
+            label="Chi nhánh"
+            placeholder="Chọn chi nhánh"
+            isView={isView}
+            options={branchOptions}
+            control={control}
+          />
           {!isAddMode && !isAddMode && (
             <AppSelectControl
               name={'status'}
@@ -180,7 +190,7 @@ const ManageUserForm = (props: ManageUserFormProps) => {
                 classNames="app-common-btn flex justify-center items-center mobile:flex-1"
                 type="primary"
                 customContent={t('common:confirm')}
-                // disabled={!isValid || loading}
+                disabled={loading}
                 onClick={handleSubmit(onSubmit)}
               />
             </div>

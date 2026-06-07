@@ -80,6 +80,12 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_AUTHORIZATION_VIEW_ACTION
           },
           {
+            key: ROUTES.MANAGE_BRANCH,
+            label: 'Quản lý chi nhánh',
+            icon: <ApartmentOutlined />,
+            type: 'item'
+          },
+          {
             key: ROUTES.DEFAULT_PARAMETERS,
             label: t('menu:default_parameter_management'),
             icon: <ReconciliationOutlined />,
@@ -104,7 +110,7 @@ const NavigationMenu = () => {
             key: ROUTES.MY_PENDING,
             label: t('menu:my_pending_tasks'),
             icon: <CarryOutOutlined />,
-            type: 'item',
+            type: 'item'
             // permission: PERMISSION_VIEW_ACTION.OTHER_FEATURE_MY_PENDING_TASK_VIEW_ACTION
           }
         ]
@@ -192,7 +198,7 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
         ]
-      },
+      }
     ],
     [t]
   );

@@ -19,6 +19,9 @@ export interface User {
   updatedAt: string;
   createdBy: string;
   updatedBy: string;
+  branchId?: string;
+  branchCode?: string;
+  branchName?: string;
 }
 export interface GetListUserReq extends PaginationReq {
   username?: string;
@@ -28,6 +31,7 @@ export interface GetListUserReq extends PaginationReq {
   status?: string;
   roleId?: string;
   email?: string;
+  branchId?: string;
 }
 
 export interface GetListUserRes extends ResultBase<User[]> {}
@@ -39,6 +43,7 @@ export interface AddUserReq {
   email: string;
   password: string;
   role: string;
+  branchId?: string;
 }
 
 export interface AddUserRes extends ResultBase {}
@@ -75,18 +80,23 @@ export interface AddListUserRes extends ResultBase {}
 export interface EditUserReq {
   userId: string;
   status: string;
+  branchId?: string;
   // roleId: string;
 }
 
 export interface EditUserRes extends ResultBase {}
 
 export interface UserSearchReq {
-  usernameContains: string;
-  emailContains: string;
-  fullNameContains: string;
-  status: string;
-  enabled: boolean;
-  roleCode: string;
+  usernameContains?: string;
+  emailContains?: string;
+  fullNameContains?: string;
+  status?: string;
+  enabled?: boolean;
+  roleCode?: string;
+  branchId?: string;
+  unassignedBranch?: boolean;
+  page?: number;
+  size?: number;
 }
 export interface UserSearchItem {
   id: string;
@@ -97,6 +107,9 @@ export interface UserSearchItem {
   createdAt: string;
   enabled: boolean;
   roles: string[];
+  branchId?: string;
+  branchCode?: string;
+  branchName?: string;
 }
 
 export interface UserSearchList {
@@ -109,7 +122,7 @@ export interface UserSearchRes extends ResultBase<UserSearchList> {}
 export enum STATUS {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
-  LOCKED = 'LOCKED',
+  LOCKED = 'LOCKED'
 }
 export interface DeleteUserReq {
   userId: string;

@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable prettier/prettier */
 /* eslint-disable eqeqeq */
 import { NULL_VALUE } from '@constant';
@@ -117,8 +116,9 @@ export function AppSelect(props: AppSelectProps) {
   const { t } = useAppTranslation();
 
   const options = useMemo(() => {
-    if (!isTranslationLabel) return originOptions;
-    return originOptions?.map?.((option) => ({ ...option, label: t(option.label as I18nKeys) }));
+    const safeOptions = Array.isArray(originOptions) ? originOptions : [];
+    if (!isTranslationLabel) return safeOptions;
+    return safeOptions.map((option) => ({ ...option, label: t(option.label as I18nKeys) }));
   }, [t, isTranslationLabel, originOptions]);
 
   const defaultOption = (option: AppSelectOption) => <p className="leading-36">{option.label}</p>;
@@ -134,10 +134,6 @@ export function AppSelect(props: AppSelectProps) {
     []
   );
 
-  if (isLoading) {
-    return <Skeleton.Input active />;
-  }
-
   const items: MenuProps['items'] = useMemo(
     () =>
       options.map((option) => ({
@@ -150,8 +146,8 @@ export function AppSelect(props: AppSelectProps) {
   );
 
   const selectedKeys = useMemo(() => {
-    if (selectable) return [...(value as any)];
-    return value !== undefined ? [String(value)] : [];
+    if (selectable) return Array.isArray(value) ? value.map(String) : [];
+    return value !== undefined && value !== null ? [String(value)] : [];
   }, [selectable, value]);
 
   const menuProps = useMemo(
@@ -163,6 +159,10 @@ export function AppSelect(props: AppSelectProps) {
     }),
     [items, onSelectOption, selectedKeys, selectable]
   );
+
+  if (isLoading) {
+    return <Skeleton.Input active />;
+  }
 
   return (
     <div className={`${block ? 'w-full' : 'inline-block'} ${wrapperClassName}`}>
@@ -218,7 +218,7 @@ export function AppSelect(props: AppSelectProps) {
                 name={name}
                 size={size}
                 value={
-                  (options.find((option) => option.value === value)?.label as string) || value || ''
+                  (options.find((option) => option.value === value)?.label as string) ?? value ?? ''
                 }
                 variant="borderless"
                 onChange={onChange}

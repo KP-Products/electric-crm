@@ -9,6 +9,7 @@ import { meterReducer } from '@redux-slice/meter';
 import { contractReducer } from '@redux-slice/contract';
 import { documentReducer } from '@redux-slice/document';
 import { serviceLocationReducer } from '@redux-slice/service-location';
+import { branchReducer } from '@redux-slice/branch';
 import { approvalMatrixReducer } from '@redux-slice/approval-matrix';
 import { pendingTaskReducer } from '@redux-slice/pending-task-slice';
 
@@ -23,6 +24,7 @@ export const allReducer = combineReducers({
   contract: contractReducer,
   document: documentReducer,
   serviceLocation: serviceLocationReducer,
+  branch: branchReducer,
   approvalMatrix: approvalMatrixReducer,
   pendingTask: pendingTaskReducer
 });

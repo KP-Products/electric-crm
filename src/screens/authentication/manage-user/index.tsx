@@ -92,7 +92,15 @@ const ManageUser = () => {
         dataIndex: 'roles',
         align: 'left',
         width: K_SIZE_200,
-        render: (roles: User['roles']) => renderColumn(roles.join(','))
+        render: (roles: User['roles']) => renderColumn(Array.isArray(roles) ? roles.join(',') : '')
+      },
+      {
+        title: 'Chi nhánh',
+        dataIndex: 'branchName',
+        align: 'left',
+        width: K_SIZE_180,
+        render: (text: string, record: User) =>
+          renderColumn(text || record.branchCode || NULL_VALUE)
       },
       {
         title: t('common:status'),
@@ -104,7 +112,7 @@ const ManageUser = () => {
             <Status
               type={USER_STATUS_TYPE_MAP[status]}
               kind={KIND_STATUS.SECONDARY}
-              content={USER_STATUS_LABEL_MAP[status]}
+              content={USER_STATUS_LABEL_MAP[status] || status || NULL_VALUE}
             />
           );
         }
@@ -155,7 +163,7 @@ const ManageUser = () => {
       });
     }
     return cols;
-  }, [t, router, renderColumn, permission]);
+  }, [t, router, renderColumn, permission, onDelete]);
 
   const TagFilterGroup = useCallback(() => {
     const entries = Object.entries(filterApplied) as [keyof UserFilterForm, any][];
