@@ -62,6 +62,16 @@ const ApiEndPoint = {
   METER_DETAIL: '/admin/meters/detail',
   // METER
 
+  // METER VERIFICATION
+  METER_VERIFICATION_SEARCH: '/admin/meter-verifications/search',
+  METER_VERIFICATION_LIST: '/admin/meter-verifications/list',
+  METER_VERIFICATION_DETAIL: '/admin/meter-verifications/detail',
+  METER_VERIFICATION_CREATE: '/admin/meter-verifications/create',
+  METER_VERIFICATION_UPDATE: '/admin/meter-verifications/update',
+  METER_VERIFICATION_DELETE: '/admin/meter-verifications/delete',
+  METER_VERIFICATION_FILE_VIEW: '/admin/meter-verifications',
+  // METER VERIFICATION
+
   // DOCUMENT
   DOCUMENT_UPLOAD: '/admin/documents/upload',
   DOCUMENT_UPDATE: '/admin/documents/update',
