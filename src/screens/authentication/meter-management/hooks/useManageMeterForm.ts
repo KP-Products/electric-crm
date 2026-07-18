@@ -1,11 +1,19 @@
 import { K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ADD_METER, EDIT_METER, METER_DETAIL } from '@redux-action-type/meter';
 import { dispatch } from '@redux-common';
-import { selectRoleList } from '@redux-selector/role';
-import { selectUserList, selectUserLoadingDetail } from '@redux-selector/user';
+import { selectMeterList, selectMeterLoadingDetail } from '@redux-selector/meter';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
+import { ErrorBase } from 'model/common';
+import {
+  AddMeterReq,
+  EditMeterReq,
+  GetMeterDetailRes,
+  Meter,
+  normalizeMeterSearchItem
+} from 'model/meter';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -13,81 +21,173 @@ import { useSelector } from 'react-redux';
 import { DebugUtils } from 'utils/debug-utils';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
 import { z } from 'zod';
-import { AddMeterReq } from '../../../../model/meter';
-import { ADD_METER, EDIT_METER } from '@redux-action-type/meter';
+import {
+  isMeterInstalled,
+  METER_STATUS,
+  normalizeMeterType,
+  normalizeMeterStatus,
+  normalizeUsagePurpose,
+  normalizeVoltageType
+} from '../utils/constant';
 
-const userSchema = (t: TypedT) => {
-  return z.object({
-    meterCode: z
-      .string()
-      .trim()
-      .min(K_SIZE_1, { message: t('validate:required', { name: 'Mã công tơ' }) }),
-    customerId: z
-      .string()
-      .trim()
-      .min(K_SIZE_1, { message: t('validate:required', { name: 'Mã khách hàng' }) }),
-    installDate: z.string().trim(),
-    voltageLevel: z.string().trim(),
-    voltageType: z.string().trim(),
-    roleId: z.string().trim().optional()
-  });
+const optionalString = z.preprocess(
+  (value) => (value === null || value === undefined ? '' : value),
+  z.string().trim()
+);
+
+const meterSchema = (t: TypedT) => {
+  return z
+    .object({
+      meterCode: z
+        .string()
+        .trim()
+        .min(K_SIZE_1, { message: t('validate:required', { name: 'Số công tơ' }) }),
+      status: z
+        .string()
+        .trim()
+        .min(K_SIZE_1, { message: t('validate:required', { name: 'Trạng thái' }) }),
+      meterType: optionalString,
+      manufacturer: optionalString,
+      purchaseDate: optionalString,
+      installationDate: optionalString,
+      inspectionDate: optionalString,
+      inspectionExpiryDate: optionalString,
+      voltageType: optionalString,
+      customerId: optionalString,
+      feederId: optionalString,
+      usagePurpose: optionalString,
+      multiplier: z
+        .string()
+        .trim()
+        .refine((value) => !value || /^\d+(\.\d+)?$/.test(value), {
+          message: 'Hệ số nhân phải là số dương'
+        })
+    })
+    .superRefine((data, ctx) => {
+      if (!isMeterInstalled(data.status)) return;
+
+      const requiredInstalledFields: { field: keyof typeof data; label: string }[] = [
+        { field: 'installationDate', label: 'Ngày lắp' },
+        { field: 'voltageType', label: 'Cấp điện áp' },
+        { field: 'customerId', label: 'Khách hàng' },
+        { field: 'feederId', label: 'Lộ điện' },
+        { field: 'usagePurpose', label: 'Mục đích sử dụng' },
+        { field: 'multiplier', label: 'Hệ số nhân' }
+      ];
+
+      requiredInstalledFields.forEach(({ field, label }) => {
+        if (!data[field]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field],
+            message: t('validate:required', { name: label })
+          });
+        }
+      });
+    });
 };
 
-export type UserForm = z.infer<ReturnType<typeof userSchema>>;
+export type MeterForm = z.infer<ReturnType<typeof meterSchema>>;
 
-export interface ManageUserFormProps {
+export interface ManageMeterFormProps {
   isAddMode: boolean;
   isView: boolean;
 }
-export default function useManageMeterForm({ isAddMode, isView }: ManageUserFormProps) {
+
+const defaultMeterFormValues: MeterForm = {
+  meterCode: '',
+  status: METER_STATUS.IN_STOCK,
+  meterType: '',
+  manufacturer: '',
+  purchaseDate: '',
+  installationDate: '',
+  inspectionDate: '',
+  inspectionExpiryDate: '',
+  voltageType: '',
+  customerId: '',
+  feederId: '',
+  usagePurpose: '',
+  multiplier: '1'
+};
+
+export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFormProps) {
   const { t } = useAppTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const userList = useSelector(selectUserList);
-  const roleList = useSelector(selectRoleList);
-  const loading = useSelector(selectUserLoadingDetail);
+  const meterList = useSelector(selectMeterList);
+  const loading = useSelector(selectMeterLoadingDetail);
 
-  const id = searchParams.get('id');
-
-  const userDetail = useMemo(() => {
-    if (!id) return;
-    return userList.find((user) => user?.id === id);
-  }, [id, userList]);
+  const id = searchParams.get('id') || '';
 
   const action = useMemo(
     () => (isAddMode ? t('common:add_new') : isView ? t('common:view_detail') : t('common:edit')),
     [t, isAddMode, isView]
   );
 
-  const roleOptions = useMemo(
-    () => roleList.map((role) => ({ value: role.id, label: role.name })),
-    [roleList]
-  );
-
-  const userForm = useForm<UserForm>({
+  const userForm = useForm<MeterForm>({
     mode: 'onTouched',
-    defaultValues: {
-      meterCode: '',
-      customerId: '',
-      installDate: '',
-      voltageLevel: '',
-      voltageType: ''
-    },
-    resolver: zodResolver(userSchema(t))
+    defaultValues: defaultMeterFormValues,
+    resolver: zodResolver(meterSchema(t))
   });
 
+  const mapMeterToForm = useCallback(
+    (meter: Meter): MeterForm => ({
+      meterCode: meter.meterCode || '',
+      status: normalizeMeterStatus(meter.status),
+      meterType: normalizeMeterType(meter.meterType),
+      manufacturer: meter.manufacturer || '',
+      purchaseDate: meter.purchaseDate || '',
+      installationDate: meter.installationDate || '',
+      inspectionDate: meter.inspectionDate || '',
+      inspectionExpiryDate: meter.inspectionExpiryDate || '',
+      voltageType: normalizeVoltageType(meter.voltageType || meter.voltageLevel),
+      customerId: meter.customerId || '',
+      feederId: meter.feederId || meter.feederName || '',
+      usagePurpose: normalizeUsagePurpose(meter.usagePurpose),
+      multiplier:
+        meter.multiplier !== undefined && meter.multiplier !== null ? String(meter.multiplier) : '1'
+    }),
+    []
+  );
+
   useEffect(() => {
-    if (!isAddMode) {
-      if (!userDetail) {
-        return router.replace(ROUTES.MANAGE_USER);
-      } else {
-        // userForm.reset({
-        //   ...userDetail
-        //   // roleId: userDetail?.roles?.roleId || ''
-        // });
-      }
+    if (isAddMode) {
+      userForm.reset(defaultMeterFormValues);
+      return;
     }
-  }, [router, userDetail, isAddMode, userForm]);
+
+    if (!id) {
+      router.replace(ROUTES.METER_MANAGEMENT);
+      return;
+    }
+
+    const meterDetail = meterList.find((meter) => meter.meterId === id || meter.id === id);
+    if (meterDetail) {
+      userForm.reset(mapMeterToForm(meterDetail));
+      return;
+    }
+
+    dispatch({
+      type: METER_DETAIL,
+      payload: {
+        body: { id, meterId: id },
+        onSuccess: (res: GetMeterDetailRes) => {
+          const meter = normalizeMeterSearchItem(res.data);
+          if (meter) userForm.reset(mapMeterToForm(meter));
+        },
+        onFailed: (error?: ErrorBase) => {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content:
+              error?.businessErrorMessage ||
+              error?.systemErrorMessage ||
+              'Tải thông tin công tơ thất bại'
+          });
+          router.replace(ROUTES.METER_MANAGEMENT);
+        }
+      }
+    });
+  }, [id, isAddMode, mapMeterToForm, meterList, router, userForm]);
 
   const onSubmitSuccess = useCallback(
     (res: any) => {
@@ -98,30 +198,50 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageUserForm
         content: action + ' công tơ thành công'
       });
     },
-    [t, router, action]
+    [router, action]
   );
 
-  const onSubmitFailed = useCallback(() => {
-    showToast({
-      type: TYPE_TOAST.ERROR,
-      content: action + ' công tơ thất bại'
-    });
-  }, [t, action]);
+  const onSubmitFailed = useCallback(
+    (error?: ErrorBase) => {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content:
+          error?.businessErrorMessage || error?.systemErrorMessage || action + ' công tơ thất bại'
+      });
+    },
+    [action]
+  );
+
+  const buildSubmitBody = useCallback((data: MeterForm): AddMeterReq => {
+    const installed = isMeterInstalled(data.status);
+    const feeder = installed ? data.feederId.trim() : undefined;
+    const voltageType = installed ? data.voltageType : undefined;
+
+    return {
+      meterCode: data.meterCode.trim(),
+      status: data.status,
+      meterType: data.meterType || undefined,
+      manufacturer: data.manufacturer || undefined,
+      purchaseDate: data.purchaseDate || undefined,
+      inspectionDate: data.inspectionDate || undefined,
+      inspectionExpiryDate: data.inspectionExpiryDate || undefined,
+      installationDate: installed ? data.installationDate || undefined : undefined,
+      voltageType,
+      voltageLevel: voltageType,
+      customerId: installed ? data.customerId.trim() || undefined : undefined,
+      feederId: feeder,
+      feederName: feeder,
+      usagePurpose: installed ? data.usagePurpose || undefined : undefined,
+      multiplier: data.multiplier ? Number(data.multiplier) : undefined,
+      initialReading: 0
+    };
+  }, []);
 
   const onSubmit = useCallback(
-    (data: UserForm) => {
+    (data: MeterForm) => {
       DebugUtils.logS(data);
       if (isAddMode) {
-        const body: AddMeterReq = {
-          meterCode: data.meterCode,
-          customerId: data.customerId,
-          installationDate: '2026-05-10',
-          voltageLevel: data.voltageLevel,
-          multiplier: 0,
-          voltageType: data.voltageType,
-          initialReading: 0,
-          status: 'ACTIVE'
-        };
+        const body = buildSubmitBody(data);
         dispatch({
           type: ADD_METER,
           payload: {
@@ -131,15 +251,10 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageUserForm
           }
         });
       } else if (id) {
-        const body: AddMeterReq = {
-          meterCode: 'string',
-          customerId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-          installationDate: '2026-05-10',
-          voltageLevel: 'string',
-          multiplier: 0,
-          voltageType: 'string',
-          initialReading: 0,
-          status: 'string'
+        const body: EditMeterReq = {
+          ...buildSubmitBody(data),
+          id,
+          meterId: id
         };
         dispatch({
           type: EDIT_METER,
@@ -151,13 +266,13 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageUserForm
         });
       }
     },
-    [onSubmitSuccess, onSubmitFailed, isAddMode, id]
+    [buildSubmitBody, onSubmitSuccess, onSubmitFailed, isAddMode, id]
   );
 
   const onBack = useCallback(() => router.back(), [router]);
 
   const onEdit = useCallback(
-    () => router.push(`${ROUTES.MANAGE_USER_EDIT}?id=${id}`),
+    () => router.push(`${ROUTES.MANAGE_METER_EDIT}?id=${id}`),
     [router, id]
   );
 
@@ -168,7 +283,6 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageUserForm
     userForm,
     loading,
     onBack,
-    onEdit,
-    roleOptions
+    onEdit
   };
 }

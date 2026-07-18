@@ -1,8 +1,8 @@
 import { createDeepEqualSelector } from '@redux-common';
-import { initialUser } from '@redux-slice/user';
+import { initialRole } from '@redux-slice/meter';
 import { RootState } from '@store/all-reducers';
 
-const selectDomain = (state: RootState) => state?.meter || initialUser;
+const selectDomain = (state: RootState) => state?.meter || initialRole;
 
 export const selectMeterLoadingList = createDeepEqualSelector(
   selectDomain,

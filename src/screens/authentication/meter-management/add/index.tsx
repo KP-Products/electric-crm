@@ -1,8 +1,8 @@
 'use client';
-import ManageUserForm from 'screens/authentication/manage-user/form';
+import ManageMeterForm from '../form';
 
-const ManageUserAddPage = () => {
-  return <ManageUserForm isAddMode isView={false} />;
+const ManageMeterAddPage = () => {
+  return <ManageMeterForm isAddMode isView={false} />;
 };
 
-export default ManageUserAddPage;
+export default ManageMeterAddPage;

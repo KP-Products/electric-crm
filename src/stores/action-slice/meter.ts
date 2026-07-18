@@ -14,6 +14,9 @@ import {
   AddMeterRes,
   DeleteMeterReq,
   DeleteMeterRes,
+  EditMeterReq,
+  GetMeterDetailReq,
+  GetMeterDetailRes,
   GetListMeterReq,
   GetListMeterRes,
   Meter
@@ -61,8 +64,8 @@ const getListMeterSearch = createAction(
 const getMeterDetail = createAction(
   METER_DETAIL,
   (
-    body: GetListMeterReq,
-    onSuccess: (data: GetListMeterRes) => void,
+    body: GetMeterDetailReq,
+    onSuccess: (data: GetMeterDetailRes) => void,
     onFailed: (error?: ErrorBase) => void
   ) => ({
     payload: { body, onSuccess, onFailed }
@@ -83,7 +86,7 @@ const addMeter = createAction(
 const editMeter = createAction(
   EDIT_METER,
   (
-    body: AddMeterReq,
+    body: EditMeterReq,
     onSuccess: (data: AddMeterRes) => void,
     onFailed: (error?: ErrorBase) => void
   ) => ({

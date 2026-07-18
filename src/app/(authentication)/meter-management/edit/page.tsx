@@ -1,7 +1,7 @@
-import ManageUserEditPage from 'screens/authentication/manage-user/edit';
+import ManageMeterEditPage from 'screens/authentication/meter-management/edit';
 
 const Page = () => {
-  return <ManageUserEditPage />;
+  return <ManageMeterEditPage />;
 };
 
 export default Page;

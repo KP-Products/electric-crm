@@ -1,39 +1,56 @@
 'use client';
-import useManageUserPermission from '../manage-user/hooks/useManageUserPermission';
-import { useCallback, useMemo } from 'react';
+
 import {
   K_SIZE_0,
   K_SIZE_1,
-  K_SIZE_100,
   K_SIZE_108,
   K_SIZE_130,
   K_SIZE_16,
   K_SIZE_160,
   K_SIZE_18,
-  K_SIZE_180,
+  K_SIZE_200,
   K_SIZE_8,
   NULL_VALUE
 } from '@constant';
-import { User } from '../../../model/user';
-import { TextBase } from '../../../components/text';
-import { ROUTES } from '../../../config/routes';
-import Status, { KIND_STATUS } from '../../../components/status';
-import {
-  USER_FILTER_LABEL_MAP,
-  USER_STATUS_LABEL_MAP,
-  USER_STATUS_TYPE_MAP
-} from '../manage-user/utils/constant';
-import { displayDateTimeFromServer } from '../../../utils/date';
-import IconHover from '../../../components/icon-vec-local/icon-hover';
-import { UserFilterForm } from '../manage-user/components/UserFilterDrawer';
-import clsx from 'clsx';
-import TagFilter from '../../../components/tag-filter';
-import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
 import { Divider, Flex } from 'antd';
-import ButtonBase from '../../../components/button';
-import AppTable from '../../../components/table';
-import AppPagination from '../../../components/table/pagination';
-import useManageMeter from './hooks/useManageMeter';
+import clsx from 'clsx';
+import ButtonBase from 'components/button';
+import IconHover from 'components/icon-vec-local/icon-hover';
+import Status, { KIND_STATUS } from 'components/status';
+import AppTable from 'components/table';
+import AppPagination from 'components/table/pagination';
+import TagFilter from 'components/tag-filter';
+import { TextBase } from 'components/text';
+import { ROUTES } from 'config/routes';
+import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import { Meter } from 'model/meter';
+import { useCallback, useMemo } from 'react';
+import { displayDateFromServer } from 'utils/date';
+import useManageMeter, { MeterFilterForm } from './hooks/useManageMeter';
+import {
+  getInspectionStatus,
+  getMeterRecordId,
+  getMeterStatusLabel,
+  getMeterStatusType,
+  getMeterTypeLabel,
+  getUsagePurposeLabel,
+  getVoltageTypeLabel,
+  INSPECTION_STATUS_LABEL_MAP,
+  INSPECTION_STATUS_TYPE_MAP,
+  METER_STATUS_LABEL_MAP,
+  VOLTAGE_TYPE_LABEL_MAP
+} from './utils/constant';
+
+const renderText = (text?: string | number) =>
+  text !== undefined && text !== null && text !== '' ? String(text) : NULL_VALUE;
+
+const renderTruncatedText = (text?: string, className = 'max-w-[220px]') => (
+  <div title={text} className={`${className} truncate`}>
+    {text || NULL_VALUE}
+  </div>
+);
+
+const renderDate = (date?: string) => (date ? displayDateFromServer(date) : NULL_VALUE);
 
 const MeterManagementScreen = () => {
   const {
@@ -41,116 +58,200 @@ const MeterManagementScreen = () => {
     router,
     filterApplied,
     loadingMeterList,
+    exportLoading,
+    currentPage,
     pagination,
     onResetFilter,
-    filterDrawerRef,
-    meterList
+    meterList,
+    total,
+    onExport
   } = useManageMeter();
 
-  const { permission } = useManageUserPermission();
-
-  const renderColumn = useCallback((text: string, display?: (text: string) => any) => {
-    return display?.(text) || text || NULL_VALUE;
+  const renderInspectionStatus = useCallback((inspectionExpiryDate?: string) => {
+    const inspectionStatus = getInspectionStatus(inspectionExpiryDate);
+    return (
+      <Status
+        type={INSPECTION_STATUS_TYPE_MAP[inspectionStatus]}
+        kind={KIND_STATUS.SECONDARY}
+        content={INSPECTION_STATUS_LABEL_MAP[inspectionStatus]}
+      />
+    );
   }, []);
 
-  const columns = useMemo(() => {
-    const cols: any = [
+  const columns = useMemo<any[]>(
+    () => [
       {
-        title: 'Mã công tơ',
+        title: 'Số công tơ',
         dataIndex: 'meterCode',
         key: 'meterCode',
         align: 'left',
         width: K_SIZE_160,
-        render: (text: string, record: User) => {
+        render: (text: string, record: Meter) => {
+          const recordId = getMeterRecordId(record);
           return (
             <TextBase
-              text={text}
+              text={text || NULL_VALUE}
               classNames={'sub-title4 !text-secondary-500 cursor-pointer hover:!text-secondary-700'}
-              onClick={() => router.push(`${ROUTES.MANAGE_METER_DETAIL}?id=${record.id}`)}
+              onClick={() =>
+                recordId && router.push(`${ROUTES.MANAGE_METER_DETAIL}?id=${recordId}`)
+              }
             />
           );
         }
       },
       {
-        title: t('common:status'),
+        title: 'Trạng thái',
         dataIndex: 'status',
+        key: 'status',
         align: 'left',
         width: K_SIZE_130,
-        render: (status: string) => {
-          return (
-            <Status
-              type={USER_STATUS_TYPE_MAP[status]}
-              kind={KIND_STATUS.SECONDARY}
-              content={USER_STATUS_LABEL_MAP[status]}
-            />
-          );
-        }
+        render: (status: string) => (
+          <Status
+            type={getMeterStatusType(status)}
+            kind={KIND_STATUS.SECONDARY}
+            content={getMeterStatusLabel(status)}
+          />
+        )
       },
       {
-        title: t('common:created_at'),
-        dataIndex: 'createdAt',
+        title: 'Loại công tơ',
+        dataIndex: 'meterType',
+        key: 'meterType',
         align: 'left',
-        width: K_SIZE_180,
-        render: (text: string) => renderColumn(text, displayDateTimeFromServer)
+        width: K_SIZE_130,
+        render: getMeterTypeLabel
       },
       {
-        title: t('common:created_by'),
-        dataIndex: 'createdBy',
+        title: 'Ngày mua',
+        dataIndex: 'purchaseDate',
+        key: 'purchaseDate',
         align: 'left',
-        width: K_SIZE_100,
-        render: (text: string) => renderColumn(text)
+        width: K_SIZE_130,
+        render: renderDate
       },
       {
-        title: t('common:updated_at'),
-        dataIndex: 'updatedAt',
+        title: 'Ngày lắp',
+        dataIndex: 'installationDate',
+        key: 'installationDate',
         align: 'left',
-        width: K_SIZE_180,
-        render: (text: string) => renderColumn(text, displayDateTimeFromServer)
+        width: K_SIZE_130,
+        render: renderDate
       },
       {
-        title: t('common:updated_by'),
-        dataIndex: 'updatedBy',
+        title: 'Ngày kiểm định',
+        dataIndex: 'inspectionDate',
+        key: 'inspectionDate',
         align: 'left',
-        width: K_SIZE_100,
-        render: (text: string) => renderColumn(text)
-      }
-    ];
-    if (permission.canEdit) {
-      cols.push({
+        width: K_SIZE_130,
+        render: renderDate
+      },
+      {
+        title: 'Thời hạn kiểm định',
+        dataIndex: 'inspectionExpiryDate',
+        key: 'inspectionExpiryDate',
+        align: 'left',
+        width: K_SIZE_160,
+        render: renderDate
+      },
+      {
+        title: 'Cảnh báo',
+        dataIndex: 'inspectionExpiryDate',
+        key: 'inspectionStatus',
+        align: 'left',
+        width: K_SIZE_160,
+        render: renderInspectionStatus
+      },
+      {
+        title: 'Cấp điện áp',
+        dataIndex: 'voltageType',
+        key: 'voltageType',
+        align: 'left',
+        width: K_SIZE_130,
+        render: (_: string, record: Meter) =>
+          getVoltageTypeLabel(record.voltageType || record.voltageLevel)
+      },
+      {
+        title: 'Khách hàng',
+        dataIndex: 'customerId',
+        key: 'customerId',
+        align: 'left',
+        width: K_SIZE_200,
+        render: (_: string, record: Meter) =>
+          renderTruncatedText(record.customerName || record.customerId, 'max-w-[220px]')
+      },
+      {
+        title: 'Lộ điện',
+        dataIndex: 'feederId',
+        key: 'feederId',
+        align: 'left',
+        width: K_SIZE_200,
+        render: (_: string, record: Meter) =>
+          renderTruncatedText(record.feederName || record.feederId, 'max-w-[220px]')
+      },
+      {
+        title: 'Mục đích',
+        dataIndex: 'usagePurpose',
+        key: 'usagePurpose',
+        align: 'left',
+        width: K_SIZE_160,
+        render: getUsagePurposeLabel
+      },
+      {
+        title: 'Hệ số nhân',
+        dataIndex: 'multiplier',
+        key: 'multiplier',
+        align: 'right',
+        width: K_SIZE_130,
+        render: renderText
+      },
+      {
         title: t('common:action'),
         fixed: 'right',
         width: K_SIZE_108,
         align: 'center',
-        render: (_: any, record: User) => (
-          <div className="flex justify-center">
-            <IconHover
-              rootClassName={'text-color-800'}
-              title={t('common:edit')}
-              icon={'ICON_EDIT'}
-              iconHeight={K_SIZE_18}
-              onClick={() => router.push(`${ROUTES.MANAGE_USER_EDIT}?id=${record.id}`)}
-            />
-          </div>
-        )
-      });
-    }
-    return cols;
-  }, [t, router, renderColumn, permission]);
+        render: (_: unknown, record: Meter) => {
+          const recordId = getMeterRecordId(record);
+          return (
+            <div className="flex justify-center">
+              <IconHover
+                rootClassName={'text-color-800'}
+                title={t('common:edit')}
+                icon={'ICON_EDIT'}
+                iconHeight={K_SIZE_18}
+                onClick={() =>
+                  recordId && router.push(`${ROUTES.MANAGE_METER_EDIT}?id=${recordId}`)
+                }
+              />
+            </div>
+          );
+        }
+      }
+    ],
+    [renderInspectionStatus, router, t]
+  );
 
   const TagFilterGroup = useCallback(() => {
-    const entries = Object.entries(filterApplied) as [keyof UserFilterForm, any][];
+    const entries = Object.entries(filterApplied) as [keyof MeterFilterForm, string][];
     const activeFilters = entries.filter(([, value]) => Boolean(value));
-    const formatValue = (key: keyof UserFilterForm, value: any) => {
+    const formatValue = (key: keyof MeterFilterForm, value: string) => {
       switch (key) {
         case 'status':
-          return USER_STATUS_LABEL_MAP[value];
+          return METER_STATUS_LABEL_MAP[value] || value;
+        case 'voltageType':
+          return VOLTAGE_TYPE_LABEL_MAP[value] || value;
         default:
           return value;
       }
     };
+    const labelMap: Record<keyof MeterFilterForm, string> = {
+      meterCodeContains: 'Số công tơ',
+      customerId: 'Khách hàng',
+      voltageType: 'Cấp điện áp',
+      status: 'Trạng thái'
+    };
     return (
       <div
-        className={clsx('flex w-full items-center gap-8', {
+        className={clsx('flex w-full flex-wrap items-center gap-8', {
           'mb-8': activeFilters.length > K_SIZE_0
         })}
       >
@@ -160,14 +261,15 @@ const MeterManagementScreen = () => {
           return (
             <TagFilter
               key={key}
-              content={`${t(USER_FILTER_LABEL_MAP[key])}: ${valueFilter}`}
+              content={`${labelMap[key]}: ${valueFilter}`}
               onClose={() => onResetFilter(key)}
             />
           );
         })}
       </div>
     );
-  }, [t, filterApplied, onResetFilter]);
+  }, [filterApplied, onResetFilter]);
+
   const breadcrumbList = [
     {
       title: t('menu:system_administration')
@@ -177,6 +279,7 @@ const MeterManagementScreen = () => {
       key: ROUTES.METER_MANAGEMENT
     }
   ];
+
   return (
     <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
       <div>
@@ -186,23 +289,27 @@ const MeterManagementScreen = () => {
           gap={K_SIZE_8}
           className={'tablet:flex-col tablet:items-start'}
         >
-          <TextBase classNames="title4" text={'Quản lý công tơ'} />
+          <div>
+            <TextBase classNames="title4" text={'Quản lý công tơ'} />
+            <TextBase
+              classNames="body3 !text-color-700"
+              text={`Theo dõi ${total} công tơ điện tử/cơ, ngày kiểm định và trạng thái lắp đặt`}
+            />
+          </div>
           <Flex
             flex={K_SIZE_1}
             justify={'end'}
             gap={K_SIZE_16}
             className={'mobile:w-full mobile:flex-col'}
           >
-            <Flex gap={K_SIZE_16}>
-              <ButtonBase
-                type={'ghost'}
-                customContent={t('common:advanced_filter')}
-                leftIcon={'IC_FILTER_OUTLINE'}
-                onClick={() => filterDrawerRef.current?.open(filterApplied)}
-                classNames={'mobile:flex-1 mobile:justify-center'}
-              />
-            </Flex>
-
+            <ButtonBase
+              type={'ghost'}
+              leftIcon={'IC_DOWNLOAD_OUTLINE'}
+              customContent={exportLoading ? 'Đang xuất...' : 'Xuất Excel'}
+              disabled={exportLoading}
+              classNames={'mobile:flex-1 mobile:justify-center'}
+              onClick={onExport}
+            />
             <ButtonBase
               type={'ghost'}
               leftIcon={'IC_ADD_OUTLINE2'}
@@ -221,24 +328,15 @@ const MeterManagementScreen = () => {
             scroll={{ x: 'max-content', y: '75vh' }}
             dataSource={meterList}
             loading={loadingMeterList}
-            columns={[...columns]}
-            rowKey={'id'}
+            columns={columns}
+            rowKey={(record: any) => getMeterRecordId(record) || record.meterCode}
             pagination={pagination}
           />
         </div>
-        <AppPagination
-          currentPage={pagination.current}
-          total={pagination.total}
-          pagination={pagination}
-        />
-        {/*<UserFilterDrawer*/}
-        {/*  ref={filterDrawerRef}*/}
-        {/*  defaultValues={defaultFilter}*/}
-        {/*  onApplyFilter={onApplyFilter}*/}
-        {/*  onResetFilter={onResetFilter}*/}
-        {/*/>*/}
+        <AppPagination currentPage={currentPage} total={total} pagination={pagination} />
       </div>
     </PageWithBreadcrumb>
   );
 };
+
 export default MeterManagementScreen;

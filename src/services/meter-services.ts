@@ -1,5 +1,4 @@
 import { ApiResponse } from '../model/common';
-import { GetListUserRes } from '../model/user';
 import appServices from '@app-services';
 import { ApiConstants } from './networking/app-apis';
 import {
@@ -7,11 +6,14 @@ import {
   AddMeterRes,
   DeleteMeterReq,
   DeleteMeterRes,
+  EditMeterReq,
+  GetMeterDetailReq,
+  GetMeterDetailRes,
   GetListMeterReq,
   GetListMeterRes
 } from '../model/meter';
 
-async function getListMeter(): Promise<ApiResponse<GetListUserRes>> {
+async function getListMeter(): Promise<ApiResponse<GetListMeterRes>> {
   try {
     const rs = await appServices.post(ApiConstants.GET_LIST_METER);
     const data = rs.data;
@@ -29,6 +31,15 @@ async function getMeterSearchList(params: GetListMeterReq): Promise<ApiResponse<
     return error;
   }
 }
+async function getMeterDetail(params: GetMeterDetailReq): Promise<ApiResponse<GetMeterDetailRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.METER_DETAIL, params);
+    const data = rs.data;
+    return data;
+  } catch (error: any) {
+    return error;
+  }
+}
 async function addMeter(params: AddMeterReq): Promise<ApiResponse<AddMeterRes>> {
   try {
     const rs = await appServices.post(ApiConstants.ADD_METER, params);
@@ -38,7 +49,7 @@ async function addMeter(params: AddMeterReq): Promise<ApiResponse<AddMeterRes>> 
     return error;
   }
 }
-async function editMeter(params: AddMeterReq): Promise<ApiResponse<AddMeterRes>> {
+async function editMeter(params: EditMeterReq): Promise<ApiResponse<AddMeterRes>> {
   try {
     const rs = await appServices.post(ApiConstants.EDIT_METER, params);
     const data = rs.data;
@@ -59,6 +70,7 @@ async function deleteMeter(params: DeleteMeterReq): Promise<ApiResponse<DeleteMe
 const meterServices = {
   getListMeter,
   getMeterSearchList,
+  getMeterDetail,
   addMeter,
   editMeter,
   deleteMeter

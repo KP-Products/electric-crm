@@ -1,7 +1,7 @@
-import ManageUserAddPage from 'screens/authentication/manage-user/add';
+import ManageMeterAddPage from 'screens/authentication/meter-management/add';
 
 const Page = () => {
-  return <ManageUserAddPage />;
+  return <ManageMeterAddPage />;
 };
 
 export default Page;
