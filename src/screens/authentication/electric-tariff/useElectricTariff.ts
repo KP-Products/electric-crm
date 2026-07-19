@@ -1,5 +1,18 @@
 import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  CREATE_ELECTRIC_TARIFF,
+  CREATE_ELECTRIC_TARIFF_TOU_PRICE,
+  GET_ELECTRIC_TARIFF_DETAIL,
+  SEARCH_ELECTRIC_TARIFF
+} from '@redux-action-type/electric-tariff';
+import { dispatch } from '@redux-common';
+import {
+  selectElectricTariffList,
+  selectElectricTariffLoadingDetail,
+  selectElectricTariffLoadingList,
+  selectElectricTariffTotal
+} from '@redux-selector/electric-tariff';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import {
@@ -7,13 +20,14 @@ import {
   CreateTouPriceReq,
   ElectricTariff,
   ElectricTariffTouPrice,
+  GetTariffDetailRes,
   SearchTariffsReq,
   TariffDetail
 } from 'model/electric-tariff';
 import moment from 'moment';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import electricTariffServices from 'services/electric-tariff-services';
+import { useSelector } from 'react-redux';
 import { z } from 'zod';
 
 export const TARIFF_STATUS = {
@@ -86,13 +100,13 @@ export const getPriceWithVat = (unitPrice?: number) =>
     : undefined;
 
 export default function useElectricTariff() {
-  const [tariffList, setTariffList] = useState<ElectricTariff[]>([]);
-  const [total, setTotal] = useState<number>(K_SIZE_0);
+  const tariffList = useSelector(selectElectricTariffList);
+  const total = useSelector(selectElectricTariffTotal);
+  const listLoading = useSelector(selectElectricTariffLoadingList);
+  const detailLoading = useSelector(selectElectricTariffLoadingDetail);
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
   const [filterDraft, setFilterDraft] = useState<ElectricTariffFilter>(DEFAULT_TARIFF_FILTER);
   const [filterApplied, setFilterApplied] = useState<ElectricTariffFilter>(DEFAULT_TARIFF_FILTER);
-  const [listLoading, setListLoading] = useState<boolean>(false);
-  const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [openCreate, setOpenCreate] = useState<boolean>(false);
   const [openDetail, setOpenDetail] = useState<boolean>(false);
   const [openTouForm, setOpenTouForm] = useState<boolean>(false);
@@ -144,21 +158,19 @@ export default function useElectricTariff() {
   );
 
   const fetchList = useCallback(
-    async (page: number, filter: ElectricTariffFilter) => {
-      setListLoading(true);
-      const response = await electricTariffServices.searchTariffs(buildSearchBody(filter, page));
-      setListLoading(false);
-
-      if (!response?.data) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: getErrorMessage(response, 'Tải danh mục giá điện thất bại')
-        });
-        return;
-      }
-
-      setTariffList(response.data.items || []);
-      setTotal(response.data.total || K_SIZE_0);
+    (page: number, filter: ElectricTariffFilter) => {
+      dispatch({
+        type: SEARCH_ELECTRIC_TARIFF,
+        payload: {
+          body: buildSearchBody(filter, page),
+          onFailed: (error?: unknown) => {
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content: getErrorMessage(error, 'Tải danh mục giá điện thất bại')
+            });
+          }
+        }
+      });
     },
     [buildSearchBody]
   );
@@ -220,7 +232,7 @@ export default function useElectricTariff() {
   }, [currentPage, fetchList, filterApplied]);
 
   const handleCreateTariff = useCallback(
-    async (data: ElectricTariffForm) => {
+    (data: ElectricTariffForm) => {
       const body: CreateTariffReq = {
         tariffCode: data.tariffCode.trim(),
         tariffName: data.tariffName.trim(),
@@ -231,43 +243,47 @@ export default function useElectricTariff() {
         status: data.status || TARIFF_STATUS.ACTIVE
       };
 
-      setDetailLoading(true);
-      const response = await electricTariffServices.createTariff(body);
-      setDetailLoading(false);
-
-      if (!response?.data) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: getErrorMessage(response, 'Thêm biểu giá điện thất bại')
-        });
-        return;
-      }
-
-      showToast({
-        type: TYPE_TOAST.SUCCESS,
-        content: 'Thêm biểu giá điện thành công'
+      dispatch({
+        type: CREATE_ELECTRIC_TARIFF,
+        payload: {
+          body,
+          onSuccess: () => {
+            showToast({
+              type: TYPE_TOAST.SUCCESS,
+              content: 'Thêm biểu giá điện thành công'
+            });
+            onCloseCreate();
+            refreshFirstPage();
+          },
+          onFailed: (error?: unknown) => {
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content: getErrorMessage(error, 'Thêm biểu giá điện thất bại')
+            });
+          }
+        }
       });
-      onCloseCreate();
-      refreshFirstPage();
     },
     [onCloseCreate, refreshFirstPage]
   );
 
-  const loadTariffDetail = useCallback(async (id: number) => {
-    setDetailLoading(true);
-    const response = await electricTariffServices.getTariffDetail({ id });
-    setDetailLoading(false);
-
-    if (!response?.data) {
-      showToast({
-        type: TYPE_TOAST.ERROR,
-        content: getErrorMessage(response, 'Tải chi tiết biểu giá thất bại')
-      });
-      return;
-    }
-
-    setSelectedDetail(response.data);
-    setTouPrices(response.data.touPrices || []);
+  const loadTariffDetail = useCallback((id: number) => {
+    dispatch({
+      type: GET_ELECTRIC_TARIFF_DETAIL,
+      payload: {
+        body: { id },
+        onSuccess: (response: GetTariffDetailRes) => {
+          setSelectedDetail(response.data);
+          setTouPrices(response.data?.touPrices || []);
+        },
+        onFailed: (error?: unknown) => {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(error, 'Tải chi tiết biểu giá thất bại')
+          });
+        }
+      }
+    });
   }, []);
 
   const onOpenDetail = useCallback(
@@ -311,7 +327,7 @@ export default function useElectricTariff() {
   }, [touPriceForm]);
 
   const handleCreateTouPrice = useCallback(
-    async (data: TouPriceForm) => {
+    (data: TouPriceForm) => {
       if (!touTargetTariff) return;
 
       const body: CreateTouPriceReq = {
@@ -323,27 +339,29 @@ export default function useElectricTariff() {
         effectiveTo: data.effectiveTo || undefined
       };
 
-      setDetailLoading(true);
-      const response = await electricTariffServices.createTouPrice(body);
-      setDetailLoading(false);
+      dispatch({
+        type: CREATE_ELECTRIC_TARIFF_TOU_PRICE,
+        payload: {
+          body,
+          onSuccess: () => {
+            showToast({
+              type: TYPE_TOAST.SUCCESS,
+              content: 'Thêm bậc giá thành công'
+            });
+            onCloseTouForm();
 
-      if (!response?.data) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: getErrorMessage(response, 'Thêm bậc giá thất bại')
-        });
-        return;
-      }
-
-      showToast({
-        type: TYPE_TOAST.SUCCESS,
-        content: 'Thêm bậc giá thành công'
+            if (openDetail && selectedDetail?.tariff?.id) {
+              loadTariffDetail(selectedDetail.tariff.id);
+            }
+          },
+          onFailed: (error?: unknown) => {
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content: getErrorMessage(error, 'Thêm bậc giá thất bại')
+            });
+          }
+        }
       });
-      onCloseTouForm();
-
-      if (openDetail && selectedDetail?.tariff?.id) {
-        loadTariffDetail(selectedDetail.tariff.id);
-      }
     },
     [loadTariffDetail, onCloseTouForm, openDetail, selectedDetail?.tariff?.id, touTargetTariff]
   );
