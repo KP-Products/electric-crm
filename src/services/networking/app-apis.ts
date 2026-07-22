@@ -81,6 +81,15 @@ const ApiEndPoint = {
   DOCUMENT_DELETE: '/admin/documents/delete',
   // DOCUMENT
 
+  // COMPANY LEGAL DOCUMENT
+  COMPANY_LEGAL_DOCUMENT_CREATE: '/admin/company-legal-documents/create',
+  COMPANY_LEGAL_DOCUMENT_UPDATE: '/admin/company-legal-documents/update',
+  COMPANY_LEGAL_DOCUMENT_SEARCH: '/admin/company-legal-documents/search',
+  COMPANY_LEGAL_DOCUMENT_DETAIL: '/admin/company-legal-documents/detail',
+  COMPANY_LEGAL_DOCUMENT_DELETE: '/admin/company-legal-documents/delete',
+  COMPANY_LEGAL_DOCUMENT_ATTACHMENT: '/admin/company-legal-documents',
+  // COMPANY LEGAL DOCUMENT
+
   // SERVICE LOCATION
   SERVICE_LOCATION_CREATE: '/admin/locations/create',
   SERVICE_LOCATION_UPDATE: '/admin/locations/update',

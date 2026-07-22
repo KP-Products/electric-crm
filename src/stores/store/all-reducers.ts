@@ -10,6 +10,7 @@ import { meterVerificationReducer } from '@redux-slice/meter-verification';
 import { electricTariffReducer } from '@redux-slice/electric-tariff';
 import { contractReducer } from '@redux-slice/contract';
 import { documentReducer } from '@redux-slice/document';
+import { companyLegalDocumentReducer } from '@redux-slice/company-legal-document';
 import { serviceLocationReducer } from '@redux-slice/service-location';
 import { branchReducer } from '@redux-slice/branch';
 import { approvalMatrixReducer } from '@redux-slice/approval-matrix';
@@ -27,6 +28,7 @@ export const allReducer = combineReducers({
   electricTariff: electricTariffReducer,
   contract: contractReducer,
   document: documentReducer,
+  companyLegalDocument: companyLegalDocumentReducer,
   serviceLocation: serviceLocationReducer,
   branch: branchReducer,
   approvalMatrix: approvalMatrixReducer,

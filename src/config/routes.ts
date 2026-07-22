@@ -46,6 +46,11 @@ export const ROUTES = {
   // DOCUMENT
   MANAGE_DOCUMENT: '/management/document',
 
+  // COMPANY LEGAL DOCUMENT
+  COMPANY_LEGAL_DOCUMENTS: '/legal-documents/company',
+  COMPANY_LEGAL_DOCUMENT_ADD: '/legal-documents/company/add',
+  COMPANY_LEGAL_DOCUMENT_EDIT: '/legal-documents/company/edit',
+
   // SERVICE LOCATION
   MANAGE_SERVICE_LOCATION: '/management/service-location',
 

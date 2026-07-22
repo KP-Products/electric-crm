@@ -39,7 +39,8 @@ export const MENU_GROUP_KEYS = {
   CONTRACT: K_SIZE_2.toString(),
   DEVICE: K_SIZE_3.toString(),
   BILLING: '4',
-  CATALOG: '5'
+  CATALOG: '5',
+  LEGAL_DOCUMENT: '6'
 };
 
 const NavigationMenu = () => {
@@ -159,6 +160,20 @@ const NavigationMenu = () => {
             key: ROUTES.MANAGE_SERVICE_LOCATION,
             label: 'Quản lý địa điểm sử dụng điện',
             icon: <EnvironmentOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.LEGAL_DOCUMENT,
+        label: 'Văn bản pháp lý',
+        icon: <FileTextOutlined />,
+        children: [
+          {
+            key: ROUTES.COMPANY_LEGAL_DOCUMENTS,
+            label: 'Danh sách văn bản',
+            icon: <FileTextOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
