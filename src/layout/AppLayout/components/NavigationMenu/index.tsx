@@ -153,6 +153,13 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
+            key: ROUTES.MANAGE_OPERATION_UNIT,
+            label: 'Quản lý đơn vị vận hành',
+            icon: <ApartmentOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
             key: ROUTES.MANAGE_CUSTOMER,
             label: 'Quản lý khách hàng',
             icon: <UsergroupAddOutlined />,

@@ -53,6 +53,14 @@ const ApiEndPoint = {
   CONTRACT_DELETE: '/contracts/delete',
   // CONTRACT
 
+  // OPERATION UNIT
+  OPERATION_UNIT_CREATE: '/admin/operation-units/create',
+  OPERATION_UNIT_UPDATE: '/admin/operation-units/update',
+  OPERATION_UNIT_SEARCH: '/admin/operation-units/search',
+  OPERATION_UNIT_DETAIL: '/admin/operation-units/detail',
+  OPERATION_UNIT_DELETE: '/admin/operation-units/delete',
+  // OPERATION UNIT
+
   // METER
   GET_LIST_METER: '/admin/meters/list',
   GET_METER_SEARCH_LIST: '/admin/meters/search',
