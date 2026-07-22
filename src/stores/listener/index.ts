@@ -9,6 +9,7 @@ export * from './meter-verification';
 export * from './electric-tariff';
 export * from './operation-price';
 export * from './contract';
+export * from './operation-unit';
 export * from './document';
 export * from './company-legal-document';
 export * from './incoming-document';
