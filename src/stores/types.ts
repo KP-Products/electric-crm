@@ -11,6 +11,7 @@ export enum SLICE_NAME {
   DOCUMENT = 'document',
   COMPANY_LEGAL_DOCUMENT = 'companyLegalDocument',
   INCOMING_DOCUMENT = 'incomingDocument',
+  EMPLOYEE = 'employee',
   SERVICE_LOCATION = 'serviceLocation',
   BRANCH = 'branch',
   APPROVAL_MATRIX = 'approvalMatrix',

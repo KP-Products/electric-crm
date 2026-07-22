@@ -99,6 +99,17 @@ const ApiEndPoint = {
   INCOMING_DOCUMENT_ATTACHMENT: '/admin/incoming-documents',
   // INCOMING DOCUMENT
 
+  // EMPLOYEE
+  EMPLOYEE_CREATE: '/admin/employees/create',
+  EMPLOYEE_UPDATE: '/admin/employees/update',
+  EMPLOYEE_SEARCH: '/admin/employees/search',
+  EMPLOYEE_DETAIL: '/admin/employees/detail',
+  EMPLOYEE_DELETE: '/admin/employees/delete',
+  EMPLOYEE_BASE: '/admin/employees',
+  EMPLOYEE_SALARY_HISTORY_ADD: '/admin/employees/salary-history/add',
+  EMPLOYEE_SALARY_HISTORY_DELETE: '/admin/employees/salary-history/delete',
+  // EMPLOYEE
+
   // SERVICE LOCATION
   SERVICE_LOCATION_CREATE: '/admin/locations/create',
   SERVICE_LOCATION_UPDATE: '/admin/locations/update',

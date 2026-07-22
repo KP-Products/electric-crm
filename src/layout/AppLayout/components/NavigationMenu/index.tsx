@@ -9,6 +9,7 @@ import {
   EnvironmentOutlined,
   FileTextOutlined,
   FundProjectionScreenOutlined,
+  IdcardOutlined,
   ProfileOutlined,
   ReconciliationOutlined,
   SafetyCertificateOutlined,
@@ -40,7 +41,8 @@ export const MENU_GROUP_KEYS = {
   DEVICE: K_SIZE_3.toString(),
   BILLING: '4',
   CATALOG: '5',
-  LEGAL_DOCUMENT: '6'
+  LEGAL_DOCUMENT: '6',
+  HUMAN_RESOURCE: '7'
 };
 
 const NavigationMenu = () => {
@@ -187,6 +189,25 @@ const NavigationMenu = () => {
         ]
       },
       {
+        key: MENU_GROUP_KEYS.HUMAN_RESOURCE,
+        label: 'Quản Lý Nhân sự',
+        icon: <IdcardOutlined />,
+        children: [
+          {
+            key: ROUTES.EMPLOYEE_LIST,
+            label: 'Danh sách nhân sự',
+            icon: <TeamOutlined />,
+            type: 'item'
+          },
+          {
+            key: ROUTES.EMPLOYEE_ADD,
+            label: 'Thêm nhân sự',
+            icon: <UsergroupAddOutlined />,
+            type: 'item'
+          }
+        ]
+      },
+      {
         key: MENU_GROUP_KEYS.DEVICE,
         label: 'Thiết bị',
         icon: <SettingOutlined />,
@@ -256,7 +277,7 @@ const NavigationMenu = () => {
   useEffect(() => {
     const matchedRoute = Object.values(ROUTES)
       .filter((route) => pathname.startsWith(route) && route !== ROUTES.ROOT)
-      .sort((a, b) => a.length - b.length)?.[0];
+      .sort((a, b) => b.length - a.length)?.[0];
     dispatch(appActions.setSelectedMenuKeys([matchedRoute]));
   }, [pathname]);
 

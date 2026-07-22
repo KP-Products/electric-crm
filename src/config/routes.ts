@@ -56,6 +56,12 @@ export const ROUTES = {
   INCOMING_DOCUMENT_ADD: '/legal-documents/incoming/add',
   INCOMING_DOCUMENT_EDIT: '/legal-documents/incoming/edit',
 
+  // HUMAN RESOURCES
+  EMPLOYEE_LIST: '/human-resources/employees',
+  EMPLOYEE_ADD: '/human-resources/employees/add',
+  EMPLOYEE_EDIT: '/human-resources/employees/edit',
+  EMPLOYEE_DETAIL: '/human-resources/employees/detail',
+
   // SERVICE LOCATION
   MANAGE_SERVICE_LOCATION: '/management/service-location',
 

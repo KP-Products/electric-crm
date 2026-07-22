@@ -12,6 +12,7 @@ import { contractReducer } from '@redux-slice/contract';
 import { documentReducer } from '@redux-slice/document';
 import { companyLegalDocumentReducer } from '@redux-slice/company-legal-document';
 import { incomingDocumentReducer } from '@redux-slice/incoming-document';
+import { employeeReducer } from '@redux-slice/employee';
 import { serviceLocationReducer } from '@redux-slice/service-location';
 import { branchReducer } from '@redux-slice/branch';
 import { approvalMatrixReducer } from '@redux-slice/approval-matrix';
@@ -31,6 +32,7 @@ export const allReducer = combineReducers({
   document: documentReducer,
   companyLegalDocument: companyLegalDocumentReducer,
   incomingDocument: incomingDocumentReducer,
+  employee: employeeReducer,
   serviceLocation: serviceLocationReducer,
   branch: branchReducer,
   approvalMatrix: approvalMatrixReducer,

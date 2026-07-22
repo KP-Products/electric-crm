@@ -272,7 +272,7 @@ const CompanyLegalDocumentScreen = () => {
             />
             <ButtonBase
               type="primary"
-              leftIcon="ICON_SEARCH"
+              leftIcon="IC_SEARCH_OUTLINE2"
               customContent="Tìm kiếm"
               onClick={onApplyFilter}
               classNames="min-w-[112px] mobile:flex-1 mobile:justify-center"
