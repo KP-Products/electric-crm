@@ -90,6 +90,15 @@ const ApiEndPoint = {
   COMPANY_LEGAL_DOCUMENT_ATTACHMENT: '/admin/company-legal-documents',
   // COMPANY LEGAL DOCUMENT
 
+  // INCOMING DOCUMENT
+  INCOMING_DOCUMENT_CREATE: '/admin/incoming-documents/create',
+  INCOMING_DOCUMENT_UPDATE: '/admin/incoming-documents/update',
+  INCOMING_DOCUMENT_SEARCH: '/admin/incoming-documents/search',
+  INCOMING_DOCUMENT_DETAIL: '/admin/incoming-documents/detail',
+  INCOMING_DOCUMENT_DELETE: '/admin/incoming-documents/delete',
+  INCOMING_DOCUMENT_ATTACHMENT: '/admin/incoming-documents',
+  // INCOMING DOCUMENT
+
   // SERVICE LOCATION
   SERVICE_LOCATION_CREATE: '/admin/locations/create',
   SERVICE_LOCATION_UPDATE: '/admin/locations/update',

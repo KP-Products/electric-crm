@@ -172,7 +172,14 @@ const NavigationMenu = () => {
         children: [
           {
             key: ROUTES.COMPANY_LEGAL_DOCUMENTS,
-            label: 'Danh sách văn bản',
+            label: 'Văn bản pháp lý công ty',
+            icon: <FileTextOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.INCOMING_DOCUMENTS,
+            label: 'Văn bản đến',
             icon: <FileTextOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION

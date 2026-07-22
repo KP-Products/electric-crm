@@ -10,6 +10,7 @@ export * from './electric-tariff';
 export * from './contract';
 export * from './document';
 export * from './company-legal-document';
+export * from './incoming-document';
 export * from './service-location';
 export * from './branch';
 export * from './approval-matrix';

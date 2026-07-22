@@ -51,6 +51,11 @@ export const ROUTES = {
   COMPANY_LEGAL_DOCUMENT_ADD: '/legal-documents/company/add',
   COMPANY_LEGAL_DOCUMENT_EDIT: '/legal-documents/company/edit',
 
+  // INCOMING DOCUMENT
+  INCOMING_DOCUMENTS: '/legal-documents/incoming',
+  INCOMING_DOCUMENT_ADD: '/legal-documents/incoming/add',
+  INCOMING_DOCUMENT_EDIT: '/legal-documents/incoming/edit',
+
   // SERVICE LOCATION
   MANAGE_SERVICE_LOCATION: '/management/service-location',
 
