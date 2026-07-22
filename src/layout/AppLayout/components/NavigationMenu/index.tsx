@@ -15,6 +15,7 @@ import {
   SafetyCertificateOutlined,
   ScheduleOutlined,
   SettingOutlined,
+  TagsOutlined,
   TeamOutlined,
   UsergroupAddOutlined
 } from '@ant-design/icons';
@@ -127,6 +128,13 @@ const NavigationMenu = () => {
             key: ROUTES.ELECTRIC_TARIFF,
             label: 'Danh mục giá điện',
             icon: <DollarCircleOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.OPERATION_PRICE,
+            label: 'Đơn giá vận hành',
+            icon: <TagsOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }

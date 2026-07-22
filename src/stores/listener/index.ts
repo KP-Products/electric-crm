@@ -7,6 +7,7 @@ export * from './user';
 export * from './meter';
 export * from './meter-verification';
 export * from './electric-tariff';
+export * from './operation-price';
 export * from './contract';
 export * from './document';
 export * from './company-legal-document';

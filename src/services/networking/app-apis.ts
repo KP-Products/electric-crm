@@ -141,6 +141,14 @@ const ApiEndPoint = {
   BILLING_TARIFF_TOU_LIST: '/admin/billing/tariffs/tou/list',
   BILLING_TARIFF_TOU_CREATE: '/admin/billing/tariffs/tou/create',
 
+  // BILLING 2.2 - DON GIA VAN HANH
+  BILLING_OPERATION_PRICE_SEARCH: '/admin/billing/operation-prices/search',
+  BILLING_OPERATION_PRICE_DETAIL: '/admin/billing/operation-prices/detail',
+  BILLING_OPERATION_PRICE_CREATE: '/admin/billing/operation-prices/create',
+  BILLING_OPERATION_PRICE_UPDATE: '/admin/billing/operation-prices/update',
+  BILLING_OPERATION_PRICE_DELETE: '/admin/billing/operation-prices/delete',
+  BILLING_OPERATION_PRICE_CONTRACT_LOOKUP: '/admin/billing/operation-prices/contract-lookup',
+
   // BILLING 5.2 - NHAP CHI SO TU FILE
   BILLING_REMOTE_READING_IMPORT_UPLOAD: '/admin/billing/readings/import/upload',
   BILLING_REMOTE_READING_IMPORT_TEMPLATE: '/admin/billing/readings/import/template',

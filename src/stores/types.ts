@@ -7,6 +7,7 @@ export enum SLICE_NAME {
   METER = 'meter',
   METER_VERIFICATION = 'meterVerification',
   ELECTRIC_TARIFF = 'electricTariff',
+  OPERATION_PRICE = 'operationPrice',
   CONTRACT = 'contract',
   DOCUMENT = 'document',
   COMPANY_LEGAL_DOCUMENT = 'companyLegalDocument',

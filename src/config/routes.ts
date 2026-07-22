@@ -67,6 +67,7 @@ export const ROUTES = {
 
   // BILLING
   ELECTRIC_TARIFF: '/billing/electric-tariff',
+  OPERATION_PRICE: '/billing/operation-price',
   MANUAL_METER_READING: '/billing/manual-meter-reading',
   REMOTE_METER_READING: '/billing/remote-meter-reading',
 

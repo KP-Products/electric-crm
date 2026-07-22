@@ -8,6 +8,7 @@ import { sysParameterReducer } from 'stores/action-slice/sys-parameter-slice';
 import { meterReducer } from '@redux-slice/meter';
 import { meterVerificationReducer } from '@redux-slice/meter-verification';
 import { electricTariffReducer } from '@redux-slice/electric-tariff';
+import { operationPriceReducer } from '@redux-slice/operation-price';
 import { contractReducer } from '@redux-slice/contract';
 import { documentReducer } from '@redux-slice/document';
 import { companyLegalDocumentReducer } from '@redux-slice/company-legal-document';
@@ -28,6 +29,7 @@ export const allReducer = combineReducers({
   meter: meterReducer,
   meterVerification: meterVerificationReducer,
   electricTariff: electricTariffReducer,
+  operationPrice: operationPriceReducer,
   contract: contractReducer,
   document: documentReducer,
   companyLegalDocument: companyLegalDocumentReducer,
