@@ -11,6 +11,7 @@ export * from './ppe-item';
 export * from './electric-tariff';
 export * from './operation-price';
 export * from './contract';
+export * from './operation-contract';
 export * from './operation-unit';
 export * from './document';
 export * from './company-legal-document';
