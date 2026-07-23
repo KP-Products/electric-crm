@@ -248,6 +248,13 @@ const NavigationMenu = () => {
             icon: <SwapOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.PPE_ITEMS,
+            label: 'Quản lý bảo hộ lao động',
+            icon: <SafetyCertificateOutlined />,
+            type: 'item'
+            // permission: PERMISSION_VIEW_ACTION.PPE_ITEM_VIEW_ACTION
           }
         ]
       },

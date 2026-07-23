@@ -289,7 +289,7 @@ export function AppSelectControl<T extends FieldValues>({
 
     onSelectExpand?.();
 
-    if (unSeleted && value) {
+    if (unSeleted && value && String(value) === key) {
       onChange('');
       restProps?.onChange?.('');
       return;

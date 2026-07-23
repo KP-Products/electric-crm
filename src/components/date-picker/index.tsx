@@ -9,10 +9,13 @@ import AppHelperText from 'components/helper-text';
 import { TextBase } from 'components/text';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import React, { useImperativeHandle, useMemo, useRef } from 'react';
 import type { Control, FieldError, FieldValues, Path } from 'react-hook-form';
 import { useController } from 'react-hook-form';
 import { IconSvgLocal } from '../icon-vec-local';
+
+dayjs.extend(customParseFormat);
 
 export interface AppDatePickerProps extends Omit<DatePickerProps, 'suffixIcon' | 'className'> {
   name?: string;

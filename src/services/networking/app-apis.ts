@@ -88,6 +88,14 @@ const ApiEndPoint = {
   METER_CHANGE_EVENT_DELETE: '/admin/meter-change-events/delete',
   // METER CHANGE EVENT
 
+  // PPE ITEM
+  PPE_ITEM_SEARCH: '/admin/ppe-items/search',
+  PPE_ITEM_DETAIL: '/admin/ppe-items/detail',
+  PPE_ITEM_CREATE: '/admin/ppe-items/create',
+  PPE_ITEM_UPDATE: '/admin/ppe-items/update',
+  PPE_ITEM_DELETE: '/admin/ppe-items/delete',
+  // PPE ITEM
+
   // DOCUMENT
   DOCUMENT_UPLOAD: '/admin/documents/upload',
   DOCUMENT_UPDATE: '/admin/documents/update',
