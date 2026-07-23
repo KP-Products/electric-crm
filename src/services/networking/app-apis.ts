@@ -80,6 +80,14 @@ const ApiEndPoint = {
   METER_VERIFICATION_FILE_VIEW: '/admin/meter-verifications',
   // METER VERIFICATION
 
+  // METER CHANGE EVENT
+  METER_CHANGE_EVENT_SEARCH: '/admin/meter-change-events/search',
+  METER_CHANGE_EVENT_DETAIL: '/admin/meter-change-events/detail',
+  METER_CHANGE_EVENT_CREATE: '/admin/meter-change-events/create',
+  METER_CHANGE_EVENT_UPDATE: '/admin/meter-change-events/update',
+  METER_CHANGE_EVENT_DELETE: '/admin/meter-change-events/delete',
+  // METER CHANGE EVENT
+
   // DOCUMENT
   DOCUMENT_UPLOAD: '/admin/documents/upload',
   DOCUMENT_UPDATE: '/admin/documents/update',

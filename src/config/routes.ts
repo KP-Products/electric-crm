@@ -39,6 +39,7 @@ export const ROUTES = {
   MANAGE_METER_EDIT: '/meter-management/edit',
   MANAGE_METER_DETAIL: '/meter-management/detail',
   METER_VERIFICATION: '/meter-verification',
+  METER_CHANGE_EVENTS: '/meter-change-events',
 
   // CONTRACT
   MANAGE_CONTRACT: '/management/contract',
