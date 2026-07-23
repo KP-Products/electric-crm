@@ -1,6 +1,7 @@
 .ant-picker {
-  padding: 7px 11px !important;
-  min-height: 37px !important;
+  box-sizing: border-box;
+  padding: 10px 11px !important;
+  min-height: 44px !important;
 }
 .ant-picker .ant-picker-input input {
   width: 100%;

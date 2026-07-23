@@ -126,7 +126,6 @@ const MeterChangeEventsScreen = () => {
     summary,
     listLoading,
     detailLoading,
-    exportLoading,
     currentPage,
     pagination,
     filter,
@@ -147,8 +146,6 @@ const MeterChangeEventsScreen = () => {
     onCloseDetail,
     onSubmit,
     onDelete,
-    onPlaceholderAction,
-    onExport,
     createDefaultDetailForm
   } = useMeterChangeEvents();
 
@@ -264,13 +261,6 @@ const MeterChangeEventsScreen = () => {
               onClick={() => onOpenUpdate(record)}
             />
             <IconHover
-              rootClassName="text-color-800"
-              title="Xem lịch sử"
-              icon="IC_HISTORY_OUTLINE"
-              iconHeight={K_SIZE_18}
-              onClick={() => onPlaceholderAction('Xem lịch sử')}
-            />
-            <IconHover
               rootClassName="text-error-500 hover:text-error-500"
               title={t('common:delete')}
               icon="IC_TRASH_OUTLINE"
@@ -281,7 +271,7 @@ const MeterChangeEventsScreen = () => {
         )
       }
     ],
-    [currentPage, onDelete, onOpenDetail, onOpenUpdate, onPlaceholderAction, pagination.pageSize, t]
+    [currentPage, onDelete, onOpenDetail, onOpenUpdate, pagination.pageSize, t]
   );
 
   const breadcrumbList = [
@@ -289,7 +279,7 @@ const MeterChangeEventsScreen = () => {
       title: 'Thiết bị'
     },
     {
-      title: 'Biến động thiết bị đo đếm',
+      title: 'Biến động công tơ/TU/TI',
       key: ROUTES.METER_CHANGE_EVENTS
     }
   ];
@@ -307,21 +297,13 @@ const MeterChangeEventsScreen = () => {
           gap={K_SIZE_8}
           className="mobile:flex-col mobile:items-start"
         >
-          <TextBase classNames="title4" text="Ghi nhận biến động thiết bị đo đếm" />
+          <TextBase classNames="title4" text="Biến động công tơ/TU/TI" />
           <Flex
             flex={K_SIZE_1}
             justify="end"
             gap={K_SIZE_8}
             className="mobile:w-full mobile:flex-col"
           >
-            <ButtonBase
-              type="ghost"
-              leftIcon="IC_DOWNLOAD_OUTLINE"
-              customContent={exportLoading ? 'Đang xuất...' : 'Xuất Excel'}
-              disabled={exportLoading}
-              classNames="mobile:flex-1 mobile:justify-center"
-              onClick={onExport}
-            />
             <ButtonBase
               type="primary"
               leftIcon="IC_ADD_OUTLINE2"
@@ -659,40 +641,32 @@ const MeterChangeEventsScreen = () => {
           closable={false}
           onClose={onCloseDetail}
           width={isTablet || isMobile ? '94vw' : '70vw'}
-          extra={
-            selectedDetail ? (
-              <Flex gap={K_SIZE_8}>
-                <ButtonBase
-                  type="ghost"
-                  leftIcon="IC_HISTORY_OUTLINE"
-                  customContent="Xem lịch sử"
-                  onClick={() => onPlaceholderAction('Xem lịch sử')}
-                />
-                <ButtonBase
-                  type="ghost"
-                  leftIcon="IC_DOWNLOAD_OUTLINE"
-                  customContent="In biên bản"
-                  onClick={() => onPlaceholderAction('In biên bản')}
-                />
-                <ButtonBase
-                  type="primary"
-                  leftIcon="ICON_EDIT"
-                  customContent="Sửa"
-                  onClick={() => {
-                    onCloseDetail();
-                    onOpenUpdate(selectedDetail);
-                  }}
-                />
-              </Flex>
-            ) : undefined
-          }
         >
           <Spin spinning={detailLoading && Boolean(openDetail)}>
             <div className="grid gap-16">
               <div className="rounded-radius-l border border-color-300 bg-color-50 p-16">
-                <Flex align="center" gap={K_SIZE_8} className="mb-12">
-                  <AuditOutlined className="text-20 text-primary-700" />
-                  <TextBase classNames="sub-title3" text="Thông tin sự kiện" />
+                <Flex
+                  justify="space-between"
+                  align="center"
+                  gap={K_SIZE_8}
+                  className="mb-12 mobile:flex-col mobile:items-start"
+                >
+                  <Flex align="center" gap={K_SIZE_8}>
+                    <AuditOutlined className="text-20 text-primary-700" />
+                    <TextBase classNames="sub-title3" text="Thông tin sự kiện" />
+                  </Flex>
+                  {selectedDetail && (
+                    <IconHover
+                      rootClassName="text-color-800"
+                      title={t('common:edit')}
+                      icon="ICON_EDIT"
+                      iconHeight={K_SIZE_18}
+                      onClick={() => {
+                        onCloseDetail();
+                        onOpenUpdate(selectedDetail);
+                      }}
+                    />
+                  )}
                 </Flex>
                 <div className="grid grid-cols-3 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
                   <DetailItem
