@@ -13,7 +13,6 @@ import {
   ProfileOutlined,
   ReconciliationOutlined,
   SafetyCertificateOutlined,
-  ScheduleOutlined,
   SettingOutlined,
   SwapOutlined,
   TagsOutlined,
@@ -96,27 +95,6 @@ const NavigationMenu = () => {
             icon: <ReconciliationOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_DEFAULT_PARAMETER_VIEW_ACTION
-          },
-          {
-            key: ROUTES.APPROVAL_MATRIX,
-            label: t('menu:approval_matrix'),
-            icon: <ApartmentOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_APPROVAL_MATRIX_VIEW_ACTION
-          },
-          {
-            key: ROUTES.PENDING_TASK,
-            label: t('menu:pending_tasks'),
-            icon: <ScheduleOutlined />,
-            type: 'item'
-            // permission: PERMISSION_VIEW_ACTION.OTHER_FEATURE_WAITING_APPROVE_TASK_VIEW_ACTION
-          },
-          {
-            key: ROUTES.MY_PENDING,
-            label: t('menu:my_pending_tasks'),
-            icon: <CarryOutOutlined />,
-            type: 'item'
-            // permission: PERMISSION_VIEW_ACTION.OTHER_FEATURE_MY_PENDING_TASK_VIEW_ACTION
           }
         ]
       },
@@ -149,6 +127,13 @@ const NavigationMenu = () => {
           {
             key: ROUTES.MANAGE_CONTRACT,
             label: 'Quản lý hợp đồng mua bán điện',
+            icon: <AuditOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.MANAGE_OPERATION_CONTRACT,
+            label: 'Quản lý hợp đồng vận hành',
             icon: <AuditOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION

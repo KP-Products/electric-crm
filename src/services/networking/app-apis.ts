@@ -53,6 +53,14 @@ const ApiEndPoint = {
   CONTRACT_DELETE: '/contracts/delete',
   // CONTRACT
 
+  // OPERATION CONTRACT
+  OPERATION_CONTRACT_CREATE: '/admin/operation-contracts/create',
+  OPERATION_CONTRACT_UPDATE: '/admin/operation-contracts/update',
+  OPERATION_CONTRACT_SEARCH: '/admin/operation-contracts/search',
+  OPERATION_CONTRACT_DETAIL: '/admin/operation-contracts/detail',
+  OPERATION_CONTRACT_DELETE: '/admin/operation-contracts/delete',
+  // OPERATION CONTRACT
+
   // OPERATION UNIT
   OPERATION_UNIT_CREATE: '/admin/operation-units/create',
   OPERATION_UNIT_UPDATE: '/admin/operation-units/update',
@@ -103,6 +111,7 @@ const ApiEndPoint = {
   DOCUMENT_LIST: '/admin/documents/list',
   DOCUMENT_DETAIL: '/admin/documents/get',
   DOCUMENT_DELETE: '/admin/documents/delete',
+  DOCUMENT_BASE: '/admin/documents',
   // DOCUMENT
 
   // COMPANY LEGAL DOCUMENT

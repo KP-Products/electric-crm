@@ -83,3 +83,9 @@ export interface DocumentDetailRes extends ResultBase<DocumentDetailData> {
   link?: string;
   path?: string;
 }
+
+export interface DocumentFileRes {
+  blob: Blob;
+  contentType?: string;
+  fileName?: string;
+}

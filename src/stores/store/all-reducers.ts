@@ -12,6 +12,7 @@ import { ppeItemReducer } from '@redux-slice/ppe-item';
 import { electricTariffReducer } from '@redux-slice/electric-tariff';
 import { operationPriceReducer } from '@redux-slice/operation-price';
 import { contractReducer } from '@redux-slice/contract';
+import { operationContractReducer } from '@redux-slice/operation-contract';
 import { operationUnitReducer } from '@redux-slice/operation-unit';
 import { documentReducer } from '@redux-slice/document';
 import { companyLegalDocumentReducer } from '@redux-slice/company-legal-document';
@@ -36,6 +37,7 @@ export const allReducer = combineReducers({
   electricTariff: electricTariffReducer,
   operationPrice: operationPriceReducer,
   contract: contractReducer,
+  operationContract: operationContractReducer,
   operationUnit: operationUnitReducer,
   document: documentReducer,
   companyLegalDocument: companyLegalDocumentReducer,

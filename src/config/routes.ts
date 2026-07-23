@@ -44,6 +44,10 @@ export const ROUTES = {
 
   // CONTRACT
   MANAGE_CONTRACT: '/management/contract',
+  MANAGE_OPERATION_CONTRACT: '/management/operation-contract',
+  MANAGE_OPERATION_CONTRACT_ADD: '/management/operation-contract/add',
+  MANAGE_OPERATION_CONTRACT_EDIT: '/management/operation-contract/edit',
+  MANAGE_OPERATION_CONTRACT_DETAIL: '/management/operation-contract/detail',
   MANAGE_OPERATION_UNIT: '/management/operation-unit',
 
   // DOCUMENT
