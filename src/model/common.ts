@@ -15,6 +15,7 @@ export interface ErrorBase {
   businessErrorCode?: string;
   businessErrorMessage?: string;
   detailMessage?: string;
+  message?: string;
   systemErrorCode?: string;
   systemErrorMessage?: string;
 }
