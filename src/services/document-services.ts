@@ -2,11 +2,14 @@ import appServices from '@app-services';
 import { ApiResponse } from 'model/common';
 import {
   DeleteDocumentReq,
+  DeleteDocumentRes,
   DocumentDetailRes,
   DocumentFileRes,
   DocumentRes,
   GetDocumentReq,
   ListDocumentReq,
+  ListDocumentsByUnitReq,
+  ListDocumentsByUnitRes,
   ListDocumentRes,
   SearchDocumentReq,
   SearchDocumentRes,
@@ -27,6 +30,17 @@ async function searchDocument(params: SearchDocumentReq): Promise<ApiResponse<Se
 async function listDocuments(params: ListDocumentReq): Promise<ApiResponse<ListDocumentRes>> {
   try {
     const rs = await appServices.post(ApiConstants.DOCUMENT_LIST, params);
+    return rs.data;
+  } catch (error: any) {
+    return error;
+  }
+}
+
+async function listDocumentsByUnit(
+  params: ListDocumentsByUnitReq
+): Promise<ApiResponse<ListDocumentsByUnitRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.DOCUMENT_BY_UNIT, params);
     return rs.data;
   } catch (error: any) {
     return error;
@@ -62,7 +76,7 @@ async function updateDocument(params: UpdateDocumentReq): Promise<ApiResponse<Do
   }
 }
 
-async function deleteDocument(params: DeleteDocumentReq): Promise<ApiResponse<DocumentRes>> {
+async function deleteDocument(params: DeleteDocumentReq): Promise<ApiResponse<DeleteDocumentRes>> {
   try {
     const rs = await appServices.post(ApiConstants.DOCUMENT_DELETE, params);
     return rs.data;
@@ -128,6 +142,7 @@ async function downloadDocumentFile(id: string): Promise<DocumentFileRes | unkno
 const documentServices = {
   searchDocument,
   listDocuments,
+  listDocumentsByUnit,
   uploadDocument,
   updateDocument,
   deleteDocument,

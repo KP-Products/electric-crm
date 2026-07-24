@@ -2,7 +2,7 @@ import { DEFAULT_PAGE_SIZE, K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   DELETE_DOCUMENT,
-  GET_DOCUMENT_DETAIL,
+  LIST_DOCUMENTS_BY_UNIT,
   SEARCH_DOCUMENT,
   UPDATE_DOCUMENT,
   UPLOAD_DOCUMENT
@@ -18,12 +18,10 @@ import { showDialog } from 'components/dialog';
 import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
-import { ENVConfig } from 'config/env';
 import { ErrorBase } from 'model/common';
 import {
   DeleteDocumentReq,
-  DocumentDetailData,
-  DocumentDetailRes,
+  DOCUMENT_STATUS,
   DocumentItem,
   SearchDocumentReq,
   UpdateDocumentReq,
@@ -36,18 +34,47 @@ import type {
   DocumentFilterDrawerRef,
   DocumentFilterForm
 } from 'screens/authentication/manage-document/components/DocumentFilterDrawer';
+import {
+  canViewBlobInline,
+  downloadBlobResponse,
+  getBlobResponseError,
+  isBlobFileResponse
+} from 'utils/blob-response';
+import documentServices from 'services/document-services';
+import useOperationUnitLookup from 'screens/authentication/manage-operation-contract/hooks/useOperationUnitLookup';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
+import useDocumentOwnerLookup from './useDocumentOwnerLookup';
 
-const DOCUMENT_STATUS = {
-  HOP_LE: 'HOP_LE',
-  CAN_BO_SUNG: 'CAN_BO_SUNG',
-  HET_HAN: 'HET_HAN'
+const SUCCESS_MESSAGES = ['success', 'ok'];
+const INLINE_DOCUMENT_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+
+const normalizeApiText = (value?: unknown) =>
+  String(value || '')
+    .trim()
+    .toLowerCase();
+
+const getDocumentErrorMessage = (
+  error?: ErrorBase & { message?: string },
+  fallback = 'Thao tác thất bại'
+) => {
+  const message =
+    error?.businessErrorMessage ||
+    error?.systemErrorMessage ||
+    error?.detailMessage ||
+    error?.message;
+  const normalizedMessage = normalizeApiText(message);
+
+  return message && !SUCCESS_MESSAGES.includes(normalizedMessage) ? message : fallback;
 };
 
 const attachDocumentSchema = z.object({
   ownerType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập loại chủ sở hữu' }),
-  ownerId: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập mã chủ sở hữu' }),
+  ownerId: z
+    .string()
+    .trim()
+    .min(K_SIZE_1, { message: 'Vui lòng nhập ID chủ sở hữu' })
+    .uuid({ message: 'ID chủ sở hữu không hợp lệ' }),
   docType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập loại tài liệu' }),
   status: z.string().trim(),
   note: z.string().trim()
@@ -58,37 +85,10 @@ const updateDocumentSchema = z.object({
   note: z.string().trim()
 });
 
-const getDocumentLink = (
-  document?: DocumentDetailData | DocumentItem | DocumentDetailRes | null
-): string | undefined => {
-  if (!document) return undefined;
-  if (typeof document === 'string') return document;
+const getDownloadFileName = (document: DocumentItem, fileName?: string) =>
+  fileName || document.originalFileName || 'ho-so-giay-to';
 
-  if ('data' in document && document.data) {
-    const nestedLink: string | undefined = getDocumentLink(document.data);
-    if (nestedLink) return nestedLink;
-  }
-
-  return (
-    document.viewUrl ||
-    document.downloadUrl ||
-    document.fileUrl ||
-    document.url ||
-    document.link ||
-    document.path
-  );
-};
-
-const buildDocumentViewUrl = (viewUrl?: string): string | undefined => {
-  if (!viewUrl) return undefined;
-
-  try {
-    return new URL(viewUrl).toString();
-  } catch {
-    const baseUrl = ENVConfig.API_URL || window.location.origin;
-    return new URL(viewUrl, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
-  }
-};
+type DocumentByUnitClientFilter = Partial<Omit<SearchDocumentReq, 'page' | 'size'>>;
 
 export type AttachDocumentForm = z.infer<typeof attachDocumentSchema>;
 export type UpdateDocumentForm = z.infer<typeof updateDocumentSchema>;
@@ -113,7 +113,8 @@ export default function useManageDocument() {
       ownerType: '',
       ownerId: '',
       docType: '',
-      status: ''
+      status: '',
+      operationUnitId: ''
     }),
     []
   );
@@ -140,13 +141,55 @@ export default function useManageDocument() {
     resolver: zodResolver(updateDocumentSchema)
   });
 
-  const buildSearchBody = useCallback(
-    (filter: DocumentFilterForm, page: number): SearchDocumentReq => {
-      const normalizedFilter = Object.fromEntries(
+  const selectedAttachOwnerType = attachForm.watch('ownerType');
+  const previousAttachOwnerTypeRef = useRef<string>();
+  const { ownerOptions, resetOwnerOptions, onOpenOwnerDropdown, ownerDropdownRender } =
+    useDocumentOwnerLookup(selectedAttachOwnerType);
+  const {
+    operationUnitOptions,
+    operationUnitLoading,
+    getOperationUnitDisplay,
+    onOpenOperationUnitDropdown,
+    operationUnitDropdownRender
+  } = useOperationUnitLookup({
+    autoLoad: false,
+    pinnedIds: [filterApplied.operationUnitId]
+  });
+
+  useEffect(() => {
+    const previousOwnerType = previousAttachOwnerTypeRef.current;
+    if (previousOwnerType === undefined) {
+      previousAttachOwnerTypeRef.current = selectedAttachOwnerType;
+      return;
+    }
+
+    if (previousOwnerType !== selectedAttachOwnerType) {
+      attachForm.setValue('ownerId', '', { shouldDirty: true });
+      resetOwnerOptions();
+      previousAttachOwnerTypeRef.current = selectedAttachOwnerType;
+    }
+  }, [attachForm, resetOwnerOptions, selectedAttachOwnerType]);
+
+  const buildNormalizedFilter = useCallback(
+    (filter: DocumentFilterForm, excludedKeys: Array<keyof DocumentFilterForm>) =>
+      Object.fromEntries(
         Object.entries(filter)
+          .filter(([key]) => !excludedKeys.includes(key as keyof DocumentFilterForm))
           .map(([key, value]) => [key, value.trim()])
           .filter(([, value]) => Boolean(value))
-      );
+      ),
+    []
+  );
+
+  const buildByUnitClientFilter = useCallback(
+    (filter: DocumentFilterForm): DocumentByUnitClientFilter =>
+      buildNormalizedFilter(filter, ['operationUnitId']) as DocumentByUnitClientFilter,
+    [buildNormalizedFilter]
+  );
+
+  const buildSearchBody = useCallback(
+    (filter: DocumentFilterForm, page: number): SearchDocumentReq => {
+      const normalizedFilter = buildNormalizedFilter(filter, ['operationUnitId']);
 
       return {
         page: page - K_SIZE_1,
@@ -154,25 +197,46 @@ export default function useManageDocument() {
         ...normalizedFilter
       };
     },
-    []
+    [buildNormalizedFilter]
   );
 
   const fetchList = useCallback(
     (page: number) => {
+      const operationUnitId = filterApplied.operationUnitId.trim();
+      if (operationUnitId) {
+        dispatch({
+          type: LIST_DOCUMENTS_BY_UNIT,
+          payload: {
+            body: { operationUnitId },
+            clientFilter: buildByUnitClientFilter(filterApplied),
+            onFailed: (error?: ErrorBase) => {
+              showToast({
+                type: TYPE_TOAST.ERROR,
+                content: getDocumentErrorMessage(
+                  error,
+                  'Tải danh sách tài liệu theo đơn vị vận hành thất bại'
+                )
+              });
+            }
+          }
+        });
+        return;
+      }
+
       dispatch({
         type: SEARCH_DOCUMENT,
         payload: {
           body: buildSearchBody(filterApplied, page),
-          onFailed: () => {
+          onFailed: (error?: ErrorBase) => {
             showToast({
               type: TYPE_TOAST.ERROR,
-              content: 'Tải danh sách tài liệu thất bại'
+              content: getDocumentErrorMessage(error, 'Tải danh sách tài liệu thất bại')
             });
           }
         }
       });
     },
-    [buildSearchBody, filterApplied]
+    [buildByUnitClientFilter, buildSearchBody, filterApplied]
   );
 
   useEffect(() => {
@@ -229,8 +293,7 @@ export default function useManageDocument() {
   const onAttachFailed = useCallback((error?: ErrorBase) => {
     showToast({
       type: TYPE_TOAST.ERROR,
-      content:
-        error?.businessErrorMessage || error?.systemErrorMessage || 'Đính kèm tài liệu thất bại'
+      content: getDocumentErrorMessage(error, 'Đính kèm tài liệu thất bại')
     });
   }, []);
 
@@ -302,7 +365,7 @@ export default function useManageDocument() {
       const body: UpdateDocumentReq = {
         id: selectedDocument.id,
         status: data.status || undefined,
-        note: data.note || undefined
+        note: data.note.trim()
       };
 
       dispatch({
@@ -313,10 +376,7 @@ export default function useManageDocument() {
           onFailed: (error?: ErrorBase) => {
             showToast({
               type: TYPE_TOAST.ERROR,
-              content:
-                error?.businessErrorMessage ||
-                error?.systemErrorMessage ||
-                'Cập nhật tài liệu thất bại'
+              content: getDocumentErrorMessage(error, 'Cập nhật tài liệu thất bại')
             });
           }
         }
@@ -357,10 +417,7 @@ export default function useManageDocument() {
                   onFailed: (error?: ErrorBase) => {
                     showToast({
                       type: TYPE_TOAST.ERROR,
-                      content:
-                        error?.businessErrorMessage ||
-                        error?.systemErrorMessage ||
-                        'Xoá tài liệu thất bại'
+                      content: getDocumentErrorMessage(error, 'Xoá tài liệu thất bại')
                     });
                   }
                 }
@@ -377,61 +434,55 @@ export default function useManageDocument() {
     [onDeleteSuccess, t]
   );
 
-  const openDocumentLink = useCallback((link?: string, targetWindow?: Window | null) => {
-    const viewUrl = buildDocumentViewUrl(link);
+  const onView = useCallback(async (document: DocumentItem) => {
+    const targetWindow = window.open('about:blank', '_blank');
+    if (targetWindow) {
+      targetWindow.opener = null;
+    }
 
-    if (!viewUrl) {
+    const response = await documentServices.viewDocumentFile(document.id);
+    const fileError = await getBlobResponseError(response);
+    if (fileError || !isBlobFileResponse(response)) {
       targetWindow?.close();
       showToast({
-        type: TYPE_TOAST.INFO,
-        content: 'Chưa có đường dẫn xem tài liệu'
+        type: TYPE_TOAST.ERROR,
+        content: getDocumentErrorMessage(fileError as ErrorBase, 'Xem tài liệu thất bại')
       });
       return;
     }
 
+    if (!canViewBlobInline(response, INLINE_DOCUMENT_MIME_TYPES)) {
+      targetWindow?.close();
+      downloadBlobResponse(response, getDownloadFileName(document, response.fileName));
+      showToast({
+        type: TYPE_TOAST.INFO,
+        content: 'Định dạng này không hỗ trợ xem trực tiếp, hệ thống đã tải file xuống'
+      });
+      return;
+    }
+
+    const viewUrl = URL.createObjectURL(response.blob);
     if (targetWindow) {
       targetWindow.location.href = viewUrl;
+    } else {
+      window.open(viewUrl, '_blank', 'noopener,noreferrer');
+    }
+    window.setTimeout(() => URL.revokeObjectURL(viewUrl), 60000);
+  }, []);
+
+  const onDownload = useCallback(async (document: DocumentItem) => {
+    const response = await documentServices.downloadDocumentFile(document.id);
+    const fileError = await getBlobResponseError(response);
+    if (fileError || !isBlobFileResponse(response)) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getDocumentErrorMessage(fileError as ErrorBase, 'Tải tài liệu thất bại')
+      });
       return;
     }
 
-    window.open(viewUrl, '_blank', 'noopener,noreferrer');
+    downloadBlobResponse(response, getDownloadFileName(document, response.fileName));
   }, []);
-
-  const onView = useCallback(
-    (document: DocumentItem) => {
-      const targetWindow = window.open('about:blank', '_blank');
-      if (targetWindow) {
-        targetWindow.opener = null;
-      }
-
-      const availableLink = getDocumentLink(document);
-      if (availableLink) {
-        openDocumentLink(availableLink, targetWindow);
-        return;
-      }
-
-      dispatch({
-        type: GET_DOCUMENT_DETAIL,
-        payload: {
-          body: { id: document.id },
-          onSuccess: (response: DocumentDetailRes) => {
-            openDocumentLink(getDocumentLink(response), targetWindow);
-          },
-          onFailed: (error?: ErrorBase) => {
-            targetWindow?.close();
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content:
-                error?.businessErrorMessage ||
-                error?.systemErrorMessage ||
-                'Lấy đường dẫn tài liệu thất bại'
-            });
-          }
-        }
-      });
-    },
-    [openDocumentLink]
-  );
 
   return {
     t,
@@ -454,12 +505,22 @@ export default function useManageDocument() {
     selectedDocument,
     attachForm,
     updateForm,
+    selectedAttachOwnerType,
+    ownerOptions,
+    onOpenOwnerDropdown,
+    ownerDropdownRender,
+    operationUnitOptions,
+    operationUnitLoading,
+    getOperationUnitDisplay,
+    onOpenOperationUnitDropdown,
+    operationUnitDropdownRender,
     handleAttachSubmit,
     handleUpdateSubmit,
     onCloseAttach,
     onOpenUpdate,
     onCloseUpdate,
     onDelete,
-    onView
+    onView,
+    onDownload
   };
 }

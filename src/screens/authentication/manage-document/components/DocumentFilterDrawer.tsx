@@ -1,15 +1,27 @@
 'use client';
 
 import { K_SIZE_24, K_SIZE_8 } from '@constant';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Drawer, Flex } from 'antd';
 import ButtonBase from 'components/button';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { AppSelectControl, type AppSelectOption } from 'components/select';
 import { AppTextFieldControl } from 'components/text-field';
-import { ForwardedRef, forwardRef, useCallback, useImperativeHandle, useState } from 'react';
+import {
+  ForwardedRef,
+  ReactNode,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState
+} from 'react';
 import { useForm } from 'react-hook-form';
 import { useAppTranslation } from 'utils/i18n';
 import { useResponsive } from 'utils/responsive';
+import { z } from 'zod';
+import useDocumentOwnerLookup from '../useDocumentOwnerLookup';
 
 export interface DocumentFilterDrawerRef {
   open: (data: DocumentFilterForm) => void;
@@ -22,13 +34,34 @@ export interface DocumentFilterForm {
   ownerId: string;
   docType: string;
   status: string;
+  operationUnitId: string;
 }
+
+const optionalUuidSchema = (message: string) =>
+  z
+    .string()
+    .trim()
+    .refine((value) => !value || z.string().uuid().safeParse(value).success, {
+      message
+    });
+
+const documentFilterSchema = z.object({
+  keyword: z.string().trim(),
+  ownerType: z.string().trim(),
+  ownerId: optionalUuidSchema('ID chủ sở hữu không hợp lệ'),
+  docType: z.string().trim(),
+  status: z.string().trim(),
+  operationUnitId: optionalUuidSchema('ID đơn vị vận hành không hợp lệ')
+});
 
 interface DocumentFilterDrawerProps {
   defaultValues: DocumentFilterForm;
   ownerTypeOptions: AppSelectOption[];
   documentTypeOptions: AppSelectOption[];
   documentStatusOptions: AppSelectOption[];
+  operationUnitOptions: AppSelectOption[];
+  operationUnitDropdownRender: (menuInstance: ReactNode) => ReactNode;
+  onOpenOperationUnitDropdown: (open?: boolean) => void;
   onApplyFilter: (data: DocumentFilterForm) => void;
   onResetFilter: () => void;
 }
@@ -40,6 +73,9 @@ const DocumentFilterDrawer = forwardRef(
       ownerTypeOptions,
       documentTypeOptions,
       documentStatusOptions,
+      operationUnitOptions,
+      operationUnitDropdownRender,
+      onOpenOperationUnitDropdown,
       onApplyFilter,
       onResetFilter
     }: DocumentFilterDrawerProps,
@@ -47,18 +83,39 @@ const DocumentFilterDrawer = forwardRef(
   ) => {
     const { t } = useAppTranslation();
     const { isMobile, isTablet } = useResponsive();
-    const { control, handleSubmit, reset } = useForm<DocumentFilterForm>({
+    const { control, handleSubmit, reset, setValue, watch } = useForm<DocumentFilterForm>({
       mode: 'onTouched',
-      defaultValues
+      defaultValues,
+      resolver: zodResolver(documentFilterSchema)
     });
     const [isOpen, setIsOpen] = useState<boolean>(false);
+    const selectedOwnerType = watch('ownerType');
+    const previousOwnerTypeRef = useRef<string>();
+    const { ownerOptions, resetOwnerOptions, onOpenOwnerDropdown, ownerDropdownRender } =
+      useDocumentOwnerLookup(selectedOwnerType);
+
+    useEffect(() => {
+      const previousOwnerType = previousOwnerTypeRef.current;
+      if (previousOwnerType === undefined) {
+        previousOwnerTypeRef.current = selectedOwnerType;
+        return;
+      }
+
+      if (previousOwnerType !== selectedOwnerType) {
+        setValue('ownerId', '', { shouldDirty: true });
+        resetOwnerOptions();
+        previousOwnerTypeRef.current = selectedOwnerType;
+      }
+    }, [resetOwnerOptions, selectedOwnerType, setValue]);
 
     const open = useCallback(
       (data: DocumentFilterForm) => {
         reset(data);
+        previousOwnerTypeRef.current = data.ownerType;
+        resetOwnerOptions();
         setIsOpen(true);
       },
-      [reset]
+      [reset, resetOwnerOptions]
     );
     const close = useCallback(() => setIsOpen(false), []);
 
@@ -124,16 +181,36 @@ const DocumentFilterDrawer = forwardRef(
             control={control}
           />
           <AppSelectControl
+            name="operationUnitId"
+            label="Đơn vị vận hành"
+            placeholder="Chọn đơn vị vận hành"
+            options={operationUnitOptions}
+            dropdownRender={operationUnitDropdownRender}
+            onOpenChange={onOpenOperationUnitDropdown}
+            control={control}
+          />
+          <AppSelectControl
             name="ownerType"
             label="Loại chủ sở hữu"
             placeholder="Chọn loại chủ sở hữu"
             options={ownerTypeOptions}
             control={control}
           />
-          <AppTextFieldControl
+          <AppSelectControl
             name="ownerId"
-            label="Mã chủ sở hữu"
-            placeholder="Nhập mã chủ sở hữu"
+            label="Chủ sở hữu"
+            placeholder="Chọn chủ sở hữu"
+            options={ownerOptions}
+            disabled={!selectedOwnerType}
+            dropdownRender={ownerDropdownRender}
+            onOpenChange={onOpenOwnerDropdown}
+            onChange={(ownerId) =>
+              setValue('ownerId', String(ownerId || ''), {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true
+              })
+            }
             control={control}
           />
           <AppSelectControl

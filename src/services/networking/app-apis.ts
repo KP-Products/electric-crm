@@ -111,6 +111,7 @@ const ApiEndPoint = {
   DOCUMENT_LIST: '/admin/documents/list',
   DOCUMENT_DETAIL: '/admin/documents/get',
   DOCUMENT_DELETE: '/admin/documents/delete',
+  DOCUMENT_BY_UNIT: '/admin/documents/by-unit',
   DOCUMENT_BASE: '/admin/documents',
   // DOCUMENT
 
