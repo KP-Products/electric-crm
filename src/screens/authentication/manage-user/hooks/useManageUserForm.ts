@@ -24,23 +24,24 @@ import {
 } from 'screens/authentication/manage-user/utils/method';
 
 const userSchema = (t: TypedT, isAddMode: boolean) => {
-  return z.object({
-    username: z
+  const requiredString = (name: string) =>
+    z
       .string()
       .trim()
-      .min(K_SIZE_1, { message: t('validate:required', { name: t('login_screen:username') }) }),
+      .min(K_SIZE_1, { message: t('validate:required', { name }) });
+  const emailString = requiredString(t('manage_user:email')).email({
+    message: t('validate:incorrect_format', { name: t('manage_user:email') })
+  });
 
-    password: isAddMode
-      ? z
-          .string()
-          .trim()
-          .min(K_SIZE_1, { message: t('validate:required', { name: t('login_screen:password') }) })
-      : z.string().trim().optional(),
+  return z.object({
+    username: requiredString(t('login_screen:username')),
 
-    email: z.string().trim(),
+    password: isAddMode ? requiredString(t('login_screen:password')) : z.string().trim().optional(),
+
+    email: isAddMode ? emailString : z.string().trim(),
     status: z.string().trim(),
-    roleId: z.string().trim().optional(),
-    branchId: z.string().trim(),
+    roleId: isAddMode ? requiredString(t('manage_user:role')) : z.string().trim().optional(),
+    branchId: isAddMode ? requiredString('Chi nhánh') : z.string().trim(),
 
     permissions: z
       .object({
