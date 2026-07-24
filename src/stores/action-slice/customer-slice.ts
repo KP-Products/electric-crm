@@ -1,29 +1,41 @@
 import {
   CUSTOMER_CREATE,
-  CUSTOMER_DOWNLOAD,
+  CUSTOMER_DELETE,
+  CUSTOMER_DETAIL,
   CUSTOMER_LIST,
+  CUSTOMER_SEARCH,
   CUSTOMER_UPDATE,
   SLICE_NAME
 } from '@redux-action-type/customer-type';
-import { createAction, createSlice } from '@reduxjs/toolkit';
+import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ErrorBase } from 'model/common';
 import {
-  CreateCustomerGroupReq,
   Customer,
-  CustomerGroup,
-  UpdateCustomerGroupReq
+  CreateCustomerReq,
+  CustomerDetailRes,
+  CustomerIdReq,
+  CustomerListRes,
+  CustomerRes,
+  CustomerSearchReq,
+  CustomerSearchRes,
+  DeleteCustomerRes,
+  UpdateCustomerReq
 } from 'model/customer';
 
 export interface CustomerState {
-  customers?: Customer[];
+  customers: Customer[];
+  total: number;
   listLoading: boolean;
-  customerGroups?: CustomerGroup[];
+  detailLoading: boolean;
+  customerGroups?: Customer[];
   listGroupLoading: boolean;
 }
 
 export const initialCustomer: CustomerState = {
-  customers: undefined,
+  customers: [],
+  total: 0,
   listLoading: false,
+  detailLoading: false,
   listGroupLoading: false
 };
 
@@ -32,16 +44,22 @@ const customerSlice = createSlice({
   initialState: initialCustomer,
   reducers: {
     reset: () => initialCustomer,
-    setCustomers: (state, { payload }) => {
+    setCustomers: (state, { payload }: PayloadAction<Customer[]>) => {
       state.customers = payload;
     },
-    setListLoading: (state, { payload }) => {
+    setTotal: (state, { payload }: PayloadAction<number>) => {
+      state.total = payload;
+    },
+    setListLoading: (state, { payload }: PayloadAction<boolean>) => {
       state.listLoading = payload;
     },
-    setCustomergroups: (state, { payload }) => {
+    setDetailLoading: (state, { payload }: PayloadAction<boolean>) => {
+      state.detailLoading = payload;
+    },
+    setCustomergroups: (state, { payload }: PayloadAction<Customer[]>) => {
       state.customerGroups = payload;
     },
-    setGroupLoading: (state, { payload }) => {
+    setGroupLoading: (state, { payload }: PayloadAction<boolean>) => {
       state.listGroupLoading = payload;
     }
   }
@@ -49,16 +67,41 @@ const customerSlice = createSlice({
 
 const getCustomerList = createAction(
   CUSTOMER_LIST,
-  (onSuccess?: (data?: Customer[]) => void, onFailed?: (error?: ErrorBase) => void) => ({
+  (
+    onSuccess?: (data?: CustomerListRes['data']) => void,
+    onFailed?: (error?: ErrorBase) => void
+  ) => ({
     payload: { onSuccess, onFailed }
+  })
+);
+
+const searchCustomer = createAction(
+  CUSTOMER_SEARCH,
+  (
+    body: CustomerSearchReq,
+    onSuccess?: (data: CustomerSearchRes) => void,
+    onFailed?: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
+
+const getCustomerDetail = createAction(
+  CUSTOMER_DETAIL,
+  (
+    body: CustomerIdReq,
+    onSuccess?: (data: CustomerDetailRes) => void,
+    onFailed?: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
   })
 );
 
 const createCustomer = createAction(
   CUSTOMER_CREATE,
   (
-    body: CreateCustomerGroupReq,
-    onSuccess?: (data?: CustomerGroup) => void,
+    body: CreateCustomerReq,
+    onSuccess?: (data: CustomerRes) => void,
     onFailed?: (error?: ErrorBase) => void
   ) => ({
     payload: { body, onSuccess, onFailed }
@@ -68,17 +111,21 @@ const createCustomer = createAction(
 const updateCustomer = createAction(
   CUSTOMER_UPDATE,
   (
-    body: UpdateCustomerGroupReq,
-    onSuccess?: (data?: CustomerGroup) => void,
+    body: UpdateCustomerReq,
+    onSuccess?: (data: CustomerRes) => void,
     onFailed?: (error?: ErrorBase) => void
   ) => ({
     payload: { body, onSuccess, onFailed }
   })
 );
 
-const downloadCustomer = createAction(
-  CUSTOMER_DOWNLOAD,
-  (body: string, onSuccess?: (data?: string) => void, onFailed?: (error?: ErrorBase) => void) => ({
+const deleteCustomer = createAction(
+  CUSTOMER_DELETE,
+  (
+    body: CustomerIdReq,
+    onSuccess?: (data: DeleteCustomerRes) => void,
+    onFailed?: (error?: ErrorBase) => void
+  ) => ({
     payload: { body, onSuccess, onFailed }
   })
 );
@@ -86,9 +133,11 @@ const downloadCustomer = createAction(
 export const customerActions = {
   ...customerSlice.actions,
   getCustomerList,
+  searchCustomer,
+  getCustomerDetail,
   createCustomer,
   updateCustomer,
-  downloadCustomer
+  deleteCustomer
 };
 
 export const customerReducer = customerSlice.reducer;

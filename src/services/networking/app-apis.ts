@@ -37,11 +37,11 @@ const ApiEndPoint = {
 
   // MANAGE CUSTOMERS
   CUSTOMER_LIST: '/admin/customers/list',
+  CUSTOMER_SEARCH: '/admin/customers/search',
   CUSTOMER_CREATE: '/admin/customers/create',
   CUSTOMER_UPDATE: '/admin/customers/update',
   CUSTOMER_DELETE: '/admin/customers/delete',
   CUSTOMER_DETAIL: '/admin/customers/detail',
-  CUSTOMER_DOWNLOAD: '/admin/customers/download',
   // MANAGE CUSTOMERS
 
   // CONTRACT

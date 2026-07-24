@@ -48,6 +48,8 @@ export const DEFAULT_OPERATION_UNIT_FILTER: OperationUnitFilter = {
   status: ''
 };
 
+const SUCCESS_MESSAGES = ['success', 'ok'];
+
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 
 const emailSchema = optionalTextSchema.refine(
@@ -76,12 +78,18 @@ export type OperationUnitForm = z.infer<typeof operationUnitSchema>;
 export const getOperationUnitErrorMessage = (
   error?: ErrorBase & { message?: string },
   fallback = 'Thao tác thất bại'
-) =>
-  error?.businessErrorMessage ||
-  error?.systemErrorMessage ||
-  error?.detailMessage ||
-  error?.message ||
-  fallback;
+) => {
+  const message =
+    error?.businessErrorMessage ||
+    error?.systemErrorMessage ||
+    error?.detailMessage ||
+    error?.message;
+  const normalizedMessage = String(message || '')
+    .trim()
+    .toLowerCase();
+
+  return message && !SUCCESS_MESSAGES.includes(normalizedMessage) ? message : fallback;
+};
 
 const optionalValue = (value?: string) => {
   const trimmedValue = value?.trim();
@@ -511,7 +519,6 @@ export default function useManageOperationUnit() {
       }
 
       exportRowsToExcel(response.data.items || [], getDisplayValue);
-      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Xuất Excel đơn vị vận hành thành công' });
     },
     [buildSearchBody, exportRowsToExcel, filterApplied]
   );

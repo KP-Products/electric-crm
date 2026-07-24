@@ -21,6 +21,7 @@ export interface ErrorBase {
 }
 
 export interface ResultBase<T = unknown> {
+  codeStatus?: string;
   code?: string;
   message?: string;
   timestamp?: string;
