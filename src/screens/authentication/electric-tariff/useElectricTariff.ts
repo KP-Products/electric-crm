@@ -2,9 +2,9 @@ import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CREATE_ELECTRIC_TARIFF,
-  CREATE_ELECTRIC_TARIFF_TOU_PRICE,
   GET_ELECTRIC_TARIFF_DETAIL,
-  SEARCH_ELECTRIC_TARIFF
+  SEARCH_ELECTRIC_TARIFF,
+  UPDATE_ELECTRIC_TARIFF
 } from '@redux-action-type/electric-tariff';
 import { dispatch } from '@redux-common';
 import {
@@ -17,23 +17,34 @@ import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import {
   CreateTariffReq,
-  CreateTouPriceReq,
   ElectricTariff,
   ElectricTariffTouPrice,
   GetTariffDetailRes,
   SearchTariffsReq,
-  TariffDetail
+  TariffDetail,
+  TariffPriceInput,
+  UpdateTariffReq
 } from 'model/electric-tariff';
 import moment from 'moment';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
 
 export const TARIFF_STATUS = {
   ACTIVE: 'ACTIVE',
   INACTIVE: 'INACTIVE'
 };
+
+export const TARIFF_PRICE_TYPE = {
+  SELL: '0',
+  BUY: '1'
+};
+
+const DEFAULT_CUSTOMER_TYPE = 'SINH_HOAT';
+const DEFAULT_VOLTAGE_LEVEL = 'HA_AP';
+const TOU_VALUES = ['BT', 'TD', 'CD'];
 
 export const DEFAULT_TARIFF_FILTER: ElectricTariffFilter = {
   tariffCode: '',
@@ -43,7 +54,7 @@ export const DEFAULT_TARIFF_FILTER: ElectricTariffFilter = {
   status: ''
 };
 
-const DATE_API_FORMAT = 'YYYY-MM-DD';
+const DATE_API_FORMAT = FORMAT_DATE_API;
 const VAT_RATE = 0.1;
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 
@@ -60,17 +71,20 @@ const tariffSchema = z.object({
 const parseNumber = (value: string) => Number(value.trim().replace(',', '.'));
 
 const touPriceSchema = z.object({
-  tou: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập bậc/khung giờ' }),
+  tou: z
+    .string()
+    .trim()
+    .min(K_SIZE_1, { message: 'Vui lòng chọn bậc/khung giờ' })
+    .refine((value) => TOU_VALUES.includes(value), {
+      message: 'Vui lòng chọn bậc/khung giờ hợp lệ'
+    }),
   unitPrice: z
     .string()
     .trim()
     .min(K_SIZE_1, { message: 'Vui lòng nhập đơn giá' })
     .refine((value) => Number.isFinite(parseNumber(value)) && parseNumber(value) >= K_SIZE_0, {
       message: 'Đơn giá không hợp lệ'
-    }),
-  voltageLevel: optionalTextSchema,
-  effectiveFrom: optionalTextSchema,
-  effectiveTo: optionalTextSchema
+    })
 });
 
 const getErrorMessage = (error?: any, fallback = 'Thao tác thất bại') => {
@@ -99,6 +113,26 @@ export const getPriceWithVat = (unitPrice?: number) =>
     ? Math.round(unitPrice * (K_SIZE_1 + VAT_RATE))
     : undefined;
 
+const getDetailPrices = (detail?: TariffDetail) => detail?.prices || detail?.touPrices || [];
+
+const buildTariffPriceInputs = (
+  prices: ElectricTariffTouPrice[],
+  newPrice: TariffPriceInput
+): TariffPriceInput[] => [
+  ...prices
+    .map((price) => ({
+      tou: price.tou || '',
+      unitPrice: price.unitPrice
+    }))
+    .filter(
+      (price): price is TariffPriceInput =>
+        TOU_VALUES.includes(price.tou) &&
+        typeof price.unitPrice === 'number' &&
+        Number.isFinite(price.unitPrice)
+    ),
+  newPrice
+];
+
 export default function useElectricTariff() {
   const tariffList = useSelector(selectElectricTariffList);
   const total = useSelector(selectElectricTariffTotal);
@@ -119,8 +153,8 @@ export default function useElectricTariff() {
     defaultValues: {
       tariffCode: '',
       tariffName: '',
-      customerType: 'SINH_HOAT',
-      voltageLevel: 'V_0_4_KV',
+      customerType: DEFAULT_CUSTOMER_TYPE,
+      voltageLevel: DEFAULT_VOLTAGE_LEVEL,
       effectiveFrom: moment().format(DATE_API_FORMAT),
       effectiveTo: '',
       status: TARIFF_STATUS.ACTIVE
@@ -132,10 +166,7 @@ export default function useElectricTariff() {
     mode: 'onTouched',
     defaultValues: {
       tou: '',
-      unitPrice: '',
-      voltageLevel: '',
-      effectiveFrom: '',
-      effectiveTo: ''
+      unitPrice: ''
     },
     resolver: zodResolver(touPriceSchema)
   });
@@ -209,8 +240,8 @@ export default function useElectricTariff() {
     tariffForm.reset({
       tariffCode: '',
       tariffName: '',
-      customerType: 'SINH_HOAT',
-      voltageLevel: 'V_0_4_KV',
+      customerType: DEFAULT_CUSTOMER_TYPE,
+      voltageLevel: DEFAULT_VOLTAGE_LEVEL,
       effectiveFrom: moment().format(DATE_API_FORMAT),
       effectiveTo: '',
       status: TARIFF_STATUS.ACTIVE
@@ -238,9 +269,10 @@ export default function useElectricTariff() {
         tariffName: data.tariffName.trim(),
         customerType: data.customerType,
         voltageLevel: data.voltageLevel,
-        effectiveFrom: data.effectiveFrom,
-        effectiveTo: data.effectiveTo || undefined,
-        status: data.status || TARIFF_STATUS.ACTIVE
+        effectiveFrom: normalizeDateToApi(data.effectiveFrom),
+        effectiveTo: normalizeDateToApi(data.effectiveTo) || undefined,
+        status: data.status || TARIFF_STATUS.ACTIVE,
+        priceType: TARIFF_PRICE_TYPE.SELL
       };
 
       dispatch({
@@ -274,7 +306,7 @@ export default function useElectricTariff() {
         body: { id },
         onSuccess: (response: GetTariffDetailRes) => {
           setSelectedDetail(response.data);
-          setTouPrices(response.data?.touPrices || []);
+          setTouPrices(getDetailPrices(response.data));
         },
         onFailed: (error?: unknown) => {
           showToast({
@@ -288,7 +320,7 @@ export default function useElectricTariff() {
 
   const onOpenDetail = useCallback(
     (tariff: ElectricTariff) => {
-      setSelectedDetail({ tariff, touPrices: [] });
+      setSelectedDetail({ tariff, prices: [] });
       setTouPrices([]);
       setOpenDetail(true);
       loadTariffDetail(tariff.id);
@@ -310,12 +342,34 @@ export default function useElectricTariff() {
       setTouTargetTariff(targetTariff);
       touPriceForm.reset({
         tou: '',
-        unitPrice: '',
-        voltageLevel: targetTariff.voltageLevel || '',
-        effectiveFrom: targetTariff.effectiveFrom || '',
-        effectiveTo: targetTariff.effectiveTo || ''
+        unitPrice: ''
       });
-      setOpenTouForm(true);
+
+      if (!tariff || selectedDetail?.tariff?.id === targetTariff.id) {
+        setOpenTouForm(true);
+        return;
+      }
+
+      setTouPrices([]);
+      dispatch({
+        type: GET_ELECTRIC_TARIFF_DETAIL,
+        payload: {
+          body: { id: targetTariff.id },
+          onSuccess: (response: GetTariffDetailRes) => {
+            const detail = response.data;
+            setTouTargetTariff(detail?.tariff || targetTariff);
+            setTouPrices(getDetailPrices(detail));
+            setOpenTouForm(true);
+          },
+          onFailed: (error?: unknown) => {
+            setTouTargetTariff(undefined);
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content: getErrorMessage(error, 'Tải chi tiết biểu giá thất bại')
+            });
+          }
+        }
+      });
     },
     [selectedDetail?.tariff, touPriceForm]
   );
@@ -330,17 +384,16 @@ export default function useElectricTariff() {
     (data: TouPriceForm) => {
       if (!touTargetTariff) return;
 
-      const body: CreateTouPriceReq = {
-        tariffId: touTargetTariff.id,
-        tou: data.tou.trim(),
-        unitPrice: parseNumber(data.unitPrice),
-        voltageLevel: data.voltageLevel || undefined,
-        effectiveFrom: data.effectiveFrom || undefined,
-        effectiveTo: data.effectiveTo || undefined
+      const body: UpdateTariffReq = {
+        id: touTargetTariff.id,
+        prices: buildTariffPriceInputs(touPrices, {
+          tou: data.tou.trim(),
+          unitPrice: parseNumber(data.unitPrice)
+        })
       };
 
       dispatch({
-        type: CREATE_ELECTRIC_TARIFF_TOU_PRICE,
+        type: UPDATE_ELECTRIC_TARIFF,
         payload: {
           body,
           onSuccess: () => {
@@ -352,7 +405,10 @@ export default function useElectricTariff() {
 
             if (openDetail && selectedDetail?.tariff?.id) {
               loadTariffDetail(selectedDetail.tariff.id);
+              return;
             }
+
+            refreshFirstPage();
           },
           onFailed: (error?: unknown) => {
             showToast({
@@ -363,7 +419,15 @@ export default function useElectricTariff() {
         }
       });
     },
-    [loadTariffDetail, onCloseTouForm, openDetail, selectedDetail?.tariff?.id, touTargetTariff]
+    [
+      loadTariffDetail,
+      onCloseTouForm,
+      openDetail,
+      refreshFirstPage,
+      selectedDetail?.tariff?.id,
+      touPrices,
+      touTargetTariff
+    ]
   );
 
   return {

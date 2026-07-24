@@ -3,9 +3,10 @@ import { type AppSelectOption } from 'components/select';
 import { ErrorBase } from 'model/common';
 import { EMPLOYEE_GENDER, EMPLOYMENT_STATUS, EMPLOYMENT_TYPE, Employee } from 'model/employee';
 import { CURRENCY_VND, NULL_VALUE } from 'utils/constant';
+import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
 import { formatCurrency } from 'utils/math';
 
-export const DATE_API_FORMAT = 'YYYY-MM-DD';
+export const DATE_API_FORMAT = FORMAT_DATE_API;
 
 export const EMPLOYEE_GENDER_OPTIONS: AppSelectOption[] = [
   { value: '', label: '-- Tất cả --' },
@@ -83,8 +84,7 @@ export const optionalNumber = (value?: string | number | null) => {
   return Number.isFinite(numberValue) ? numberValue : undefined;
 };
 
-export const toDatePickerValue = (value?: string | null) =>
-  optionalString(value)?.slice(0, 10) || '';
+export const toDatePickerValue = (value?: string | null) => normalizeDateToApi(value);
 
 export const getEmployeeGenderLabel = (value?: string) =>
   String(EMPLOYEE_GENDER_OPTIONS.find((option) => option.value === value)?.label || value || '');

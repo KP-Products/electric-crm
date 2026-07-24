@@ -617,7 +617,7 @@ const ManageOperationUnitScreen = () => {
               />
               <DetailItem
                 label="Ngày cấp CMND/CCCD"
-                value={displayText(selectedDetail?.contactIsueDate)}
+                value={renderDate(selectedDetail?.contactIsueDate)}
               />
               <DetailItem
                 label="Trạng thái"

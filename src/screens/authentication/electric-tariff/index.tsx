@@ -27,8 +27,9 @@ import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { ElectricTariff, ElectricTariffTouPrice } from 'model/electric-tariff';
+import moment from 'moment';
 import { useMemo } from 'react';
-import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
+import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
 import useElectricTariff, {
   ElectricTariffFilter,
@@ -36,21 +37,20 @@ import useElectricTariff, {
   TARIFF_STATUS
 } from './useElectricTariff';
 
-const DATE_API_FORMAT = 'YYYY-MM-DD';
+const DATE_API_FORMAT = FORMAT_DATE_API;
+const DATE_DISPLAY_FORMAT = 'DD/MM/YYYY';
 
 const CUSTOMER_TYPE_OPTIONS = [
   { value: 'SINH_HOAT', label: 'Sinh hoạt' },
   { value: 'SAN_XUAT', label: 'Sản xuất' },
   { value: 'KINH_DOANH', label: 'Kinh doanh' },
-  { value: 'HANH_CHINH', label: 'Hành chính' }
+  { value: 'HANH_CHINH_SU_NGHIEP', label: 'Hành chính sự nghiệp' }
 ];
 
 const VOLTAGE_LEVEL_OPTIONS = [
-  { value: 'V_0_4_KV', label: '0.4kV' },
-  { value: 'V_6_KV', label: '6kV' },
-  { value: 'V_22_KV', label: '22kV' },
-  { value: 'V_35_KV', label: '35kV' },
-  { value: 'V_110_KV', label: '110kV' }
+  { value: 'HA_AP', label: 'Hạ áp' },
+  { value: 'TRUNG_AP', label: 'Trung áp' },
+  { value: 'CAO_AP', label: 'Cao áp' }
 ];
 
 const STATUS_OPTIONS = [
@@ -58,19 +58,30 @@ const STATUS_OPTIONS = [
   { value: TARIFF_STATUS.INACTIVE, label: 'Ngưng áp dụng' }
 ];
 
+const TOU_OPTIONS = [
+  { value: 'BT', label: 'Bình thường' },
+  { value: 'TD', label: 'Thấp điểm' },
+  { value: 'CD', label: 'Cao điểm' }
+];
+
 const CUSTOMER_TYPE_LABEL_MAP: Record<string, string> = {
   SINH_HOAT: 'Sinh hoạt',
   SAN_XUAT: 'Sản xuất',
   KINH_DOANH: 'Kinh doanh',
+  HANH_CHINH_SU_NGHIEP: 'Hành chính sự nghiệp',
   HANH_CHINH: 'Hành chính',
   HC: 'Hành chính',
   'Sinh hoạt': 'Sinh hoạt',
   'Sản xuất': 'Sản xuất',
   'Kinh doanh': 'Kinh doanh',
-  'Hành chính': 'Hành chính'
+  'Hành chính': 'Hành chính',
+  'Hành chính sự nghiệp': 'Hành chính sự nghiệp'
 };
 
 const VOLTAGE_LEVEL_LABEL_MAP: Record<string, string> = {
+  HA_AP: 'Hạ áp',
+  TRUNG_AP: 'Trung áp',
+  CAO_AP: 'Cao áp',
   V_0_4_KV: '0.4kV',
   V_6_KV: '6kV',
   V_22_KV: '22kV',
@@ -84,15 +95,9 @@ const VOLTAGE_LEVEL_LABEL_MAP: Record<string, string> = {
 };
 
 const TOU_LABEL_MAP: Record<string, string> = {
-  BAC_1: 'Bậc 1',
-  BAC_2: 'Bậc 2',
-  BAC_3: 'Bậc 3',
-  BAC_4: 'Bậc 4',
-  BAC_5: 'Bậc 5',
-  BAC_6: 'Bậc 6',
   BT: 'Bình thường',
-  CD: 'Cao điểm',
-  TD: 'Thấp điểm'
+  TD: 'Thấp điểm',
+  CD: 'Cao điểm'
 };
 
 const FILTER_LABEL_MAP: Record<keyof ElectricTariffFilter, string> = {
@@ -113,6 +118,12 @@ const getStatusMeta = (status?: string) => {
   }
 
   return { label: status || NULL_VALUE, type: TYPE_STATUS.PENDING };
+};
+
+const displayElectricTariffDate = (date?: string) => {
+  if (!date) return NULL_VALUE;
+  const parsedDate = moment(date, [...API_DATE_INPUT_FORMATS, moment.ISO_8601], true);
+  return parsedDate.isValid() ? parsedDate.format(DATE_DISPLAY_FORMAT) : NULL_VALUE;
 };
 
 const formatCurrency = (value?: number) => {
@@ -228,14 +239,14 @@ const ElectricTariffScreen = () => {
         dataIndex: 'effectiveFrom',
         key: 'effectiveFrom',
         width: K_SIZE_130,
-        render: (text: string) => displayDateFromServer(text)
+        render: (text: string) => displayElectricTariffDate(text)
       },
       {
         title: 'Hiệu lực đến',
         dataIndex: 'effectiveTo',
         key: 'effectiveTo',
         width: K_SIZE_130,
-        render: (text: string) => displayDateFromServer(text)
+        render: (text: string) => displayElectricTariffDate(text)
       },
       {
         title: 'Trạng thái',
@@ -289,7 +300,8 @@ const ElectricTariffScreen = () => {
         dataIndex: 'tou',
         key: 'tou',
         width: K_SIZE_160,
-        render: (text: string) => TOU_LABEL_MAP[text] || text || NULL_VALUE
+        render: (text: string, record: ElectricTariffTouPrice) =>
+          record.touName || TOU_LABEL_MAP[text] || text || NULL_VALUE
       },
       {
         title: 'Đơn giá',
@@ -314,22 +326,6 @@ const ElectricTariffScreen = () => {
         align: 'right',
         width: K_SIZE_160,
         render: (value: number) => formatCurrency(getPriceWithVat(value))
-      },
-      {
-        title: 'Cấp điện áp',
-        dataIndex: 'voltageLevel',
-        key: 'voltageLevel',
-        width: K_SIZE_130,
-        render: (text: string) => VOLTAGE_LEVEL_LABEL_MAP[text] || text || NULL_VALUE
-      },
-      {
-        title: 'Hiệu lực',
-        key: 'effective',
-        width: K_SIZE_200,
-        render: (_: unknown, record: ElectricTariffTouPrice) =>
-          `${displayDateFromServer(record.effectiveFrom || '')} - ${displayDateFromServer(
-            record.effectiveTo || ''
-          )}`
       }
     ],
     []
@@ -644,13 +640,13 @@ const ElectricTariffScreen = () => {
             }
           >
             <div className="grid gap-12">
-              <AppTextFieldControl
+              <AppSelectControl
                 name="tou"
                 control={touControl}
                 label="Bậc/TOU"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
-                placeholder="VD: BAC_1 hoặc BT"
+                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                placeholder="Chọn bậc/khung giờ"
+                options={TOU_OPTIONS}
               />
               <AppTextFieldControl
                 name="unitPrice"
@@ -660,32 +656,6 @@ const ElectricTariffScreen = () => {
                 labelSuffixClassName="text-error-600"
                 placeholder="VD: 1806"
               />
-              <AppSelectControl
-                name="voltageLevel"
-                control={touControl}
-                label="Cấp điện áp"
-                options={VOLTAGE_LEVEL_OPTIONS}
-              />
-              <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
-                <AppDatePickerControl
-                  name="effectiveFrom"
-                  control={touControl}
-                  backendFormat={DATE_API_FORMAT}
-                  label="Hiệu lực từ"
-                  allowClear
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
-                />
-                <AppDatePickerControl
-                  name="effectiveTo"
-                  control={touControl}
-                  backendFormat={DATE_API_FORMAT}
-                  label="Hiệu lực đến"
-                  allowClear
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
-                />
-              </div>
             </div>
           </Drawer>
         </form>

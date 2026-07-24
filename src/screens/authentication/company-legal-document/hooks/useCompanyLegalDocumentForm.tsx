@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import companyLegalDocumentServices from 'services/company-legal-document-services';
+import { normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
 import {
   DATE_API_FORMAT,
@@ -123,9 +124,9 @@ export default function useCompanyLegalDocumentForm({
         documentNumber: document.documentNumber || '',
         documentName: document.documentName || '',
         documentType: document.documentType || '',
-        documentDate: document.documentDate || '',
-        effectiveDate: document.effectiveDate || '',
-        expiryDate: document.expiryDate || '',
+        documentDate: normalizeDateToApi(document.documentDate),
+        effectiveDate: normalizeDateToApi(document.effectiveDate),
+        expiryDate: normalizeDateToApi(document.expiryDate),
         summary: document.summary || '',
         draftedBy:
           document.draftedBy !== undefined && document.draftedBy !== null
@@ -177,9 +178,9 @@ export default function useCompanyLegalDocumentForm({
       documentNumber: optionalString(data.documentNumber),
       documentName: data.documentName.trim(),
       documentType: data.documentType.trim(),
-      documentDate: optionalString(data.documentDate),
-      effectiveDate: optionalString(data.effectiveDate),
-      expiryDate: optionalString(data.expiryDate),
+      documentDate: optionalString(normalizeDateToApi(data.documentDate)),
+      effectiveDate: optionalString(normalizeDateToApi(data.effectiveDate)),
+      expiryDate: optionalString(normalizeDateToApi(data.expiryDate)),
       summary: optionalString(data.summary),
       draftedBy: optionalNumber(data.draftedBy),
       approvedBy: optionalNumber(data.approvedBy),

@@ -36,11 +36,11 @@ import type {
   ContractFilterDrawerRef,
   ContractFilterForm
 } from 'screens/authentication/manage-contract/components/ContractFilterDrawer';
-import { FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
+import { FORMAT_DATE_API, FORMAT_DATE_TIME_DOWNLOAD, normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 
-const ISO_DATE_FORMAT = 'YYYY-MM-DD';
+const DATE_API_FORMAT = FORMAT_DATE_API;
 
 const contractSchema = z.object({
   contractNumber: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập số hợp đồng' }),
@@ -293,9 +293,9 @@ export default function useManageContract() {
           contract.capacityKva !== undefined && contract.capacityKva !== null
             ? String(contract.capacityKva)
             : '',
-        signedDate: contract.signedDate || '',
-        effectiveDate: contract.effectiveDate || '',
-        expiryDate: contract.expiryDate || '',
+        signedDate: normalizeDateToApi(contract.signedDate),
+        effectiveDate: normalizeDateToApi(contract.effectiveDate),
+        expiryDate: normalizeDateToApi(contract.expiryDate),
         note: contract.note || ''
       });
       setOpenForm(true);
@@ -333,9 +333,9 @@ export default function useManageContract() {
       voltageLevelId: normalizeVoltageLevel(contract.voltageLevelId),
       customerType: contract.customerType || undefined,
       capacityKva: Number(contract.capacityKva || 0),
-      signedDate: contract.signedDate || '',
-      effectiveDate: contract.effectiveDate || contract.signedDate || '',
-      expiryDate: contract.expiryDate || undefined,
+      signedDate: normalizeDateToApi(contract.signedDate),
+      effectiveDate: normalizeDateToApi(contract.effectiveDate || contract.signedDate),
+      expiryDate: normalizeDateToApi(contract.expiryDate) || undefined,
       status: contract.status || undefined,
       note: contract.note || undefined,
       ...override
@@ -351,9 +351,9 @@ export default function useManageContract() {
         voltageLevelId: normalizeVoltageLevel(data.voltageLevelId),
         customerType: data.customerType,
         capacityKva: Number(data.capacityKva),
-        signedDate: data.signedDate,
-        effectiveDate: data.effectiveDate,
-        expiryDate: data.expiryDate || undefined,
+        signedDate: normalizeDateToApi(data.signedDate),
+        effectiveDate: normalizeDateToApi(data.effectiveDate),
+        expiryDate: normalizeDateToApi(data.expiryDate) || undefined,
         note: data.note || undefined,
         status: selectedContract?.status || undefined
       };
@@ -403,7 +403,7 @@ export default function useManageContract() {
     (contract: Contract) => {
       setSelectedExtendContract(contract);
       extendForm.reset({
-        expiryDate: contract.expiryDate || '',
+        expiryDate: normalizeDateToApi(contract.expiryDate),
         note: contract.note || ''
       });
       setOpenExtend(true);
@@ -421,7 +421,7 @@ export default function useManageContract() {
     (data: ContractExtendForm) => {
       if (!selectedExtendContract) return;
       const body = buildBasePayloadFromRecord(selectedExtendContract, {
-        expiryDate: data.expiryDate,
+        expiryDate: normalizeDateToApi(data.expiryDate),
         note: data.note || selectedExtendContract.note || undefined,
         status: 'HIEU_LUC'
       });
@@ -649,6 +649,6 @@ export default function useManageContract() {
     onCloseStatus,
     onDelete,
     onExport,
-    isoDateFormat: ISO_DATE_FORMAT
+    isoDateFormat: DATE_API_FORMAT
   };
 }

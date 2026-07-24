@@ -1,24 +1,21 @@
 import {
   CREATE_ELECTRIC_TARIFF,
-  CREATE_ELECTRIC_TARIFF_TOU_PRICE,
   GET_ELECTRIC_TARIFF_DETAIL,
-  LIST_ELECTRIC_TARIFF_TOU_PRICE,
-  SEARCH_ELECTRIC_TARIFF
+  SEARCH_ELECTRIC_TARIFF,
+  UPDATE_ELECTRIC_TARIFF
 } from '@redux-action-type/electric-tariff';
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ErrorBase } from 'model/common';
 import {
   CreateTariffReq,
   CreateTariffRes,
-  CreateTouPriceReq,
-  CreateTouPriceRes,
   ElectricTariff,
   GetTariffDetailReq,
   GetTariffDetailRes,
-  ListTouPricesReq,
-  ListTouPricesRes,
   SearchTariffsReq,
-  SearchTariffsRes
+  SearchTariffsRes,
+  UpdateTariffReq,
+  UpdateTariffRes
 } from 'model/electric-tariff';
 import { SLICE_NAME } from 'stores/types';
 
@@ -89,22 +86,11 @@ const createElectricTariff = createAction(
   })
 );
 
-const listElectricTariffTouPrice = createAction(
-  LIST_ELECTRIC_TARIFF_TOU_PRICE,
+const updateElectricTariff = createAction(
+  UPDATE_ELECTRIC_TARIFF,
   (
-    body: ListTouPricesReq,
-    onSuccess?: (data: ListTouPricesRes) => void,
-    onFailed?: (error?: ErrorBase) => void
-  ) => ({
-    payload: { body, onSuccess, onFailed }
-  })
-);
-
-const createElectricTariffTouPrice = createAction(
-  CREATE_ELECTRIC_TARIFF_TOU_PRICE,
-  (
-    body: CreateTouPriceReq,
-    onSuccess?: (data: CreateTouPriceRes) => void,
+    body: UpdateTariffReq,
+    onSuccess?: (data: UpdateTariffRes) => void,
     onFailed?: (error?: ErrorBase) => void
   ) => ({
     payload: { body, onSuccess, onFailed }
@@ -116,8 +102,7 @@ export const electricTariffActions = {
   searchElectricTariff,
   getElectricTariffDetail,
   createElectricTariff,
-  listElectricTariffTouPrice,
-  createElectricTariffTouPrice
+  updateElectricTariff
 };
 
 export const electricTariffReducer = electricTariffSlice.reducer;

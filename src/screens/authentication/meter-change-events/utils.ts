@@ -2,9 +2,9 @@ import { FILE_EXT, NULL_VALUE } from '@constant';
 import { TYPE_STATUS } from 'components/status';
 import { MeterChangeEventWithDetails } from 'model/meter-change-event';
 import moment from 'moment';
-import { FORMAT_DATE_PARAMS, FORMAT_DATE_TIME_PARAMS } from 'utils/date';
+import { FORMAT_DATE_API, FORMAT_DATE_PARAMS, FORMAT_DATE_TIME_PARAMS } from 'utils/date';
 
-export const DATE_API_FORMAT = 'YYYY-MM-DD';
+export const DATE_API_FORMAT = FORMAT_DATE_API;
 const DATE_SERVER_INPUT_FORMATS = [
   DATE_API_FORMAT,
   'DD-MM-YYYY HH:mm:ss',

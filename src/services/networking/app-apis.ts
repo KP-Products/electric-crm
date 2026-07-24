@@ -171,8 +171,7 @@ const ApiEndPoint = {
   BILLING_TARIFF_LIST: '/admin/billing/tariffs/list',
   BILLING_TARIFF_DETAIL: '/admin/billing/tariffs/detail',
   BILLING_TARIFF_CREATE: '/admin/billing/tariffs/create',
-  BILLING_TARIFF_TOU_LIST: '/admin/billing/tariffs/tou/list',
-  BILLING_TARIFF_TOU_CREATE: '/admin/billing/tariffs/tou/create',
+  BILLING_TARIFF_UPDATE: '/admin/billing/tariffs/update',
 
   // BILLING 2.2 - DON GIA VAN HANH
   BILLING_OPERATION_PRICE_SEARCH: '/admin/billing/operation-prices/search',

@@ -32,7 +32,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import operationUnitServices from 'services/operation-unit-services';
-import { FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
+import { FORMAT_DATE_TIME_DOWNLOAD, normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 
@@ -125,7 +125,7 @@ const buildFormValues = (operationUnit?: OperationUnit): OperationUnitForm => ({
   email: operationUnit?.email || '',
   contactName: operationUnit?.contactName || '',
   contractIdNo: operationUnit?.contractIdNo || '',
-  contactIsueDate: operationUnit?.contactIsueDate || '',
+  contactIsueDate: normalizeDateToApi(operationUnit?.contactIsueDate),
   address: operationUnit?.address || '',
   status: normalizeStatusValue(operationUnit?.status)
 });
@@ -282,7 +282,7 @@ export default function useManageOperationUnit() {
       email: optionalValue(data.email),
       contactName: optionalValue(data.contactName),
       contractIdNo: optionalValue(data.contractIdNo),
-      contactIsueDate: optionalValue(data.contactIsueDate),
+      contactIsueDate: optionalValue(normalizeDateToApi(data.contactIsueDate)),
       address: optionalValue(data.address),
       status: optionalValue(data.status)
     }),
@@ -299,7 +299,7 @@ export default function useManageOperationUnit() {
       email: updateTextValue(data.email),
       contactName: updateTextValue(data.contactName),
       contractIdNo: updateTextValue(data.contractIdNo),
-      contactIsueDate: updateTextValue(data.contactIsueDate),
+      contactIsueDate: updateTextValue(normalizeDateToApi(data.contactIsueDate)),
       address: updateTextValue(data.address),
       status: optionalValue(data.status)
     }),

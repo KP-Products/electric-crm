@@ -3,6 +3,13 @@ import type { Moment } from 'moment';
 import moment from 'moment';
 
 export const FORMAT_DATE_PARAMS = 'DD/MM/YYYY';
+export const FORMAT_DATE_API = 'DD-MM-YYYY';
+export const API_DATE_INPUT_FORMATS = [
+  FORMAT_DATE_API,
+  'YYYY-MM-DD',
+  'DD/MM/YYYY',
+  'YYYY-MM-DDTHH:mm:ss'
+];
 export const FORMAT_FULL_TIME_PARAMS = 'HH:mm:ss';
 export const FORMAT_DATE_TIME_PARAMS = 'HH:mm:ss - DD/MM/YYYY';
 export const FORMAT_DATE_TIME_DOWNLOAD = 'HH:mm:ss_DD/MM/YYYY';
@@ -152,6 +159,17 @@ export function formartDateCustom(value: any, type: string, toType: string) {
   return moment(value, type).format(toType);
 }
 
+export const normalizeDateToApi = (date?: string | null) => {
+  const normalizedDate = date?.trim();
+  if (!normalizedDate) return '';
+
+  const parsedDate = moment(normalizedDate, API_DATE_INPUT_FORMATS, true);
+  if (parsedDate.isValid()) return parsedDate.format(FORMAT_DATE_API);
+
+  const fallbackDate = moment(normalizedDate);
+  return fallbackDate.isValid() ? fallbackDate.format(FORMAT_DATE_API) : normalizedDate;
+};
+
 export function calculateIntestSaving(
   interest: number,
   dayStart: string,
@@ -169,12 +187,16 @@ export function calculateIntestSaving(
 
 export const displayDateFromServer = (date: string) => {
   if (!date) return NULL_VALUE;
-  const momentDate = moment(date);
+  const momentDate = moment(date, API_DATE_INPUT_FORMATS, true).isValid()
+    ? moment(date, API_DATE_INPUT_FORMATS, true)
+    : moment(date);
   return momentDate.isValid() ? momentDate.format(FORMAT_DATE_PARAMS) : NULL_VALUE;
 };
 
 export const displayDateTimeFromServer = (date: string) => {
   if (!date) return NULL_VALUE;
-  const momentDate = moment(date);
+  const momentDate = moment(date, API_DATE_INPUT_FORMATS, true).isValid()
+    ? moment(date, API_DATE_INPUT_FORMATS, true)
+    : moment(date);
   return momentDate.isValid() ? momentDate.format(FORMAT_DATE_TIME_PARAMS) : NULL_VALUE;
 };

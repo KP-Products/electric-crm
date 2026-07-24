@@ -1,6 +1,6 @@
 'use client';
 /* eslint-disable react/display-name */
-import { ISO_DATE_TIME_FORMAT, NULL_VALUE } from '@constant';
+import { NULL_VALUE } from '@constant';
 import type { DatePickerProps } from 'antd/lib/date-picker';
 import DatePicker from 'antd/lib/date-picker';
 import { IconSvgTypes } from 'assets/svg';
@@ -13,6 +13,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import React, { useImperativeHandle, useMemo, useRef } from 'react';
 import type { Control, FieldError, FieldValues, Path } from 'react-hook-form';
 import { useController } from 'react-hook-form';
+import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API } from 'utils/date';
 import { IconSvgLocal } from '../icon-vec-local';
 
 dayjs.extend(customParseFormat);
@@ -144,7 +145,7 @@ const AppDatePickerControl = <T extends FieldValues>({
   name,
   control,
   onChange,
-  backendFormat = ISO_DATE_TIME_FORMAT,
+  backendFormat = FORMAT_DATE_API,
   customError,
   ...restProps
 }: AppDatePickerControlProps<T>) => {
@@ -153,7 +154,7 @@ const AppDatePickerControl = <T extends FieldValues>({
     fieldState: { error }
   } = useController({ name, control });
   const parsedValue = useMemo(
-    () => (field.value ? dayjs(field.value, backendFormat) : null),
+    () => (field.value ? dayjs(field.value, [backendFormat, ...API_DATE_INPUT_FORMATS]) : null),
     [field.value, backendFormat]
   );
 
