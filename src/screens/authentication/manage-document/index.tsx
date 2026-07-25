@@ -4,7 +4,6 @@ import {
   K_SIZE_0,
   K_SIZE_1,
   K_SIZE_100,
-  K_SIZE_130,
   K_SIZE_16,
   K_SIZE_160,
   K_SIZE_18,
@@ -29,7 +28,7 @@ import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
-import { DocumentItem } from 'model/document';
+import { DOCUMENT_OWNER_TYPE, DOCUMENT_STATUS, DOCUMENT_TYPE, DocumentItem } from 'model/document';
 import { useMemo } from 'react';
 import { displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
@@ -37,29 +36,29 @@ import DocumentFilterDrawer, { type DocumentFilterForm } from './components/Docu
 import useManageDocument from './useManageDocument';
 
 const DOCUMENT_STATUS_LABEL_MAP: Record<string, string> = {
-  HOP_LE: 'Hợp lệ',
-  CAN_BO_SUNG: 'Cần bổ sung',
-  HET_HAN: 'Hết hạn'
+  [DOCUMENT_STATUS.HOP_LE]: 'Hợp lệ',
+  [DOCUMENT_STATUS.CAN_BO_SUNG]: 'Cần bổ sung',
+  [DOCUMENT_STATUS.HET_HAN]: 'Hết hạn'
 };
 
 const DOCUMENT_STATUS_TYPE_MAP: Record<string, TYPE_STATUS> = {
-  HOP_LE: TYPE_STATUS.SUCCESS,
-  CAN_BO_SUNG: TYPE_STATUS.PENDING,
-  HET_HAN: TYPE_STATUS.ERROR
+  [DOCUMENT_STATUS.HOP_LE]: TYPE_STATUS.SUCCESS,
+  [DOCUMENT_STATUS.CAN_BO_SUNG]: TYPE_STATUS.PENDING,
+  [DOCUMENT_STATUS.HET_HAN]: TYPE_STATUS.ERROR
 };
 
 const DOCUMENT_STATUS_OPTIONS = [
-  { value: 'HOP_LE', label: 'Hợp lệ' },
-  { value: 'CAN_BO_SUNG', label: 'Cần bổ sung' },
-  { value: 'HET_HAN', label: 'Hết hạn' }
+  { value: DOCUMENT_STATUS.HOP_LE, label: 'Hợp lệ' },
+  { value: DOCUMENT_STATUS.CAN_BO_SUNG, label: 'Cần bổ sung' },
+  { value: DOCUMENT_STATUS.HET_HAN, label: 'Hết hạn' }
 ];
 
 const DOCUMENT_TYPE_OPTIONS = [
-  { value: 'CMND_CCCD', label: 'CMND/CCCD' },
-  { value: 'DKKD', label: 'ĐKKD' },
-  { value: 'HD', label: 'HĐ' },
-  { value: 'SO_DO_DIEN', label: 'Sơ đồ điện' },
-  { value: 'KHAC', label: 'Khác' }
+  { value: DOCUMENT_TYPE.CMND_CCCD, label: 'CMND/CCCD' },
+  { value: DOCUMENT_TYPE.DKKD, label: 'ĐKKD' },
+  { value: DOCUMENT_TYPE.HD, label: 'HĐ' },
+  { value: DOCUMENT_TYPE.SO_DO_DIEN, label: 'Sơ đồ điện' },
+  { value: DOCUMENT_TYPE.KHAC, label: 'Khác' }
 ];
 
 const DOCUMENT_TYPE_LABEL_MAP = Object.fromEntries(
@@ -67,8 +66,9 @@ const DOCUMENT_TYPE_LABEL_MAP = Object.fromEntries(
 );
 
 const OWNER_TYPE_OPTIONS = [
-  { value: 'Customer', label: 'Khách hàng' },
-  { value: 'Contract', label: 'Hợp đồng' }
+  { value: DOCUMENT_OWNER_TYPE.CUSTOMER, label: 'Khách hàng' },
+  { value: DOCUMENT_OWNER_TYPE.CONTRACT, label: 'Hợp đồng mua bán điện' },
+  { value: DOCUMENT_OWNER_TYPE.OPERATION_CONTRACT, label: 'Hợp đồng vận hành' }
 ];
 
 const OWNER_TYPE_LABEL_MAP = Object.fromEntries(
@@ -78,9 +78,10 @@ const OWNER_TYPE_LABEL_MAP = Object.fromEntries(
 const DOCUMENT_FILTER_LABEL_MAP: Record<keyof DocumentFilterForm, string> = {
   keyword: 'Từ khóa',
   ownerType: 'Loại chủ sở hữu',
-  ownerId: 'Mã chủ sở hữu',
+  ownerId: 'Chủ sở hữu',
   docType: 'Loại tài liệu',
-  status: 'Trạng thái'
+  status: 'Trạng thái',
+  operationUnitId: 'Đơn vị vận hành'
 };
 
 const ACCEPTED_DOCUMENT_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'docx'];
@@ -136,13 +137,22 @@ const ManageDocumentScreen = () => {
     selectedDocument,
     attachForm,
     updateForm,
+    selectedAttachOwnerType,
+    ownerOptions,
+    onOpenOwnerDropdown,
+    ownerDropdownRender,
+    operationUnitOptions,
+    getOperationUnitDisplay,
+    onOpenOperationUnitDropdown,
+    operationUnitDropdownRender,
     handleAttachSubmit,
     handleUpdateSubmit,
     onCloseAttach,
     onOpenUpdate,
     onCloseUpdate,
     onDelete,
-    onView
+    onView,
+    onDownload
   } = useManageDocument();
 
   const {
@@ -181,6 +191,7 @@ const ManageDocumentScreen = () => {
     if (key === 'ownerType') return OWNER_TYPE_LABEL_MAP[value] || value;
     if (key === 'docType') return DOCUMENT_TYPE_LABEL_MAP[value] || value;
     if (key === 'status') return DOCUMENT_STATUS_LABEL_MAP[value] || value;
+    if (key === 'operationUnitId') return getOperationUnitDisplay(value);
     return value;
   };
 
@@ -242,7 +253,7 @@ const ManageDocumentScreen = () => {
         title: t('common:action'),
         fixed: 'right',
         align: 'center',
-        width: K_SIZE_130,
+        width: K_SIZE_160,
         render: (_: unknown, record: DocumentItem) => (
           <div className="flex justify-center gap-8">
             <IconHover
@@ -251,6 +262,13 @@ const ManageDocumentScreen = () => {
               icon="ICON_EYE_OPEN"
               iconHeight={K_SIZE_18}
               onClick={() => onView(record)}
+            />
+            <IconHover
+              rootClassName="text-color-800"
+              title="Tải tài liệu"
+              icon="IC_DOWNLOAD_OUTLINE"
+              iconHeight={K_SIZE_18}
+              onClick={() => onDownload(record)}
             />
             <IconHover
               rootClassName="text-color-800"
@@ -270,7 +288,7 @@ const ManageDocumentScreen = () => {
         )
       }
     ],
-    [onDelete, onOpenUpdate, onView, t]
+    [onDelete, onDownload, onOpenUpdate, onView, t]
   );
 
   const breadcrumbList = [
@@ -401,12 +419,22 @@ const ManageDocumentScreen = () => {
                 options={OWNER_TYPE_OPTIONS}
                 control={attachControl}
               />
-              <AppTextFieldControl
+              <AppSelectControl
                 name="ownerId"
-                label="Mã chủ sở hữu"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
-                placeholder="Nhập mã chủ sở hữu"
+                label="Chủ sở hữu"
+                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                placeholder="Chọn chủ sở hữu"
+                options={ownerOptions}
+                disabled={!selectedAttachOwnerType}
+                dropdownRender={ownerDropdownRender}
+                onOpenChange={onOpenOwnerDropdown}
+                onChange={(ownerId) =>
+                  attachForm.setValue('ownerId', String(ownerId || ''), {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true
+                  })
+                }
                 control={attachControl}
               />
               <AppSelectControl
@@ -553,6 +581,9 @@ const ManageDocumentScreen = () => {
           ownerTypeOptions={OWNER_TYPE_OPTIONS}
           documentTypeOptions={DOCUMENT_TYPE_OPTIONS}
           documentStatusOptions={DOCUMENT_STATUS_OPTIONS}
+          operationUnitOptions={operationUnitOptions}
+          operationUnitDropdownRender={operationUnitDropdownRender}
+          onOpenOperationUnitDropdown={onOpenOperationUnitDropdown}
           onApplyFilter={onApplyFilter}
           onResetFilter={onResetFilter}
         />

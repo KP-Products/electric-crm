@@ -27,11 +27,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import incomingDocumentServices from 'services/incoming-document-services';
+import { normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
 import {
   canViewAttachmentInline,
   DATE_API_FORMAT,
-  DATE_TIME_START_OF_DAY_SUFFIX,
   getAttachmentFileName,
   getAttachmentResponseError,
   getErrorContent,
@@ -87,12 +87,9 @@ const optionalNumber = (value?: string) => {
   return normalizedValue ? Number(normalizedValue) : undefined;
 };
 
-const optionalDateTime = (value?: string | null) => {
-  const normalizedValue = optionalString(value);
-  return normalizedValue ? `${normalizedValue}${DATE_TIME_START_OF_DAY_SUFFIX}` : undefined;
-};
+const optionalDate = (value?: string | null) => optionalString(normalizeDateToApi(value));
 
-const toDatePickerValue = (value?: string | null) => optionalString(value)?.slice(0, 10) || '';
+const toDatePickerValue = (value?: string | null) => normalizeDateToApi(value);
 
 interface UseIncomingDocumentFormProps {
   isEditMode: boolean;
@@ -201,18 +198,18 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
   const buildSubmitBody = useCallback(
     (data: IncomingDocumentForm): CreateIncomingDocumentReq => ({
       incomingNumber: data.incomingNumber.trim(),
-      incomingDate: optionalString(data.incomingDate),
+      incomingDate: optionalDate(data.incomingDate),
       documentNumber: optionalString(data.documentNumber),
-      documentDate: data.documentDate.trim(),
+      documentDate: normalizeDateToApi(data.documentDate),
       issuingAgency: data.issuingAgency.trim(),
       documentType: optionalString(data.documentType),
       summary: data.summary.trim(),
       urgencyLevel: optionalString(data.urgencyLevel),
       confidentialityLevel: optionalString(data.confidentialityLevel),
       pageCount: optionalNumber(data.pageCount),
-      dueDate: optionalString(data.dueDate),
+      dueDate: optionalDate(data.dueDate),
       approvedBy: optionalNumber(data.approvedBy),
-      approvalDate: optionalDateTime(data.approvalDate),
+      approvalDate: optionalDate(data.approvalDate),
       approvalNote: optionalString(data.approvalNote),
       note: optionalString(data.note)
     }),

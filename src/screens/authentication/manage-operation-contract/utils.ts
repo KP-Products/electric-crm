@@ -10,9 +10,9 @@ import {
 } from 'model/operation-contract';
 import { OperationUnit } from 'model/operation-unit';
 import moment from 'moment';
-import { FORMAT_DATE_PARAMS } from 'utils/date';
+import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
 
-export const OPERATION_CONTRACT_DATE_FORMAT = 'DD-MM-YYYY';
+export const OPERATION_CONTRACT_DATE_FORMAT = FORMAT_DATE_API;
 export const OPERATION_CONTRACT_DEFAULT_TYPE = 'VẬN HÀNH';
 export const OPERATION_CONTRACT_DOCUMENT_OWNER_TYPE = 'OPERATION_CONTRACT';
 
@@ -70,7 +70,7 @@ export const DEFAULT_OPERATION_CONTRACT_FORM: OperationContractForm = {
   note: ''
 };
 
-const DATE_INPUT_FORMATS = [OPERATION_CONTRACT_DATE_FORMAT, 'YYYY-MM-DD', 'DD/MM/YYYY'];
+const DATE_INPUT_FORMATS = API_DATE_INPUT_FORMATS;
 
 const normalizeText = (value?: string) => {
   const normalized = value?.trim();

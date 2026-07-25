@@ -1,425 +1,678 @@
 'use client';
 
-import { useResponsive } from 'utils/responsive';
-import { Divider, Drawer, Flex, Spin } from 'antd';
 import {
+  DEFAULT_PAGE_SIZE,
   K_SIZE_0,
   K_SIZE_1,
   K_SIZE_100,
-  K_SIZE_108,
-  K_SIZE_16,
+  K_SIZE_120,
+  K_SIZE_130,
+  K_SIZE_150,
   K_SIZE_160,
+  K_SIZE_16,
   K_SIZE_18,
-  K_SIZE_20,
+  K_SIZE_180,
   K_SIZE_200,
+  K_SIZE_220,
+  K_SIZE_240,
   K_SIZE_8,
-  NULL_VALUE
+  NULL_VALUE,
+  REQUIRED_MARK
 } from '@constant';
-import { TextBase } from 'components/text';
+import { Divider, Drawer, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
-import AppTable from 'components/table';
-import { IconSvgLocal } from 'components/icon-vec-local';
-import AppPagination from 'components/table/pagination';
 import IconHover from 'components/icon-vec-local/icon-hover';
-import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { AppSelectControl } from 'components/select';
-import useManageCustomer from './useManageCustomer';
-import React, { useEffect } from 'react';
-import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
-import { ROUTES } from '../../../config/routes';
-import { STATUS } from '../../../model/user';
+import AppTable from 'components/table';
+import AppPagination from 'components/table/pagination';
+import TagFilter from 'components/tag-filter';
+import { TextBase } from 'components/text';
+import { AppTextField, AppTextFieldControl } from 'components/text-field';
+import { ROUTES } from 'config/routes';
+import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import { Customer, SignedContractInfo } from 'model/customer';
+import type { ReactNode } from 'react';
+import { useCallback, useMemo } from 'react';
+import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
+import { useResponsive } from 'utils/responsive';
+import useManageCustomer, { CustomerFilter } from './useManageCustomer';
+
+const FILTER_LABEL_MAP: Record<keyof CustomerFilter, string> = {
+  customerCodeContains: 'Mã khách hàng',
+  fullNameContains: 'Tên khách hàng',
+  taxNoContains: 'Mã số thuế',
+  phoneContains: 'Số điện thoại',
+  emailContains: 'Email',
+  contactNameContains: 'Người liên hệ',
+  addressContains: 'Địa chỉ'
+};
+
+const displayText = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === '') return NULL_VALUE;
+  return String(value);
+};
+
+const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') => (
+  <div title={text || ''} className={`${className} truncate`}>
+    {displayText(text)}
+  </div>
+);
+
+const renderDate = (date?: string | null) => (date ? displayDateFromServer(date) : NULL_VALUE);
+
+const renderDateTime = (date?: string | null) =>
+  date ? displayDateTimeFromServer(date) : NULL_VALUE;
+
+const DetailItem = ({ label, value }: { label: string; value: ReactNode }) => (
+  <div className="min-w-0">
+    <div className="mb-4 text-12 font-semibold text-color-700">{label}</div>
+    <div className="break-words text-14 font-medium text-color-900">{value || NULL_VALUE}</div>
+  </div>
+);
 
 const ManageCustomerScreen = () => {
   const { isMobile, isTablet } = useResponsive();
   const {
     t,
-    fetchList,
-    setMoreAction,
-    selectedItem,
-    setSelectedItem,
-    openCreate,
-    setOpenCreate,
+    customerList,
+    total,
+    listLoading,
+    detailLoading,
+    detailLoadFailed,
     currentPage,
     pagination,
-    optionStatus,
-    onCloseCreate,
-    listLoading,
-    handleUpdateSubmit,
-    updateForm,
-    loadingEdit,
-    debounceSearch,
-    total,
-    search,
-    setSearch,
-    custList,
-    // fetchCustomeType,
-    loadingDP,
-    onDownload
+    filter,
+    filterApplied,
+    openForm,
+    openDetail,
+    selectedCustomer,
+    selectedDetail,
+    operationUnitLoading,
+    operationUnitOptions,
+    form,
+    onChangeFilter,
+    onApplyFilter,
+    onResetFilter,
+    onOpenCreate,
+    onOpenUpdate,
+    onCloseForm,
+    handleSubmit,
+    onOpenDetail,
+    onCloseDetail,
+    onDelete
   } = useManageCustomer();
 
   const {
     control,
-    handleSubmit,
+    handleSubmit: handleFormSubmit,
     formState: { isValid, isDirty }
-  } = updateForm;
+  } = form;
 
-  const isView = !!selectedItem?.id && !openCreate;
+  const detailCustomer = selectedDetail?.customer;
+  const detailOperationUnit = selectedDetail?.operationUnit;
+  const detailContracts = selectedDetail?.contracts || [];
 
-  useEffect(() => {
-    fetchList();
-  }, []);
+  const activeFilters = useMemo(
+    () =>
+      (Object.entries(filterApplied) as [keyof CustomerFilter, string][]).filter(([, value]) =>
+        Boolean(value)
+      ),
+    [filterApplied]
+  );
 
-  // useEffect(() => {
-  //   if (!customerTypes) {
-  //     fetchCustomeType();
-  //   }
-  // }, [customerTypes]);
+  const operationUnitLabelMap = useMemo(
+    () =>
+      operationUnitOptions.reduce<Record<string, string>>((result, option) => {
+        result[String(option.value)] = String(option.label);
+        return result;
+      }, {}),
+    [operationUnitOptions]
+  );
+
+  const getOperationUnitLabel = useCallback(
+    (operationUnitId?: string | null) =>
+      operationUnitId ? operationUnitLabelMap[operationUnitId] || operationUnitId : NULL_VALUE,
+    [operationUnitLabelMap]
+  );
+
+  const columns = useMemo<any[]>(
+    () => [
+      {
+        title: 'STT',
+        key: 'index',
+        width: K_SIZE_100,
+        align: 'center',
+        render: (_: unknown, __: Customer, index: number) =>
+          (currentPage - K_SIZE_1) * DEFAULT_PAGE_SIZE + index + K_SIZE_1
+      },
+      {
+        title: 'Mã KH',
+        dataIndex: 'customerCode',
+        key: 'customerCode',
+        width: K_SIZE_150,
+        render: (text: string, record: Customer) => (
+          <TextBase
+            text={displayText(text)}
+            classNames="sub-title4 cursor-pointer !text-secondary-500 hover:!text-secondary-700"
+            onClick={() => onOpenDetail(record)}
+          />
+        )
+      },
+      {
+        title: 'Tên khách hàng',
+        key: 'fullName',
+        dataIndex: 'fullName',
+        render: (text: string) => renderTruncatedText(text, 'max-w-[260px]'),
+        width: K_SIZE_240
+      },
+      {
+        title: 'Mã số thuế',
+        dataIndex: 'taxNo',
+        key: 'taxNo',
+        render: (text: string) => renderTruncatedText(text, 'max-w-[160px]'),
+        width: K_SIZE_160
+      },
+      {
+        title: 'Số điện thoại',
+        dataIndex: 'phone',
+        key: 'phone',
+        render: (text: string) => displayText(text),
+        width: K_SIZE_150
+      },
+      {
+        title: 'Email',
+        dataIndex: 'email',
+        key: 'email',
+        render: (text: string) => renderTruncatedText(text, 'max-w-[180px]'),
+        width: K_SIZE_180
+      },
+      {
+        title: 'Người liên hệ',
+        dataIndex: 'contactName',
+        key: 'contactName',
+        render: (text: string) => renderTruncatedText(text, 'max-w-[180px]'),
+        width: K_SIZE_180
+      },
+      {
+        title: 'Đơn vị vận hành',
+        dataIndex: 'operationUnitId',
+        key: 'operationUnitId',
+        render: (text: string) => renderTruncatedText(getOperationUnitLabel(text), 'max-w-[220px]'),
+        width: K_SIZE_220
+      },
+      {
+        title: 'Địa chỉ',
+        dataIndex: 'address',
+        key: 'address',
+        render: (text: string) => renderTruncatedText(text, 'max-w-[260px]'),
+        width: K_SIZE_240
+      },
+      {
+        title: 'Ngày tạo',
+        dataIndex: 'createdAt',
+        key: 'createdAt',
+        width: K_SIZE_200,
+        render: (date: string) => renderDateTime(date)
+      },
+      {
+        title: 'Ngày cập nhật',
+        dataIndex: 'updatedAt',
+        key: 'updatedAt',
+        width: K_SIZE_200,
+        render: (date: string) => renderDateTime(date)
+      },
+      {
+        title: t('common:action'),
+        fixed: 'right',
+        align: 'center',
+        width: K_SIZE_120,
+        render: (_: unknown, record: Customer) => (
+          <div className="flex justify-center gap-8">
+            <IconHover
+              rootClassName="text-color-800"
+              title="Xem chi tiết"
+              icon="ICON_EYE_OPEN"
+              iconHeight={K_SIZE_18}
+              onClick={() => onOpenDetail(record)}
+            />
+            <IconHover
+              rootClassName="text-color-800"
+              title={t('common:edit')}
+              icon="ICON_EDIT"
+              iconHeight={K_SIZE_18}
+              onClick={() => onOpenUpdate(record)}
+            />
+            <IconHover
+              rootClassName="text-error-500 hover:text-error-500"
+              title={t('common:delete')}
+              icon="IC_TRASH_OUTLINE"
+              iconHeight={K_SIZE_18}
+              onClick={() => onDelete(record)}
+            />
+          </div>
+        )
+      }
+    ],
+    [currentPage, getOperationUnitLabel, onDelete, onOpenDetail, onOpenUpdate, t]
+  );
+
+  const contractColumns = useMemo<any[]>(
+    () => [
+      {
+        title: 'Số hợp đồng',
+        dataIndex: 'contractNumber',
+        key: 'contractNumber',
+        width: K_SIZE_180,
+        render: (text: string) => displayText(text)
+      },
+      {
+        title: 'Ngày ký',
+        dataIndex: 'signedDate',
+        key: 'signedDate',
+        width: K_SIZE_130,
+        render: (date: string) => renderDate(date)
+      },
+      {
+        title: 'Ngày hiệu lực',
+        dataIndex: 'effectiveDate',
+        key: 'effectiveDate',
+        width: K_SIZE_130,
+        render: (date: string) => renderDate(date)
+      },
+      {
+        title: 'Ngày hết hạn',
+        dataIndex: 'expiryDate',
+        key: 'expiryDate',
+        width: K_SIZE_130,
+        render: (date: string) => renderDate(date)
+      },
+      {
+        title: 'Trạng thái',
+        dataIndex: 'status',
+        key: 'status',
+        width: K_SIZE_130,
+        render: (text: string) => displayText(text)
+      }
+    ],
+    []
+  );
+
   const breadcrumbList = [
     {
-      title: t('menu:system_administration'),
-      key: ROUTES.MANAGE_USER
+      title: 'Hợp đồng'
     },
     {
-      title: 'Quản lý khách hàng',
+      title: 'Khách hàng'
+    },
+    {
+      title: 'Danh sách',
       key: ROUTES.MANAGE_CUSTOMER
     }
   ];
+
   return (
     <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
       <section>
         <Flex
-          justify={'space-between'}
-          align={'center'}
+          justify="space-between"
+          align="center"
           gap={K_SIZE_8}
-          className={'mobile:flex-col mobile:items-start'}
+          className="mobile:flex-col mobile:items-start"
         >
-          <TextBase classNames="title4" text={'Quản lý khách hàng'} />
+          <TextBase classNames="title4" text="Quản lý khách hàng" />
           <Flex
             flex={K_SIZE_1}
-            justify={'end'}
+            justify="end"
             gap={K_SIZE_16}
-            className={'mobile:mt-8 mobile:w-full mobile:flex-col'}
+            className="mobile:mt-8 mobile:w-full mobile:flex-col"
           >
-            <div className={'w-[250px] mobile:w-full'}>
-              <AppTextField
-                allowClear
-                placeholder={t('common:search_placeholder')}
-                rootClassName={'h-44'}
-                prefix={
-                  <IconSvgLocal
-                    name={'IC_SEARCH_OUTLINE2'}
-                    width={K_SIZE_20}
-                    height={K_SIZE_20}
-                    classNames={'text-color-500'}
-                  />
-                }
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  debounceSearch(e.target.value);
-                }}
-              />
-            </div>
-            <div className={'flex justify-between gap-8 mobile:w-full'}>
-              <ButtonBase
-                type={'ghost'}
-                leftIcon={'IC_ADD_OUTLINE2'}
-                t18n={'common:add_new'}
-                onClick={() => {
-                  setOpenCreate(true);
-                }}
-                classNames={'mobile:flex-1 mobile:justify-center'}
-              />
-              <ButtonBase
-                type={'primary'}
-                leftIcon={'IC_DOWNLOAD_OUTLINE'}
-                t18n={'common:download'}
-                onClick={onDownload}
-                disabled={loadingDP}
-                classNames={'mobile:flex-1 mobile:justify-center'}
-              />
-            </div>
+            <ButtonBase
+              type="primary"
+              leftIcon="IC_ADD_OUTLINE2"
+              customContent="Thêm mới"
+              onClick={onOpenCreate}
+              classNames="mobile:flex-1 mobile:justify-center"
+            />
           </Flex>
         </Flex>
-        <Divider className={'my-16'} />
-        <Spin spinning={listLoading && custList?.length > K_SIZE_0}>
-          <div className={'overflow-hidden rounded-radius-l border border-color-400 duration-500'}>
+        <Divider className="my-16" />
+
+        <div className="mb-12 grid grid-cols-4 items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <AppTextField
+            name="customerCodeContains"
+            label="Mã khách hàng"
+            placeholder="Nhập mã khách hàng"
+            value={filter.customerCodeContains}
+            onChange={(event) => onChangeFilter('customerCodeContains', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="fullNameContains"
+            label="Tên khách hàng"
+            placeholder="Nhập tên khách hàng"
+            value={filter.fullNameContains}
+            onChange={(event) => onChangeFilter('fullNameContains', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="taxNoContains"
+            label="Mã số thuế"
+            placeholder="Nhập mã số thuế"
+            value={filter.taxNoContains}
+            onChange={(event) => onChangeFilter('taxNoContains', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="phoneContains"
+            label="Số điện thoại"
+            placeholder="Nhập số điện thoại"
+            value={filter.phoneContains}
+            onChange={(event) => onChangeFilter('phoneContains', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="emailContains"
+            label="Email"
+            placeholder="Nhập email"
+            value={filter.emailContains}
+            onChange={(event) => onChangeFilter('emailContains', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="contactNameContains"
+            label="Người liên hệ"
+            placeholder="Nhập người liên hệ"
+            value={filter.contactNameContains}
+            onChange={(event) => onChangeFilter('contactNameContains', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="addressContains"
+            label="Địa chỉ"
+            placeholder="Nhập địa chỉ"
+            value={filter.addressContains}
+            onChange={(event) => onChangeFilter('addressContains', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <Flex gap={K_SIZE_8}>
+            <ButtonBase
+              type="ghost"
+              customContent="Làm mới"
+              onClick={() => onResetFilter()}
+              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+            />
+            <ButtonBase
+              type="primary"
+              leftIcon="IC_SEARCH_OUTLINE2"
+              customContent="Tìm kiếm"
+              onClick={onApplyFilter}
+              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+            />
+          </Flex>
+        </div>
+
+        {activeFilters.length > K_SIZE_0 && (
+          <div className="mb-8 flex w-full flex-wrap items-center gap-8">
+            {activeFilters.map(([key, value]) => (
+              <TagFilter
+                key={key}
+                content={`${FILTER_LABEL_MAP[key]}: ${value}`}
+                onClose={() => onResetFilter(key)}
+              />
+            ))}
+          </div>
+        )}
+
+        <Spin spinning={listLoading && customerList.length > K_SIZE_0}>
+          <div className="overflow-hidden rounded-radius-l border border-color-400 duration-500">
             <AppTable
               loading={listLoading}
-              rootClassName={'w-full'}
-              className={'[&_.ant-pagination]:hidden'}
+              rootClassName="w-full"
+              className="[&_.ant-pagination]:hidden"
               scroll={{ x: 'max-content', y: '75vh' }}
-              dataSource={custList}
-              columns={[
-                {
-                  title: 'Mã KH',
-                  dataIndex: 'customerCode',
-                  key: 'customerCode',
-                  width: K_SIZE_100,
-                  render: (text, record) => (
-                    <TextBase
-                      text={text}
-                      classNames={
-                        'sub-title4 !text-secondary-500 cursor-pointer hover:!text-secondary-700'
-                      }
-                      onClick={() => {
-                        setSelectedItem(record as any);
-                      }}
-                    />
-                  )
-                },
-                {
-                  title: 'Tên khách hàng',
-                  key: 'fullName',
-                  dataIndex: 'fullName',
-                  render: (text) => <>{text || NULL_VALUE}</>,
-                  width: K_SIZE_200
-                },
-                {
-                  title: 'Loại KH',
-                  dataIndex: 'contactName',
-                  key: 'contactName',
-                  render: (text) => <>{text || NULL_VALUE}</>,
-                  width: K_SIZE_160
-                },
-                {
-                  title: 'Mã số thuế',
-                  dataIndex: 'taxNo',
-                  key: 'taxNo',
-                  render: (text) => <>{text || NULL_VALUE}</>,
-                  width: K_SIZE_160
-                },
-                {
-                  title: 'Số điện thoại',
-                  dataIndex: 'phone',
-                  key: 'phone',
-                  render: (text) => <>{text || NULL_VALUE}</>,
-                  width: K_SIZE_160
-                },
-                {
-                  title: 'Email',
-                  dataIndex: 'email',
-                  key: 'email',
-                  render: (text) => <>{text || NULL_VALUE}</>,
-                  width: K_SIZE_160
-                },
-                {
-                  title: 'Công nợ hiện tại',
-                  dataIndex: 'email',
-                  key: 'email',
-                  render: (text) => <>{text || NULL_VALUE}</>,
-                  width: K_SIZE_160
-                },
-
-                // {
-                //   title: t('common:status'),
-                //   dataIndex: 'status',
-                //   key: 'status',
-                //   width: K_SIZE_108,
-                //   render: (_, record) => {
-                //     const active = record?.status?.toUpperCase() === STATUS_FEE_COND.ACTIVE;
-                //     return (
-                //       <Status
-                //         type={active ? TYPE_STATUS.SUCCESS : TYPE_STATUS.ERROR}
-                //         kind={KIND_STATUS.SECONDARY}
-                //         content={t(active ? 'common:status_active' : 'common:status_inactive')}
-                //       />
-                //     );
-                //   }
-                // },
-                // {
-                //   title: t('common:created_at'),
-                //   dataIndex: 'createdAt',
-                //   key: 'createdAt',
-                //   width: K_SIZE_160,
-                //   render: (text) => <span>{displayDateTimeFromServer(text)}</span>
-                // },
-                // {
-                //   title: t('common:created_by'),
-                //   dataIndex: 'createdBy',
-                //   key: 'createdBy',
-                //   width: K_SIZE_160
-                // },
-                // {
-                //   title: t('common:updated_at'),
-                //   dataIndex: 'updateAt',
-                //   key: 'updateAt',
-                //   width: K_SIZE_160,
-                //   render: (text) => <span>{displayDateTimeFromServer(text)}</span>
-                // },
-                // {
-                //   title: t('common:updated_by'),
-                //   dataIndex: 'updateBy',
-                //   key: 'updateBy',
-                //   width: K_SIZE_160
-                // },
-                {
-                  title: t('common:action'),
-                  fixed: 'right',
-                  align: 'center',
-                  width: K_SIZE_108,
-                  render: (_, record: any) =>
-                    record?.status?.toUpperCase() === STATUS.ACTIVE ? (
-                      NULL_VALUE
-                    ) : (
-                      <Flex justify={'center'}>
-                        <IconHover
-                          rootClassName={'text-color-800'}
-                          title={t('common:edit')}
-                          icon={'ICON_EDIT'}
-                          iconHeight={K_SIZE_18}
-                          onClick={() => {
-                            setSelectedItem(record);
-                            setOpenCreate(true);
-                          }}
-                        />
-                      </Flex>
-                    )
-                }
-              ]}
-              onScroll={() => {
-                setMoreAction(undefined);
-              }}
-              rowKey={'id'}
+              dataSource={customerList}
+              columns={columns}
+              rowKey={(record: any, index?: number) =>
+                String(record.id || record.customerCode || index)
+              }
               pagination={pagination}
             />
           </div>
           <AppPagination currentPage={currentPage} total={total} pagination={pagination} />
         </Spin>
 
-        <form id={'update-form'} onSubmit={handleSubmit(handleUpdateSubmit)}>
+        <form id="customer-form" onSubmit={handleFormSubmit(handleSubmit)}>
           <Drawer
-            open={openCreate || !!selectedItem?.id}
+            open={openForm}
             title={
-              <Flex justify={'space-between'}>
-                <div className={''}>
-                  {`${t(
-                    !!selectedItem?.id
-                      ? openCreate
-                        ? 'common:edit'
-                        : 'common:view_detail'
-                      : 'common:add_new'
-                  )} khách hàng`}
-                </div>
-                {selectedItem?.status?.toUpperCase() === STATUS.ACTIVE ? null : (
-                  <IconHover
-                    title={isView ? t('common:edit') : ''}
-                    icon={isView ? 'ICON_EDIT' : 'IC_CLOSE_OUTLINE'}
-                    onClick={() => {
-                      if (isView) {
-                        setOpenCreate(true);
-                        return;
-                      }
-                      onCloseCreate();
-                    }}
-                  />
-                )}
+              <Flex justify="space-between" align="center">
+                <div>{selectedCustomer ? 'Cập nhật khách hàng' : 'Thêm mới khách hàng'}</div>
+                <IconHover
+                  title={t('common:close')}
+                  icon="IC_CLOSE_OUTLINE"
+                  onClick={onCloseForm}
+                />
               </Flex>
             }
             destroyOnClose
-            placement={'right'}
+            placement="right"
             closable={false}
-            maskClosable={isView}
-            onClose={onCloseCreate}
-            width={isTablet || isMobile ? '80vw' : '40vw'}
+            maskClosable={!detailLoading}
+            onClose={onCloseForm}
+            width={isTablet || isMobile ? '92vw' : '54vw'}
             footer={
-              <Flex justify={'end'}>
+              <Flex justify="end" gap={K_SIZE_8}>
                 <ButtonBase
-                  classNames={'app-common-btn'}
-                  type={isView ? 'ghost' : 'primary'}
-                  customContent={t(isView ? 'common:close' : 'common:confirm')}
-                  form={'update-form'}
-                  htmlType={isView ? 'button' : 'submit'}
-                  onClick={() => {
-                    if (isView) onCloseCreate();
-                  }}
-                  disabled={isView ? false : !isValid || !isDirty || loadingEdit}
+                  classNames="app-common-btn"
+                  type="ghost"
+                  customContent="Hủy"
+                  onClick={onCloseForm}
+                  disabled={detailLoading}
+                />
+                <ButtonBase
+                  classNames="app-common-btn"
+                  type="primary"
+                  form="customer-form"
+                  htmlType="submit"
+                  disabled={!isValid || Boolean(selectedCustomer && !isDirty) || detailLoading}
+                  customContent={
+                    <div className="flex flex-row items-center justify-center">
+                      <div>Lưu</div>
+                      {detailLoading && (
+                        <div className="ml-8">
+                          <Spin size="small" />
+                        </div>
+                      )}
+                    </div>
+                  }
                 />
               </Flex>
             }
           >
-            <div>
-              <div
-                className={`grid gap-8 ${!!selectedItem && !openCreate ? 'grid-cols-2 gap-y-12' : ''}`}
-              >
-                {isView && (
-                  <AppTextField
-                    label={'ID'}
-                    wrapperClassName={'flex-1'}
-                    isView={true}
-                    value={selectedItem?.id}
-                  />
-                )}
+            <div className="grid gap-12">
+              <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
                 <AppTextFieldControl
-                  name={'customerCode'}
+                  name="customerCode"
                   control={control}
-                  label={'Mã khách hàng *'}
-                  placeholder={'Nhập mã khách hàng'}
-                  wrapperClassName={'flex-1'}
-                  isView={!openCreate}
+                  label="Mã khách hàng"
+                  labelSuffix={REQUIRED_MARK}
+                  labelSuffixClassName="text-error-600"
+                  placeholder="Nhập mã khách hàng"
                 />
                 <AppTextFieldControl
-                  name={'name'}
+                  name="fullName"
                   control={control}
-                  label={'Tên khách hàng *'}
-                  placeholder={'Nhập tên khách hàng'}
-                  wrapperClassName={'flex-1'}
-                  isView={!openCreate}
-                />
-                <AppTextFieldControl
-                  name={'taxNo'}
-                  label={'Mã số thuế *'}
-                  placeholder={'Nhập mã số thuế'}
-                  isView={!openCreate}
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name={'phone'}
-                  label={'Số điện thoại *'}
-                  placeholder={'Nhập số điện thoại'}
-                  isView={!openCreate}
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name={'email'}
-                  label={'Email *'}
-                  placeholder={'Nhập email'}
-                  isView={!openCreate}
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name={'address'}
-                  label={'Địa chỉ *'}
-                  placeholder={'Nhập địa chỉ'}
-                  isView={!openCreate}
-                  control={control}
-                />
-                {isView && (
-                  <>
-                    <AppSelectControl
-                      name={'status'}
-                      label={t('common:status')}
-                      placeholder={t('common:select_pla', {
-                        label: t('common:status').toLowerCase()
-                      })}
-                      options={optionStatus}
-                      isView={true}
-                      control={control}
-                    />
-                  </>
-                )}
-                <AppTextFieldControl
-                  label={t('common:note')}
-                  placeholder={t('common:input_pla', { label: t('common:note').toLowerCase() })}
-                  wrapperClassName={'flex-1'}
-                  isView={!openCreate}
-                  control={control}
-                  name={'note'}
+                  label="Tên khách hàng"
+                  placeholder="Nhập tên khách hàng"
                 />
               </div>
+
+              <div className="grid grid-cols-3 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+                <AppTextFieldControl
+                  name="taxNo"
+                  label="Mã số thuế"
+                  placeholder="Nhập mã số thuế"
+                  control={control}
+                />
+                <AppTextFieldControl
+                  name="phone"
+                  label="Số điện thoại"
+                  placeholder="Nhập số điện thoại"
+                  control={control}
+                />
+                <AppTextFieldControl
+                  name="email"
+                  label="Email"
+                  placeholder="Nhập email"
+                  control={control}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+                <AppTextFieldControl
+                  name="contactName"
+                  label="Người liên hệ"
+                  placeholder="Nhập người liên hệ"
+                  control={control}
+                />
+                <AppTextFieldControl
+                  name="contactIdNo"
+                  label="CMND/CCCD người liên hệ"
+                  placeholder="Nhập CMND/CCCD"
+                  control={control}
+                />
+                <AppTextFieldControl
+                  name="contactIssueDate"
+                  label="Ngày cấp CMND/CCCD"
+                  placeholder="dd-mm-yyyy"
+                  control={control}
+                />
+              </div>
+
+              <AppSelectControl
+                name="operationUnitId"
+                label="Đơn vị vận hành"
+                placeholder="Chọn đơn vị vận hành"
+                isLoading={operationUnitLoading}
+                options={operationUnitOptions}
+                control={control}
+              />
+
+              <AppTextFieldControl
+                name="address"
+                label="Địa chỉ"
+                placeholder="Nhập địa chỉ"
+                control={control}
+              />
             </div>
           </Drawer>
         </form>
+
+        <Drawer
+          open={openDetail}
+          title={
+            <Flex justify="space-between" align="center">
+              <div>Chi tiết khách hàng</div>
+              <IconHover
+                title={t('common:close')}
+                icon="IC_CLOSE_OUTLINE"
+                onClick={onCloseDetail}
+              />
+            </Flex>
+          }
+          destroyOnClose
+          placement="right"
+          closable={false}
+          onClose={onCloseDetail}
+          width={isTablet || isMobile ? '92vw' : '54vw'}
+          extra={
+            detailCustomer ? (
+              <ButtonBase
+                type="ghost"
+                leftIcon="ICON_EDIT"
+                customContent="Sửa"
+                onClick={() => {
+                  onCloseDetail();
+                  onOpenUpdate(detailCustomer);
+                }}
+              />
+            ) : undefined
+          }
+        >
+          <Spin spinning={detailLoading}>
+            <div className="grid gap-20">
+              {detailLoadFailed && (
+                <div className="rounded-radius-m border border-error-200 bg-error-50 p-12 text-14 font-medium text-error-600">
+                  Không tải được chi tiết khách hàng. Thông tin đang hiển thị chỉ lấy từ danh sách.
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-16 mobile:grid-cols-1">
+                <DetailItem
+                  label="Mã khách hàng"
+                  value={displayText(detailCustomer?.customerCode)}
+                />
+                <DetailItem label="Tên khách hàng" value={displayText(detailCustomer?.fullName)} />
+                <DetailItem label="Mã số thuế" value={displayText(detailCustomer?.taxNo)} />
+                <DetailItem label="Số điện thoại" value={displayText(detailCustomer?.phone)} />
+                <DetailItem label="Email" value={displayText(detailCustomer?.email)} />
+                <DetailItem
+                  label="Người liên hệ"
+                  value={displayText(detailCustomer?.contactName)}
+                />
+                <DetailItem
+                  label="CMND/CCCD người liên hệ"
+                  value={displayText(detailCustomer?.contactIdNo)}
+                />
+                <DetailItem
+                  label="Ngày cấp CMND/CCCD"
+                  value={renderDate(detailCustomer?.contactIssueDate)}
+                />
+                <DetailItem label="Địa chỉ" value={displayText(detailCustomer?.address)} />
+                <DetailItem
+                  label="Đơn vị vận hành"
+                  value={
+                    detailOperationUnit
+                      ? [detailOperationUnit.unitCode, detailOperationUnit.unitName]
+                          .filter(Boolean)
+                          .join(' - ')
+                      : getOperationUnitLabel(detailCustomer?.operationUnitId)
+                  }
+                />
+                <DetailItem label="Ngày tạo" value={renderDateTime(detailCustomer?.createdAt)} />
+                <DetailItem
+                  label="Ngày cập nhật"
+                  value={renderDateTime(detailCustomer?.updatedAt)}
+                />
+              </div>
+
+              <div>
+                <TextBase classNames="sub-title3 mb-8" text="Hợp đồng đã ký" />
+                {detailLoadFailed ? (
+                  <div className="text-14 font-medium text-color-700">
+                    Không tải được danh sách hợp đồng đã ký
+                  </div>
+                ) : detailContracts.length > K_SIZE_0 ? (
+                  <div className="overflow-hidden rounded-radius-l border border-color-300">
+                    <AppTable
+                      rootClassName="w-full"
+                      className="[&_.ant-pagination]:hidden"
+                      scroll={{ x: 'max-content' }}
+                      dataSource={detailContracts}
+                      columns={contractColumns}
+                      rowKey={(record: SignedContractInfo, index?: number) =>
+                        String(record.id || record.contractNumber || index)
+                      }
+                      pagination={false}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-14 font-medium text-color-700">Chưa có hợp đồng đã ký</div>
+                )}
+              </div>
+            </div>
+          </Spin>
+        </Drawer>
       </section>
     </PageWithBreadcrumb>
   );

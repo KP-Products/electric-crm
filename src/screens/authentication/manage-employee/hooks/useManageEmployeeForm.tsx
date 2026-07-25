@@ -25,6 +25,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import { normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
 import {
   DATE_API_FORMAT,
@@ -232,12 +233,12 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
   const buildBaseBody = useCallback(
     (data: EmployeeForm): Omit<CreateEmployeeReq, 'employeeCode'> => ({
       fullName: data.fullName.trim(),
-      dateOfBirth: optionalString(data.dateOfBirth),
+      dateOfBirth: optionalString(normalizeDateToApi(data.dateOfBirth)),
       gender: optionalString(data.gender),
       phone: optionalString(data.phone),
       email: optionalString(data.email),
       identityNumber: optionalString(data.identityNumber),
-      identityIssueDate: optionalString(data.identityIssueDate),
+      identityIssueDate: optionalString(normalizeDateToApi(data.identityIssueDate)),
       identityIssuePlace: optionalString(data.identityIssuePlace),
       taxCode: optionalString(data.taxCode),
       socialInsuranceNo: optionalString(data.socialInsuranceNo),
@@ -248,9 +249,9 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
       positionCode: optionalString(data.positionCode),
       positionName: optionalString(data.positionName),
       managerId: optionalNumber(data.managerId),
-      hireDate: optionalString(data.hireDate),
-      officialDate: optionalString(data.officialDate),
-      resignationDate: optionalString(data.resignationDate),
+      hireDate: optionalString(normalizeDateToApi(data.hireDate)),
+      officialDate: optionalString(normalizeDateToApi(data.officialDate)),
+      resignationDate: optionalString(normalizeDateToApi(data.resignationDate)),
       employmentStatus: optionalString(data.employmentStatus),
       employmentType: optionalString(data.employmentType),
       basicSalary: optionalNumber(data.basicSalary),

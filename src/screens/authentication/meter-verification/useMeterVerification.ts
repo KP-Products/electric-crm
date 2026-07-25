@@ -32,7 +32,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import meterServices from 'services/meter-services';
-import { FORMAT_DATE_TIME_DOWNLOAD, displayDateFromServer } from 'utils/date';
+import {
+  API_DATE_INPUT_FORMATS,
+  FORMAT_DATE_TIME_DOWNLOAD,
+  displayDateFromServer,
+  normalizeDateToApi
+} from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 import {
@@ -180,7 +185,7 @@ export default function useMeterVerification() {
       if (verification.daysUntilNextVerification !== undefined) {
         return verification.daysUntilNextVerification <= maxWarningDays;
       }
-      const days = moment(verification.nextVerificationDate, DATE_API_FORMAT)
+      const days = moment(verification.nextVerificationDate, API_DATE_INPUT_FORMATS, true)
         .startOf('day')
         .diff(moment().startOf('day'), 'days');
       return days <= maxWarningDays;
@@ -336,8 +341,9 @@ export default function useMeterVerification() {
       const values: MeterVerificationForm = {
         meterId: verification.meterId || '',
         deviceType: verification.deviceType || defaultFormValues.deviceType,
-        verificationDate: verification.verificationDate || moment().format(DATE_API_FORMAT),
-        nextVerificationDate: verification.nextVerificationDate || '',
+        verificationDate:
+          normalizeDateToApi(verification.verificationDate) || moment().format(DATE_API_FORMAT),
+        nextVerificationDate: normalizeDateToApi(verification.nextVerificationDate),
         resultStatus: verification.resultStatus || 'PASS',
         certificateNo: verification.certificateNo || '',
         notes: verification.notes || ''
@@ -386,11 +392,11 @@ export default function useMeterVerification() {
   const onSubmit = useCallback(
     (data: MeterVerificationForm) => {
       const baseRequest = {
-        verificationDate: data.verificationDate,
+        verificationDate: normalizeDateToApi(data.verificationDate),
         resultStatus: data.resultStatus,
         certificateNo: data.certificateNo || undefined,
         notes: data.notes || undefined,
-        nextVerificationDate: data.nextVerificationDate || undefined,
+        nextVerificationDate: normalizeDateToApi(data.nextVerificationDate) || undefined,
         file: selectedFile
       };
 

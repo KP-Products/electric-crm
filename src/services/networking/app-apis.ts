@@ -37,11 +37,11 @@ const ApiEndPoint = {
 
   // MANAGE CUSTOMERS
   CUSTOMER_LIST: '/admin/customers/list',
+  CUSTOMER_SEARCH: '/admin/customers/search',
   CUSTOMER_CREATE: '/admin/customers/create',
   CUSTOMER_UPDATE: '/admin/customers/update',
   CUSTOMER_DELETE: '/admin/customers/delete',
   CUSTOMER_DETAIL: '/admin/customers/detail',
-  CUSTOMER_DOWNLOAD: '/admin/customers/download',
   // MANAGE CUSTOMERS
 
   // CONTRACT
@@ -111,6 +111,7 @@ const ApiEndPoint = {
   DOCUMENT_LIST: '/admin/documents/list',
   DOCUMENT_DETAIL: '/admin/documents/get',
   DOCUMENT_DELETE: '/admin/documents/delete',
+  DOCUMENT_BY_UNIT: '/admin/documents/by-unit',
   DOCUMENT_BASE: '/admin/documents',
   // DOCUMENT
 
@@ -171,8 +172,7 @@ const ApiEndPoint = {
   BILLING_TARIFF_LIST: '/admin/billing/tariffs/list',
   BILLING_TARIFF_DETAIL: '/admin/billing/tariffs/detail',
   BILLING_TARIFF_CREATE: '/admin/billing/tariffs/create',
-  BILLING_TARIFF_TOU_LIST: '/admin/billing/tariffs/tou/list',
-  BILLING_TARIFF_TOU_CREATE: '/admin/billing/tariffs/tou/create',
+  BILLING_TARIFF_UPDATE: '/admin/billing/tariffs/update',
 
   // BILLING 2.2 - DON GIA VAN HANH
   BILLING_OPERATION_PRICE_SEARCH: '/admin/billing/operation-prices/search',

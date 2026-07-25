@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { DebugUtils } from 'utils/debug-utils';
+import { normalizeDateToApi } from 'utils/date';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
 import { z } from 'zod';
 import {
@@ -136,10 +137,10 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       status: normalizeMeterStatus(meter.status),
       meterType: normalizeMeterType(meter.meterType),
       manufacturer: meter.manufacturer || '',
-      purchaseDate: meter.purchaseDate || '',
-      installationDate: meter.installationDate || '',
-      inspectionDate: meter.inspectionDate || '',
-      inspectionExpiryDate: meter.inspectionExpiryDate || '',
+      purchaseDate: normalizeDateToApi(meter.purchaseDate),
+      installationDate: normalizeDateToApi(meter.installationDate),
+      inspectionDate: normalizeDateToApi(meter.inspectionDate),
+      inspectionExpiryDate: normalizeDateToApi(meter.inspectionExpiryDate),
       voltageType: normalizeVoltageType(meter.voltageType || meter.voltageLevel),
       customerId: meter.customerId || '',
       feederId: meter.feederId || meter.feederName || '',
@@ -222,10 +223,12 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       status: data.status,
       meterType: data.meterType || undefined,
       manufacturer: data.manufacturer || undefined,
-      purchaseDate: data.purchaseDate || undefined,
-      inspectionDate: data.inspectionDate || undefined,
-      inspectionExpiryDate: data.inspectionExpiryDate || undefined,
-      installationDate: installed ? data.installationDate || undefined : undefined,
+      purchaseDate: normalizeDateToApi(data.purchaseDate) || undefined,
+      inspectionDate: normalizeDateToApi(data.inspectionDate) || undefined,
+      inspectionExpiryDate: normalizeDateToApi(data.inspectionExpiryDate) || undefined,
+      installationDate: installed
+        ? normalizeDateToApi(data.installationDate) || undefined
+        : undefined,
       voltageType,
       voltageLevel: voltageType,
       customerId: installed ? data.customerId.trim() || undefined : undefined,

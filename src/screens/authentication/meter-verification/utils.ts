@@ -1,8 +1,9 @@
 import { MeterVerificationConfig } from 'model/meter-verification';
 import moment from 'moment';
+import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API } from 'utils/date';
 
 export const METER_VERIFICATION_CONFIG_STORAGE_KEY = 'electric-crm:meter-verification-config';
-export const DATE_API_FORMAT = 'YYYY-MM-DD';
+export const DATE_API_FORMAT = FORMAT_DATE_API;
 
 export const EQUIPMENT_TYPE_OPTIONS = [
   { value: 'METER_1P_ELECTRONIC', label: 'Công tơ 1 pha điện tử' },
@@ -46,7 +47,7 @@ export const getResultStatusLabel = (status?: string) =>
 
 export const calculateNextVerificationDate = (verificationDate: string, cycleMonths?: number) => {
   if (!verificationDate || !cycleMonths) return '';
-  const date = moment(verificationDate, DATE_API_FORMAT);
+  const date = moment(verificationDate, API_DATE_INPUT_FORMATS, true);
   return date.isValid() ? date.add(cycleMonths, 'months').format(DATE_API_FORMAT) : '';
 };
 

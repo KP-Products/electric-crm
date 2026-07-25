@@ -3,14 +3,12 @@ import { ApiResponse } from 'model/common';
 import {
   CreateTariffReq,
   CreateTariffRes,
-  CreateTouPriceReq,
-  CreateTouPriceRes,
   GetTariffDetailReq,
   GetTariffDetailRes,
-  ListTouPricesReq,
-  ListTouPricesRes,
   SearchTariffsReq,
-  SearchTariffsRes
+  SearchTariffsRes,
+  UpdateTariffReq,
+  UpdateTariffRes
 } from 'model/electric-tariff';
 import { ApiConstants } from './networking/app-apis';
 
@@ -43,18 +41,9 @@ async function createTariff(params: CreateTariffReq): Promise<ApiResponse<Create
   }
 }
 
-async function listTouPrices(params: ListTouPricesReq): Promise<ApiResponse<ListTouPricesRes>> {
+async function updateTariff(params: UpdateTariffReq): Promise<ApiResponse<UpdateTariffRes>> {
   try {
-    const rs = await appServices.post(ApiConstants.BILLING_TARIFF_TOU_LIST, params);
-    return rs.data;
-  } catch (error: any) {
-    return error;
-  }
-}
-
-async function createTouPrice(params: CreateTouPriceReq): Promise<ApiResponse<CreateTouPriceRes>> {
-  try {
-    const rs = await appServices.post(ApiConstants.BILLING_TARIFF_TOU_CREATE, params);
+    const rs = await appServices.post(ApiConstants.BILLING_TARIFF_UPDATE, params);
     return rs.data;
   } catch (error: any) {
     return error;
@@ -65,8 +54,7 @@ const electricTariffServices = {
   searchTariffs,
   getTariffDetail,
   createTariff,
-  listTouPrices,
-  createTouPrice
+  updateTariff
 };
 
 export default electricTariffServices;

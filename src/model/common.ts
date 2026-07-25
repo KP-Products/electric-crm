@@ -15,11 +15,13 @@ export interface ErrorBase {
   businessErrorCode?: string;
   businessErrorMessage?: string;
   detailMessage?: string;
+  message?: string;
   systemErrorCode?: string;
   systemErrorMessage?: string;
 }
 
 export interface ResultBase<T = unknown> {
+  codeStatus?: string;
   code?: string;
   message?: string;
   timestamp?: string;

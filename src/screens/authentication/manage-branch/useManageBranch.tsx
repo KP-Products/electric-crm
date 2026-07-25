@@ -102,10 +102,6 @@ export default function useManageBranch() {
     fetchList(currentPage);
   }, [currentPage, fetchList]);
 
-  useEffect(() => {
-    fetchBranchUsers();
-  }, [fetchBranchUsers]);
-
   const pagination = useMemo(
     () => ({
       current: currentPage,
@@ -143,8 +139,7 @@ export default function useManageBranch() {
     setSelectedBranch(undefined);
     form.reset(DEFAULT_BRANCH_FORM_VALUES);
     setIsDrawerOpen(false);
-    fetchBranchUsers();
-  }, [fetchBranchUsers, form]);
+  }, [form]);
 
   const onSubmitSuccess = useCallback(
     (content: string) => {
@@ -157,14 +152,13 @@ export default function useManageBranch() {
       setSelectedBranch(undefined);
       setIsDrawerOpen(false);
       form.reset(DEFAULT_BRANCH_FORM_VALUES);
-      fetchBranchUsers();
       if (currentPage === K_SIZE_1) {
         fetchList(K_SIZE_1);
       } else {
         setCurrentPage(K_SIZE_1);
       }
     },
-    [currentPage, fetchBranchUsers, fetchList, form]
+    [currentPage, fetchList, form]
   );
 
   const handleSubmit = useCallback(

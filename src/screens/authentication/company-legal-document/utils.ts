@@ -1,8 +1,9 @@
 import { TYPE_STATUS } from 'components/status';
 import { ErrorBase } from 'model/common';
 import { CompanyLegalDocumentAttachmentFile } from 'services/company-legal-document-services';
+import { FORMAT_DATE_API } from 'utils/date';
 
-export const DATE_API_FORMAT = 'YYYY-MM-DD';
+export const DATE_API_FORMAT = FORMAT_DATE_API;
 export const ACCEPTED_ATTACHMENT_EXTENSIONS = [
   'pdf',
   'doc',

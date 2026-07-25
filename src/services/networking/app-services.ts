@@ -31,10 +31,19 @@ appServices.interceptors.request.use(
 appServices.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (
-      [401, 403].includes(error.response.status) &&
-      !window.location.href.includes(ROUTES.LOGIN)
-    ) {
+    const { data, ...rest } = error.response || {};
+    const responseData = data && typeof data === 'object' ? data : {};
+    const responseMessage = typeof data === 'string' ? data : responseData?.message;
+    const message =
+      responseMessage ||
+      responseData?.detailMessage ||
+      responseData?.businessErrorMessage ||
+      responseData?.systemErrorMessage ||
+      error?.message ||
+      t('common:system_error');
+    const status = error.response?.status;
+
+    if (status && [401, 403].includes(status) && !window.location.href.includes(ROUTES.LOGIN)) {
       showDialog({
         title: t('common:title_session_expired'),
         content: t('common:session_expired'),
@@ -52,15 +61,12 @@ appServices.interceptors.response.use(
       // window.location.pathname = ROUTES.LOGIN;
     }
 
-    const { data, ...rest } = error.response || {};
     return Promise.reject({
       ...rest,
-      ...(data || {}),
-      message:
-        data?.detailMessage ||
-        data?.businessErrorMessage ||
-        data?.systemErrorMessage ||
-        t('common:system_error')
+      ...responseData,
+      businessErrorMessage: responseData?.businessErrorMessage || responseMessage,
+      detailMessage: responseData?.detailMessage || responseMessage,
+      message
     });
   }
 );

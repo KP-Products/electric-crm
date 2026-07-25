@@ -1,18 +1,22 @@
 'use client';
 /* eslint-disable react/display-name */
-import { ISO_DATE_TIME_FORMAT, K_SIZE_0, K_SIZE_1, NULL_VALUE } from '@constant';
+import { K_SIZE_0, K_SIZE_1, NULL_VALUE } from '@constant';
 import DatePicker from 'antd/lib/date-picker';
 import { IconSvgTypes } from 'assets/svg';
 import { useDatePickerLanguage } from 'components/date-picker/hooks/useDatePickerLanguage';
 import { TextBase } from 'components/text';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import React, { useImperativeHandle, useMemo, useRef } from 'react';
 import type { Control, FieldError, FieldValues, Path } from 'react-hook-form';
 import { useController } from 'react-hook-form';
 import { RangePickerProps } from 'antd/es/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import AppHelperText from 'components/helper-text';
+import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API } from 'utils/date';
+
+dayjs.extend(customParseFormat);
 
 export interface AppDatePickerProps extends Omit<RangePickerProps, 'suffixIcon' | 'className'> {
   name?: string;
@@ -149,7 +153,7 @@ const AppDateRangePickerControl = <T extends FieldValues>({
   name,
   control,
   onChange,
-  backendFormat = ISO_DATE_TIME_FORMAT,
+  backendFormat = FORMAT_DATE_API,
   customError,
   ...restProps
 }: AppDatePickerControlProps<T>) => {
@@ -159,7 +163,11 @@ const AppDateRangePickerControl = <T extends FieldValues>({
   } = useController({ name, control });
   const parsedValue = useMemo(
     () =>
-      field.value ? field.value.map((v: string) => (v ? dayjs(v, backendFormat) : null)) : null,
+      field.value
+        ? field.value.map((v: string) =>
+            v ? dayjs(v, [backendFormat, ...API_DATE_INPUT_FORMATS]) : null
+          )
+        : null,
     [field.value, backendFormat]
   );
 

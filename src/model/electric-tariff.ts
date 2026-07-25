@@ -9,14 +9,18 @@ export interface ElectricTariff {
   effectiveFrom?: string;
   effectiveTo?: string;
   status?: string;
+  priceType?: string;
   createdAt?: string;
   updatedAt?: string;
+  filePath?: string;
+  fileName?: string;
 }
 
 export interface ElectricTariffTouPrice {
   id: number;
-  tariffId: number;
+  tariffId?: number;
   tou?: string;
+  touName?: string;
   unitPrice?: number;
   voltageLevel?: string;
   effectiveFrom?: string;
@@ -32,18 +36,25 @@ export interface SearchTariffsReq extends PaginationReq {
   status?: string;
 }
 
-export interface SearchTariffsRes extends ResultBase<PaginationRes<ElectricTariff>> {}
-
 export interface GetTariffDetailReq {
   id: number;
 }
 
 export interface TariffDetail {
   tariff?: ElectricTariff;
+  voltageLabel?: string;
+  prices?: ElectricTariffTouPrice[];
   touPrices?: ElectricTariffTouPrice[];
 }
 
+export interface SearchTariffsRes extends ResultBase<PaginationRes<TariffDetail>> {}
+
 export interface GetTariffDetailRes extends ResultBase<TariffDetail> {}
+
+export interface TariffPriceInput {
+  tou: string;
+  unitPrice: number;
+}
 
 export interface CreateTariffReq {
   tariffCode: string;
@@ -53,23 +64,23 @@ export interface CreateTariffReq {
   effectiveFrom: string;
   effectiveTo?: string;
   status?: string;
+  priceType?: string;
+  prices?: TariffPriceInput[];
 }
 
 export interface CreateTariffRes extends ResultBase<ElectricTariff> {}
 
-export interface ListTouPricesReq {
-  tariffId: number;
-}
-
-export interface ListTouPricesRes extends ResultBase<ElectricTariffTouPrice[]> {}
-
-export interface CreateTouPriceReq {
-  tariffId: number;
-  tou: string;
-  unitPrice: number;
+export interface UpdateTariffReq {
+  id: number;
+  tariffCode?: string;
+  tariffName?: string;
+  customerType?: string;
   voltageLevel?: string;
   effectiveFrom?: string;
   effectiveTo?: string;
+  status?: string;
+  priceType?: string;
+  prices?: TariffPriceInput[];
 }
 
-export interface CreateTouPriceRes extends ResultBase<ElectricTariffTouPrice> {}
+export interface UpdateTariffRes extends ResultBase<ElectricTariff> {}

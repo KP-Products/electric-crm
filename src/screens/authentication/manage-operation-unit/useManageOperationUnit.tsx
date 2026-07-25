@@ -32,7 +32,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import operationUnitServices from 'services/operation-unit-services';
-import { FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
+import { FORMAT_DATE_TIME_DOWNLOAD, normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 
@@ -47,6 +47,8 @@ export const DEFAULT_OPERATION_UNIT_FILTER: OperationUnitFilter = {
   unitName: '',
   status: ''
 };
+
+const SUCCESS_MESSAGES = ['success', 'ok'];
 
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 
@@ -76,12 +78,18 @@ export type OperationUnitForm = z.infer<typeof operationUnitSchema>;
 export const getOperationUnitErrorMessage = (
   error?: ErrorBase & { message?: string },
   fallback = 'Thao tác thất bại'
-) =>
-  error?.businessErrorMessage ||
-  error?.systemErrorMessage ||
-  error?.detailMessage ||
-  error?.message ||
-  fallback;
+) => {
+  const message =
+    error?.businessErrorMessage ||
+    error?.systemErrorMessage ||
+    error?.detailMessage ||
+    error?.message;
+  const normalizedMessage = String(message || '')
+    .trim()
+    .toLowerCase();
+
+  return message && !SUCCESS_MESSAGES.includes(normalizedMessage) ? message : fallback;
+};
 
 const optionalValue = (value?: string) => {
   const trimmedValue = value?.trim();
@@ -125,7 +133,7 @@ const buildFormValues = (operationUnit?: OperationUnit): OperationUnitForm => ({
   email: operationUnit?.email || '',
   contactName: operationUnit?.contactName || '',
   contractIdNo: operationUnit?.contractIdNo || '',
-  contactIsueDate: operationUnit?.contactIsueDate || '',
+  contactIsueDate: normalizeDateToApi(operationUnit?.contactIsueDate),
   address: operationUnit?.address || '',
   status: normalizeStatusValue(operationUnit?.status)
 });
@@ -282,7 +290,7 @@ export default function useManageOperationUnit() {
       email: optionalValue(data.email),
       contactName: optionalValue(data.contactName),
       contractIdNo: optionalValue(data.contractIdNo),
-      contactIsueDate: optionalValue(data.contactIsueDate),
+      contactIsueDate: optionalValue(normalizeDateToApi(data.contactIsueDate)),
       address: optionalValue(data.address),
       status: optionalValue(data.status)
     }),
@@ -299,7 +307,7 @@ export default function useManageOperationUnit() {
       email: updateTextValue(data.email),
       contactName: updateTextValue(data.contactName),
       contractIdNo: updateTextValue(data.contractIdNo),
-      contactIsueDate: updateTextValue(data.contactIsueDate),
+      contactIsueDate: updateTextValue(normalizeDateToApi(data.contactIsueDate)),
       address: updateTextValue(data.address),
       status: optionalValue(data.status)
     }),
@@ -511,7 +519,6 @@ export default function useManageOperationUnit() {
       }
 
       exportRowsToExcel(response.data.items || [], getDisplayValue);
-      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Xuất Excel đơn vị vận hành thành công' });
     },
     [buildSearchBody, exportRowsToExcel, filterApplied]
   );

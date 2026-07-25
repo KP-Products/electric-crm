@@ -36,7 +36,8 @@ import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { OperationPrice } from 'model/operation-price';
-import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
+import moment from 'moment';
+import { API_DATE_INPUT_FORMATS, displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
 import useOperationPrice, {
   DATE_API_FORMAT,
@@ -53,6 +54,8 @@ const DISCOUNT_TYPE_OPTIONS: AppSelectOption[] = [
   { value: 'PERCENT', label: 'Phần trăm' },
   { value: 'AMOUNT', label: 'Số tiền' }
 ];
+
+const DATE_DISPLAY_FORMAT = 'DD/MM/YYYY';
 
 const FILTER_LABEL_MAP: Record<keyof OperationPriceFilter, string> = {
   priceCode: 'Mã đơn giá',
@@ -114,7 +117,14 @@ const formatDiscount = (discountType?: string, discountValue?: number) => {
   return `${getDiscountTypeLabel(discountType)} - ${discountValue}`;
 };
 
-const getDatePickerValue = (date?: string) => (date ? dayjs(date, DATE_API_FORMAT) : null);
+const getDatePickerValue = (date?: string) =>
+  date ? dayjs(date, [DATE_API_FORMAT, ...API_DATE_INPUT_FORMATS]) : null;
+
+const displayOperationPriceDate = (date?: string) => {
+  if (!date) return NULL_VALUE;
+  const parsedDate = moment(date, [...API_DATE_INPUT_FORMATS, moment.ISO_8601], true);
+  return parsedDate.isValid() ? parsedDate.format(DATE_DISPLAY_FORMAT) : NULL_VALUE;
+};
 
 const isActiveFilter = (value: OperationPriceFilter[keyof OperationPriceFilter]) => value !== '';
 
@@ -123,7 +133,9 @@ const getFilterDisplayValue = (
   value: OperationPriceFilter[keyof OperationPriceFilter]
 ) => {
   if (key === 'status') return getStatusMeta(value).label;
-  if (key === 'effectiveFrom' || key === 'effectiveTo') return displayDateFromServer(String(value));
+  if (key === 'effectiveFrom' || key === 'effectiveTo') {
+    return displayOperationPriceDate(String(value));
+  }
   return String(value);
 };
 
@@ -257,14 +269,14 @@ const OperationPriceScreen = () => {
         dataIndex: 'effectiveFrom',
         key: 'effectiveFrom',
         width: K_SIZE_150,
-        render: (date: string) => displayDateFromServer(date)
+        render: (date: string) => displayOperationPriceDate(date)
       },
       {
         title: 'Ngày hiệu lực đến',
         dataIndex: 'effectiveTo',
         key: 'effectiveTo',
         width: K_SIZE_150,
-        render: (date: string) => displayDateFromServer(date)
+        render: (date: string) => displayOperationPriceDate(date)
       },
       {
         title: 'Người cập nhật',
@@ -685,11 +697,11 @@ const OperationPriceScreen = () => {
               />
               <DetailItem
                 label="Ngày hiệu lực từ"
-                value={displayDateFromServer(selectedDetail?.effectiveFrom || '')}
+                value={displayOperationPriceDate(selectedDetail?.effectiveFrom)}
               />
               <DetailItem
                 label="Ngày hiệu lực đến"
-                value={displayDateFromServer(selectedDetail?.effectiveTo || '')}
+                value={displayOperationPriceDate(selectedDetail?.effectiveTo)}
               />
               <DetailItem label="Người tạo" value={displayText(selectedDetail?.createdBy)} />
               <DetailItem

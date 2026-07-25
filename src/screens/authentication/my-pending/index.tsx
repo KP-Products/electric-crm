@@ -7,19 +7,22 @@ import { TextBase } from 'components/text';
 import React, { useState } from 'react';
 import { useResponsive } from 'utils/responsive';
 import AppTable from 'components/table';
-import { FORMAT_DATE_PARAMS } from 'utils/date';
+import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
 import useMyPendingHook from 'screens/authentication/my-pending/useMyPendingHook';
 import AppPagination from 'components/table/pagination';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { AppSelect } from 'components/select';
 import { AppTextField } from 'components/text-field';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { AppDatePicker } from 'components/date-picker';
 import { FEE_CODE_STATUS } from 'model/fee-code';
 import { DebugUtils } from 'utils/debug-utils';
 import { AppSelectWithMulti } from 'components/select/AppSelectWithMulti';
 import { ROUTES } from '../../../config/routes';
 import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
+
+dayjs.extend(customParseFormat);
 
 const MyPending = () => {
   const { isMobile, isTablet } = useResponsive();
@@ -248,9 +251,9 @@ const MyPending = () => {
               label={t('common:created_at')}
               wrapperClassName={'w-full'}
               onChange={(date) => {
-                setFieldFilter('createAt', date.toISOString());
+                setFieldFilter('createAt', date ? date.format(FORMAT_DATE_API) : '');
               }}
-              value={filter.createAt ? dayjs(filter.createAt) : undefined}
+              value={filter.createAt ? dayjs(filter.createAt, API_DATE_INPUT_FORMATS) : undefined}
               format={FORMAT_DATE_PARAMS}
             />
             <AppSelectWithMulti
@@ -267,7 +270,6 @@ const MyPending = () => {
             />
           </Flex>
         </Drawer>
-
       </section>
     </PageWithBreadcrumb>
   );

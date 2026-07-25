@@ -10,6 +10,7 @@ import {
 import moment from 'moment';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import manualMeterReadingServices from 'services/manual-meter-reading-services';
+import { FORMAT_DATE_API, displayDateFromServer, normalizeDateToApi } from 'utils/date';
 
 export interface ManualMeterReadingFilter {
   keyword: string;
@@ -118,7 +119,7 @@ export default function useManualMeterReading() {
     if (!firstRow) return 'Chưa có kỳ ghi chỉ số';
 
     return `${firstRow.periodCode || 'Kỳ hiện tại'} | Hạn nhập: ${
-      firstRow.periodTo ? moment(firstRow.periodTo).format('DD/MM/YYYY') : '-'
+      firstRow.periodTo ? displayDateFromServer(firstRow.periodTo) : '-'
     }`;
   }, [rows]);
 
@@ -191,9 +192,9 @@ export default function useManualMeterReading() {
       return {
         id: row.id,
         periodCode: row.periodCode,
-        periodFrom: row.periodFrom,
-        periodTo: row.periodTo,
-        readingDate: row.readingDate || moment().format('YYYY-MM-DD')
+        periodFrom: normalizeDateToApi(row.periodFrom),
+        periodTo: normalizeDateToApi(row.periodTo),
+        readingDate: normalizeDateToApi(row.readingDate) || moment().format(FORMAT_DATE_API)
       };
     },
     []

@@ -3,12 +3,12 @@ import { TYPE_STATUS } from 'components/status';
 import { ErrorBase } from 'model/common';
 import { CreatePpeItemReq, PpeItem, SearchPpeItemsReq, UpdatePpeItemReq } from 'model/ppe-item';
 import moment from 'moment';
-import { FORMAT_DATE_PARAMS } from 'utils/date';
+import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
 import type { PpeItemFilterForm, PpeItemForm } from './usePpeItems';
 
-export const PPE_DATE_FORMAT = 'DD-MM-YYYY';
+export const PPE_DATE_FORMAT = FORMAT_DATE_API;
 
-const PPE_DATE_INPUT_FORMATS = [PPE_DATE_FORMAT, 'YYYY-MM-DD', 'DD/MM/YYYY'];
+const PPE_DATE_INPUT_FORMATS = API_DATE_INPUT_FORMATS;
 
 export const PPE_ITEM_STATUS = {
   TRONG_KHO: 'TRONG_KHO'

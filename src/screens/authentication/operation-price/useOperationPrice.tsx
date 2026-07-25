@@ -33,10 +33,11 @@ import moment from 'moment';
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 
-export const DATE_API_FORMAT = 'YYYY-MM-DD';
+export const DATE_API_FORMAT = FORMAT_DATE_API;
 
 export const OPERATION_PRICE_STATUS = {
   INACTIVE: 0,
@@ -163,6 +164,10 @@ const normalizeStatusValue = (status?: number | string): number | '' => {
   return '';
 };
 
+const normalizeDateForForm = (date?: string) => {
+  return normalizeDateToApi(date);
+};
+
 const buildFormValues = (operationPrice?: OperationPrice): OperationPriceForm => ({
   priceName: operationPrice?.priceName || '',
   contractNumber: operationPrice?.contractNumber || '',
@@ -178,8 +183,8 @@ const buildFormValues = (operationPrice?: OperationPrice): OperationPriceForm =>
     Number.isFinite(operationPrice.discountValue)
       ? String(operationPrice.discountValue)
       : '',
-  effectiveFrom: operationPrice?.effectiveFrom || '',
-  effectiveTo: operationPrice?.effectiveTo || '',
+  effectiveFrom: normalizeDateForForm(operationPrice?.effectiveFrom),
+  effectiveTo: normalizeDateForForm(operationPrice?.effectiveTo),
   description: operationPrice?.description || '',
   status: normalizeStatusValue(operationPrice?.status)
 });
@@ -218,8 +223,8 @@ export default function useOperationPrice() {
       status: isSupportedOperationPriceStatus(appliedFilter.status)
         ? appliedFilter.status
         : undefined,
-      effectiveFrom: appliedFilter.effectiveFrom || undefined,
-      effectiveTo: appliedFilter.effectiveTo || undefined
+      effectiveFrom: normalizeDateToApi(appliedFilter.effectiveFrom) || undefined,
+      effectiveTo: normalizeDateToApi(appliedFilter.effectiveTo) || undefined
     }),
     []
   );
@@ -342,8 +347,8 @@ export default function useOperationPrice() {
       unitPrice: parseNumberInput(data.unitPrice),
       discountType,
       discountValue: discountType ? parseNumberInput(data.discountValue) : undefined,
-      effectiveFrom: data.effectiveFrom,
-      effectiveTo: data.effectiveTo || undefined,
+      effectiveFrom: normalizeDateToApi(data.effectiveFrom),
+      effectiveTo: normalizeDateToApi(data.effectiveTo) || undefined,
       description: data.description.trim() || undefined
     };
   }, []);
@@ -358,8 +363,8 @@ export default function useOperationPrice() {
         unitPrice: parseNumberInput(data.unitPrice),
         discountType: discountType || null,
         discountValue: discountType ? parseNumberInput(data.discountValue) : null,
-        effectiveFrom: data.effectiveFrom,
-        effectiveTo: data.effectiveTo || null,
+        effectiveFrom: normalizeDateToApi(data.effectiveFrom),
+        effectiveTo: normalizeDateToApi(data.effectiveTo) || null,
         description: data.description.trim() || null,
         status: isSupportedOperationPriceStatus(data.status) ? data.status : undefined
       };

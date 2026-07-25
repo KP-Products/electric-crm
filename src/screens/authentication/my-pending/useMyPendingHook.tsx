@@ -38,11 +38,11 @@ import {
   PendingTaskListRes,
   RejectTaskReq
 } from 'model/pending-task';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 // import FeeCodeStatus from 'screens/authentication/products-and-code-fee/components/FeeCodeStatus';
 import { appCodes } from 'utils/constant/appCodes';
-import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
+import { displayDateFromServer, displayDateTimeFromServer, normalizeDateToApi } from 'utils/date';
 import { DebugUtils } from 'utils/debug-utils';
 import { I18nKeys, useAppTranslation } from 'utils/i18n';
 import { PERMISSION_APPROVE_ACTION } from 'utils/permission.util';
@@ -76,7 +76,7 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
   };
 
   const optionFeature = useSelector(selectPendingTaskOptionFeature);
-  const fecthPermissionApprove = () => {
+  const fecthPermissionApprove = useCallback(() => {
     dispatch({
       type: GET_LIST_APPROVAL_FUNCTION,
       payload: {
@@ -87,10 +87,10 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
           }));
           dispatch(pendingTaskActions.setOptionFeature(options));
         },
-        onFailed: (error?: ErrorBase) => {}
+        onFailed: (_error?: ErrorBase) => {}
       }
     });
-  };
+  }, []);
 
   const optionAction = [
     {
@@ -117,17 +117,20 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
   const [total, setTotal] = useState<number>(K_SIZE_0);
   const [dataFilter, setDataFilter] = useState<PendingTask[]>([]);
 
-  const setFieldFilter = (key: keyof FilterMyTask | string, value: string | number | string[]) => {
-    setFilter((pre) => ({ ...pre, [key]: value }));
-  };
+  const setFieldFilter = useCallback(
+    (key: keyof FilterMyTask | string, value: string | number | string[]) => {
+      setFilter((pre) => ({ ...pre, [key]: value }));
+    },
+    []
+  );
 
-  const setFieldFilterApplied = (
-    key: keyof FilterMyTask | string,
-    value: string | number | string[]
-  ) => {
-    setFieldFilter(key, value);
-    setFilterApplied((pre) => ({ ...pre, [key]: value }));
-  };
+  const setFieldFilterApplied = useCallback(
+    (key: keyof FilterMyTask | string, value: string | number | string[]) => {
+      setFieldFilter(key, value);
+      setFilterApplied((pre) => ({ ...pre, [key]: value }));
+    },
+    [setFieldFilter]
+  );
 
   const pagination = useMemo(
     () => ({
@@ -139,15 +142,15 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
       },
       showSizeChanger: false
     }),
-    [filterApplied.page, total]
+    [filterApplied.page, setFieldFilterApplied, total]
   );
 
   // const permissionList = useSelector(selectPermissionList);
-  const fetchTasks = () => {
+  const fetchTasks = useCallback(() => {
     const body: FilterMyTask = {
       actionId: filterApplied.actionId || undefined,
       actionName: filterApplied.actionName || undefined,
-      createAt: filterApplied.createAt || undefined,
+      createAt: normalizeDateToApi(filterApplied.createAt) || undefined,
       createdBy: filterApplied.createdBy || undefined,
       operationType: filterApplied.operationType || undefined,
       requestId: filterApplied.requestId || undefined,
@@ -183,7 +186,7 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
         }
       }
     });
-  };
+  }, [filterApplied, isPendingTask, t]);
 
   const onApprove = ({
     id,
@@ -485,7 +488,7 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
       title: t('common:status'),
       dataIndex: 'status',
       width: K_SIZE_120,
-      render: (text: string) => {
+      render: () => {
         return <>status</>;
       }
     },
@@ -511,11 +514,11 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
 
   useEffect(() => {
     fetchTasks();
-  }, [filterApplied]);
+  }, [fetchTasks]);
 
   useEffect(() => {
     if (!optionFeature) fecthPermissionApprove();
-  }, [optionFeature]);
+  }, [fecthPermissionApprove, optionFeature]);
 
   return {
     t,

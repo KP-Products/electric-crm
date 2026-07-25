@@ -1,6 +1,7 @@
 import {
   DELETE_DOCUMENT,
   GET_DOCUMENT_DETAIL,
+  LIST_DOCUMENTS_BY_UNIT,
   SEARCH_DOCUMENT,
   UPDATE_DOCUMENT,
   UPLOAD_DOCUMENT
@@ -9,16 +10,21 @@ import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ErrorBase } from 'model/common';
 import {
   DeleteDocumentReq,
+  DeleteDocumentRes,
   DocumentDetailRes,
   DocumentItem,
   DocumentRes,
   GetDocumentReq,
+  ListDocumentsByUnitReq,
+  ListDocumentsByUnitRes,
   SearchDocumentReq,
   SearchDocumentRes,
   UpdateDocumentReq,
   UploadDocumentReq
 } from 'model/document';
 import { SLICE_NAME } from 'stores/types';
+
+type DocumentByUnitClientFilter = Partial<Omit<SearchDocumentReq, 'page' | 'size'>>;
 
 export interface DocumentState {
   documentList: DocumentItem[];
@@ -91,7 +97,7 @@ const deleteDocument = createAction(
   DELETE_DOCUMENT,
   (
     body: DeleteDocumentReq,
-    onSuccess?: (data: DocumentRes) => void,
+    onSuccess?: (data: DeleteDocumentRes) => void,
     onFailed?: (error?: ErrorBase) => void
   ) => ({
     payload: { body, onSuccess, onFailed }
@@ -109,13 +115,26 @@ const getDocumentDetail = createAction(
   })
 );
 
+const listDocumentsByUnit = createAction(
+  LIST_DOCUMENTS_BY_UNIT,
+  (
+    body: ListDocumentsByUnitReq,
+    clientFilter?: DocumentByUnitClientFilter,
+    onSuccess?: (data: ListDocumentsByUnitRes) => void,
+    onFailed?: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, clientFilter, onSuccess, onFailed }
+  })
+);
+
 export const documentActions = {
   ...documentSlice.actions,
   searchDocument,
   uploadDocument,
   updateDocument,
   deleteDocument,
-  getDocumentDetail
+  getDocumentDetail,
+  listDocumentsByUnit
 };
 
 export const documentReducer = documentSlice.reducer;

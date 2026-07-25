@@ -1,6 +1,6 @@
 'use client';
 
-import { K_SIZE_1, K_SIZE_16, K_SIZE_24, K_SIZE_8 } from '@constant';
+import { K_SIZE_1, K_SIZE_16, K_SIZE_24, K_SIZE_8, REQUIRED_MARK } from '@constant';
 import { Divider, Flex } from 'antd';
 import clsx from 'clsx';
 import ButtonBase from 'components/button';
@@ -19,6 +19,8 @@ import useManageUserPermission from '../hooks/useManageUserPermission';
 import PermissionTableView from '../../manage-permission-group/form/components/PermissionTableView';
 import React from 'react';
 import { USER_STATUS_OPTIONS } from '../utils/constant';
+
+const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
 
 const ManageUserForm = (props: ManageUserFormProps) => {
   const { isAddMode, isView } = props;
@@ -99,6 +101,7 @@ const ManageUserForm = (props: ManageUserFormProps) => {
           <AppTextFieldControl
             name="username"
             label={t('login_screen:username')}
+            labelSuffix={isAddMode ? requiredMark : undefined}
             placeholder={t('login_screen:enter_username')}
             isView={isView}
             control={control}
@@ -108,6 +111,7 @@ const ManageUserForm = (props: ManageUserFormProps) => {
             <AppTextFieldControl
               name="password"
               label={'Mật khẩu'}
+              labelSuffix={requiredMark}
               placeholder={'Nhập mật khẩu'}
               isView={isView}
               control={control}
@@ -127,6 +131,7 @@ const ManageUserForm = (props: ManageUserFormProps) => {
           <AppTextFieldControl
             name="email"
             label={t('manage_user:email')}
+            labelSuffix={isAddMode ? requiredMark : undefined}
             placeholder={t('manage_user:enter_email')}
             isView={isView}
             control={control}
@@ -145,6 +150,7 @@ const ManageUserForm = (props: ManageUserFormProps) => {
                     setValue('permissions', getUserPermission(key));
                   }}
                   label={t('manage_user:role')}
+                  labelSuffix={isAddMode ? requiredMark : undefined}
                   placeholder={t('manage_user:select_role')}
                   isView={isView}
                   options={roleOptions}
@@ -157,6 +163,7 @@ const ManageUserForm = (props: ManageUserFormProps) => {
           <AppSelectControl
             name="branchId"
             label="Chi nhánh"
+            labelSuffix={isAddMode ? requiredMark : undefined}
             placeholder="Chọn chi nhánh"
             isView={isView}
             options={branchOptions}
