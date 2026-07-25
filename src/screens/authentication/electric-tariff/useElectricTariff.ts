@@ -2,8 +2,11 @@ import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CREATE_ELECTRIC_TARIFF,
+  DELETE_ELECTRIC_TARIFF_DOCUMENT,
+  DELETE_ELECTRIC_TARIFF,
   GET_ELECTRIC_TARIFF_DETAIL,
   SEARCH_ELECTRIC_TARIFF,
+  UPLOAD_ELECTRIC_TARIFF_DOCUMENT,
   UPDATE_ELECTRIC_TARIFF
 } from '@redux-action-type/electric-tariff';
 import { dispatch } from '@redux-common';
@@ -13,8 +16,11 @@ import {
   selectElectricTariffLoadingList,
   selectElectricTariffTotal
 } from '@redux-selector/electric-tariff';
+import { showDialog } from 'components/dialog';
+import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
+import { ErrorBase } from 'model/common';
 import {
   CreateTariffReq,
   ElectricTariff,
@@ -29,7 +35,16 @@ import moment from 'moment';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import electricTariffServices from 'services/electric-tariff-services';
+import {
+  canViewBlobInline,
+  downloadBlobResponse,
+  getBlobResponseError,
+  isBlobFileResponse
+} from 'utils/blob-response';
 import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
+import { useAppTranslation } from 'utils/i18n';
+import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 import { z } from 'zod';
 
 export const TARIFF_STATUS = {
@@ -44,7 +59,11 @@ export const TARIFF_PRICE_TYPE = {
 
 const DEFAULT_CUSTOMER_TYPE = 'SINH_HOAT';
 const DEFAULT_VOLTAGE_LEVEL = 'HA_AP';
-const TOU_VALUES = ['BT', 'TD', 'CD'];
+const TOU_PRICE_ROWS = [
+  { tou: 'BT', touName: 'Bình thường' },
+  { tou: 'TD', touName: 'Thấp điểm' },
+  { tou: 'CD', touName: 'Cao điểm' }
+] as const;
 
 export const DEFAULT_TARIFF_FILTER: ElectricTariffFilter = {
   tariffCode: '',
@@ -57,6 +76,7 @@ export const DEFAULT_TARIFF_FILTER: ElectricTariffFilter = {
 const DATE_API_FORMAT = FORMAT_DATE_API;
 const VAT_RATE = 0.1;
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
+const INLINE_TARIFF_DOCUMENT_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
 
 const tariffSchema = z.object({
   tariffCode: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập mã giá' }),
@@ -64,30 +84,12 @@ const tariffSchema = z.object({
   customerType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn mục đích sử dụng' }),
   voltageLevel: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn cấp điện áp' }),
   effectiveFrom: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày hiệu lực' }),
-  effectiveTo: optionalTextSchema,
-  status: z.string().trim()
+  effectiveTo: optionalTextSchema
 });
 
 const parseNumber = (value: string) => Number(value.trim().replace(',', '.'));
 
-const touPriceSchema = z.object({
-  tou: z
-    .string()
-    .trim()
-    .min(K_SIZE_1, { message: 'Vui lòng chọn bậc/khung giờ' })
-    .refine((value) => TOU_VALUES.includes(value), {
-      message: 'Vui lòng chọn bậc/khung giờ hợp lệ'
-    }),
-  unitPrice: z
-    .string()
-    .trim()
-    .min(K_SIZE_1, { message: 'Vui lòng nhập đơn giá' })
-    .refine((value) => Number.isFinite(parseNumber(value)) && parseNumber(value) >= K_SIZE_0, {
-      message: 'Đơn giá không hợp lệ'
-    })
-});
-
-const getErrorMessage = (error?: any, fallback = 'Thao tác thất bại') => {
+const getErrorMessage = (error?: ErrorBase, fallback = 'Thao tác thất bại') => {
   return (
     error?.businessErrorMessage ||
     error?.systemErrorMessage ||
@@ -96,6 +98,15 @@ const getErrorMessage = (error?: any, fallback = 'Thao tác thất bại') => {
     fallback
   );
 };
+
+const getTariffDocumentFileName = (tariff?: ElectricTariff, responseFileName?: string) =>
+  responseFileName ||
+  tariff?.fileName ||
+  tariff?.filePath?.split(/[\\/]/).pop() ||
+  'van-ban-ap-gia';
+
+const hasTariffDocument = (tariff?: ElectricTariff) =>
+  Boolean(tariff?.fileName || tariff?.filePath);
 
 export interface ElectricTariffFilter {
   tariffCode: string;
@@ -106,7 +117,23 @@ export interface ElectricTariffFilter {
 }
 
 export type ElectricTariffForm = z.infer<typeof tariffSchema>;
-export type TouPriceForm = z.infer<typeof touPriceSchema>;
+
+export interface TariffTouPriceRow {
+  id?: number;
+  tariffId?: number;
+  tou: string;
+  touName?: string;
+  unitPrice?: number;
+  voltageLevel?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  createdAt?: string;
+  draftUnitPrice: string;
+}
+
+type RawTouPrice = Partial<ElectricTariffTouPrice> & {
+  draftUnitPrice?: string;
+};
 
 export const getPriceWithVat = (unitPrice?: number) =>
   typeof unitPrice === 'number' && Number.isFinite(unitPrice)
@@ -115,25 +142,62 @@ export const getPriceWithVat = (unitPrice?: number) =>
 
 const getDetailPrices = (detail?: TariffDetail) => detail?.prices || detail?.touPrices || [];
 
-const buildTariffPriceInputs = (
-  prices: ElectricTariffTouPrice[],
-  newPrice: TariffPriceInput
-): TariffPriceInput[] => [
-  ...prices
-    .map((price) => ({
-      tou: price.tou || '',
-      unitPrice: price.unitPrice
-    }))
-    .filter(
-      (price): price is TariffPriceInput =>
-        TOU_VALUES.includes(price.tou) &&
-        typeof price.unitPrice === 'number' &&
-        Number.isFinite(price.unitPrice)
-    ),
-  newPrice
-];
+const getDraftUnitPrice = (unitPrice?: number) =>
+  typeof unitPrice === 'number' && Number.isFinite(unitPrice) ? String(unitPrice) : '';
+
+const getParsedTouPrice = (value: string) => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return undefined;
+
+  const parsedValue = parseNumber(trimmedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : undefined;
+};
+
+const normalizeTouPrices = (prices: RawTouPrice[] = []): TariffTouPriceRow[] =>
+  TOU_PRICE_ROWS.map((row) => {
+    const matchedPrice = prices.find((price) => price.tou === row.tou);
+
+    return {
+      ...matchedPrice,
+      tou: row.tou,
+      touName: matchedPrice?.touName || row.touName,
+      unitPrice: matchedPrice?.unitPrice,
+      draftUnitPrice: matchedPrice?.draftUnitPrice ?? getDraftUnitPrice(matchedPrice?.unitPrice)
+    };
+  });
+
+const buildTouPriceInputs = (prices: TariffTouPriceRow[]): TariffPriceInput[] =>
+  TOU_PRICE_ROWS.map((row) => {
+    const matchedPrice = prices.find((price) => price.tou === row.tou);
+
+    return {
+      tou: row.tou,
+      unitPrice: getParsedTouPrice(matchedPrice?.draftUnitPrice || '') ?? K_SIZE_0
+    };
+  });
+
+const validateTouPrices = (prices: TariffTouPriceRow[]) => {
+  const normalizedPrices = normalizeTouPrices(prices);
+
+  const missingPrice = normalizedPrices.find((price) => !price.draftUnitPrice.trim());
+  if (missingPrice) {
+    return `Vui lòng nhập đơn giá cho bậc ${missingPrice.touName || missingPrice.tou}`;
+  }
+
+  const invalidPrice = normalizedPrices.find((price) => {
+    const parsedPrice = getParsedTouPrice(price.draftUnitPrice);
+    return parsedPrice === undefined || parsedPrice < K_SIZE_0;
+  });
+
+  if (invalidPrice) {
+    return `Đơn giá bậc ${invalidPrice.touName || invalidPrice.tou} không hợp lệ`;
+  }
+
+  return '';
+};
 
 export default function useElectricTariff() {
+  const { t } = useAppTranslation();
   const tariffList = useSelector(selectElectricTariffList);
   const total = useSelector(selectElectricTariffTotal);
   const listLoading = useSelector(selectElectricTariffLoadingList);
@@ -143,10 +207,9 @@ export default function useElectricTariff() {
   const [filterApplied, setFilterApplied] = useState<ElectricTariffFilter>(DEFAULT_TARIFF_FILTER);
   const [openCreate, setOpenCreate] = useState<boolean>(false);
   const [openDetail, setOpenDetail] = useState<boolean>(false);
-  const [openTouForm, setOpenTouForm] = useState<boolean>(false);
   const [selectedDetail, setSelectedDetail] = useState<TariffDetail>();
-  const [touTargetTariff, setTouTargetTariff] = useState<ElectricTariff>();
-  const [touPrices, setTouPrices] = useState<ElectricTariffTouPrice[]>([]);
+  const [touPrices, setTouPrices] = useState<TariffTouPriceRow[]>(normalizeTouPrices());
+  const [selectedTariffDocumentFile, setSelectedTariffDocumentFile] = useState<File>();
 
   const tariffForm = useForm<ElectricTariffForm>({
     mode: 'onTouched',
@@ -156,19 +219,9 @@ export default function useElectricTariff() {
       customerType: DEFAULT_CUSTOMER_TYPE,
       voltageLevel: DEFAULT_VOLTAGE_LEVEL,
       effectiveFrom: moment().format(DATE_API_FORMAT),
-      effectiveTo: '',
-      status: TARIFF_STATUS.ACTIVE
+      effectiveTo: ''
     },
     resolver: zodResolver(tariffSchema)
-  });
-
-  const touPriceForm = useForm<TouPriceForm>({
-    mode: 'onTouched',
-    defaultValues: {
-      tou: '',
-      unitPrice: ''
-    },
-    resolver: zodResolver(touPriceSchema)
   });
 
   const buildSearchBody = useCallback(
@@ -194,7 +247,7 @@ export default function useElectricTariff() {
         type: SEARCH_ELECTRIC_TARIFF,
         payload: {
           body: buildSearchBody(filter, page),
-          onFailed: (error?: unknown) => {
+          onFailed: (error?: ErrorBase) => {
             showToast({
               type: TYPE_TOAST.ERROR,
               content: getErrorMessage(error, 'Tải danh mục giá điện thất bại')
@@ -243,8 +296,7 @@ export default function useElectricTariff() {
       customerType: DEFAULT_CUSTOMER_TYPE,
       voltageLevel: DEFAULT_VOLTAGE_LEVEL,
       effectiveFrom: moment().format(DATE_API_FORMAT),
-      effectiveTo: '',
-      status: TARIFF_STATUS.ACTIVE
+      effectiveTo: ''
     });
     setOpenCreate(true);
   }, [tariffForm]);
@@ -262,6 +314,15 @@ export default function useElectricTariff() {
     }
   }, [currentPage, fetchList, filterApplied]);
 
+  const refreshAfterDelete = useCallback(() => {
+    if (tariffList.length === K_SIZE_1 && currentPage > K_SIZE_1) {
+      setCurrentPage(currentPage - K_SIZE_1);
+      return;
+    }
+
+    fetchList(currentPage, filterApplied);
+  }, [currentPage, fetchList, filterApplied, tariffList.length]);
+
   const handleCreateTariff = useCallback(
     (data: ElectricTariffForm) => {
       const body: CreateTariffReq = {
@@ -271,7 +332,6 @@ export default function useElectricTariff() {
         voltageLevel: data.voltageLevel,
         effectiveFrom: normalizeDateToApi(data.effectiveFrom),
         effectiveTo: normalizeDateToApi(data.effectiveTo) || undefined,
-        status: data.status || TARIFF_STATUS.ACTIVE,
         priceType: TARIFF_PRICE_TYPE.SELL
       };
 
@@ -287,7 +347,7 @@ export default function useElectricTariff() {
             onCloseCreate();
             refreshFirstPage();
           },
-          onFailed: (error?: unknown) => {
+          onFailed: (error?: ErrorBase) => {
             showToast({
               type: TYPE_TOAST.ERROR,
               content: getErrorMessage(error, 'Thêm biểu giá điện thất bại')
@@ -306,9 +366,9 @@ export default function useElectricTariff() {
         body: { id },
         onSuccess: (response: GetTariffDetailRes) => {
           setSelectedDetail(response.data);
-          setTouPrices(getDetailPrices(response.data));
+          setTouPrices(normalizeTouPrices(getDetailPrices(response.data)));
         },
-        onFailed: (error?: unknown) => {
+        onFailed: (error?: ErrorBase) => {
           showToast({
             type: TYPE_TOAST.ERROR,
             content: getErrorMessage(error, 'Tải chi tiết biểu giá thất bại')
@@ -321,7 +381,8 @@ export default function useElectricTariff() {
   const onOpenDetail = useCallback(
     (tariff: ElectricTariff) => {
       setSelectedDetail({ tariff, prices: [] });
-      setTouPrices([]);
+      setTouPrices(normalizeTouPrices());
+      setSelectedTariffDocumentFile(undefined);
       setOpenDetail(true);
       loadTariffDetail(tariff.id);
     },
@@ -331,103 +392,304 @@ export default function useElectricTariff() {
   const onCloseDetail = useCallback(() => {
     setOpenDetail(false);
     setSelectedDetail(undefined);
-    setTouPrices([]);
+    setTouPrices(normalizeTouPrices());
+    setSelectedTariffDocumentFile(undefined);
   }, []);
 
-  const onOpenTouCreate = useCallback(
-    (tariff?: ElectricTariff) => {
-      const targetTariff = tariff || selectedDetail?.tariff;
-      if (!targetTariff) return;
+  const tariffDocumentFileName = useMemo(
+    () => getTariffDocumentFileName(selectedDetail?.tariff, ''),
+    [selectedDetail?.tariff]
+  );
 
-      setTouTargetTariff(targetTariff);
-      touPriceForm.reset({
-        tou: '',
-        unitPrice: ''
+  const onSelectTariffDocumentFile = useCallback((file: File) => {
+    if (!isValidUploadFileSize(file)) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getUploadFileSizeError('văn bản áp giá')
       });
+      return false;
+    }
 
-      if (!tariff || selectedDetail?.tariff?.id === targetTariff.id) {
-        setOpenTouForm(true);
+    setSelectedTariffDocumentFile(file);
+    return true;
+  }, []);
+
+  const onRemoveSelectedTariffDocumentFile = useCallback(() => {
+    setSelectedTariffDocumentFile(undefined);
+    return true;
+  }, []);
+
+  const onChangeTouPrice = useCallback((tou: string, value: string) => {
+    setTouPrices((prev) =>
+      normalizeTouPrices(prev).map((price) =>
+        price.tou === tou
+          ? {
+              ...price,
+              draftUnitPrice: value,
+              unitPrice: getParsedTouPrice(value)
+            }
+          : price
+      )
+    );
+  }, []);
+
+  const handleSaveTouPrices = useCallback(() => {
+    if (!selectedDetail?.tariff?.id) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: 'Không tìm thấy ID biểu giá điện để cập nhật bậc giá'
+      });
+      return;
+    }
+
+    const validationError = validateTouPrices(touPrices);
+    if (validationError) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: validationError
+      });
+      return;
+    }
+
+    const body: UpdateTariffReq = {
+      id: selectedDetail.tariff.id,
+      prices: buildTouPriceInputs(touPrices)
+    };
+
+    dispatch({
+      type: UPDATE_ELECTRIC_TARIFF,
+      payload: {
+        body,
+        onSuccess: () => {
+          showToast({
+            type: TYPE_TOAST.SUCCESS,
+            content: 'Cập nhật bậc giá thành công'
+          });
+          loadTariffDetail(selectedDetail.tariff?.id || body.id);
+          onCloseDetail();
+        },
+        onFailed: (error?: ErrorBase) => {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(error, 'Cập nhật bậc giá thất bại')
+          });
+          onCloseDetail();
+        }
+      }
+    });
+  }, [loadTariffDetail, onCloseDetail, selectedDetail?.tariff?.id, touPrices]);
+
+  const handleUploadTariffDocument = useCallback(() => {
+    const tariffId = selectedDetail?.tariff?.id;
+    if (!tariffId) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: 'Không tìm thấy ID biểu giá điện để tải văn bản áp giá'
+      });
+      return;
+    }
+
+    if (!selectedTariffDocumentFile) {
+      showToast({
+        type: TYPE_TOAST.INFO,
+        content: 'Vui lòng chọn văn bản áp giá'
+      });
+      return;
+    }
+
+    dispatch({
+      type: UPLOAD_ELECTRIC_TARIFF_DOCUMENT,
+      payload: {
+        body: { id: tariffId, file: selectedTariffDocumentFile },
+        onSuccess: () => {
+          setSelectedTariffDocumentFile(undefined);
+          loadTariffDetail(tariffId);
+          showToast({
+            type: TYPE_TOAST.SUCCESS,
+            content: 'Tải văn bản áp giá thành công'
+          });
+        },
+        onFailed: (error?: ErrorBase) => {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(error, 'Tải văn bản áp giá thất bại')
+          });
+        }
+      }
+    });
+  }, [loadTariffDetail, selectedDetail?.tariff?.id, selectedTariffDocumentFile]);
+
+  const ensureTariffDocument = useCallback(() => {
+    if (hasTariffDocument(selectedDetail?.tariff)) return true;
+
+    showToast({
+      type: TYPE_TOAST.INFO,
+      content: 'Biểu giá điện chưa có văn bản áp giá'
+    });
+    return false;
+  }, [selectedDetail?.tariff]);
+
+  const onViewTariffDocument = useCallback(async () => {
+    const tariff = selectedDetail?.tariff;
+    if (!tariff?.id || !ensureTariffDocument()) return;
+
+    const targetWindow = window.open('about:blank', '_blank');
+    if (targetWindow) {
+      targetWindow.opener = null;
+    }
+
+    const response = await electricTariffServices.viewTariffDocument(tariff.id);
+    const fileError = await getBlobResponseError(response);
+    if (fileError || !isBlobFileResponse(response)) {
+      targetWindow?.close();
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getErrorMessage(fileError as ErrorBase, 'Xem văn bản áp giá thất bại')
+      });
+      return;
+    }
+
+    if (!canViewBlobInline(response, INLINE_TARIFF_DOCUMENT_MIME_TYPES)) {
+      targetWindow?.close();
+      downloadBlobResponse(response, getTariffDocumentFileName(tariff, response.fileName));
+      showToast({
+        type: TYPE_TOAST.INFO,
+        content: 'Định dạng này không hỗ trợ xem trực tiếp, hệ thống đã tải file xuống'
+      });
+      return;
+    }
+
+    const viewUrl = URL.createObjectURL(response.blob);
+    if (targetWindow) {
+      targetWindow.location.href = viewUrl;
+    } else {
+      window.open(viewUrl, '_blank', 'noopener,noreferrer');
+    }
+    window.setTimeout(() => URL.revokeObjectURL(viewUrl), 60000);
+  }, [ensureTariffDocument, selectedDetail?.tariff]);
+
+  const onDownloadTariffDocument = useCallback(async () => {
+    const tariff = selectedDetail?.tariff;
+    if (!tariff?.id || !ensureTariffDocument()) return;
+
+    const response = await electricTariffServices.downloadTariffDocument(tariff.id);
+    const fileError = await getBlobResponseError(response);
+    if (fileError || !isBlobFileResponse(response)) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getErrorMessage(fileError as ErrorBase, 'Tải văn bản áp giá thất bại')
+      });
+      return;
+    }
+
+    downloadBlobResponse(response, getTariffDocumentFileName(tariff, response.fileName));
+  }, [ensureTariffDocument, selectedDetail?.tariff]);
+
+  const deleteTariffDocument = useCallback(() => {
+    const tariffId = selectedDetail?.tariff?.id;
+    if (!tariffId) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: 'Không tìm thấy ID biểu giá điện để gỡ văn bản áp giá'
+      });
+      return;
+    }
+
+    dispatch({
+      type: DELETE_ELECTRIC_TARIFF_DOCUMENT,
+      payload: {
+        body: { id: tariffId },
+        onSuccess: () => {
+          setSelectedTariffDocumentFile(undefined);
+          loadTariffDetail(tariffId);
+          showToast({
+            type: TYPE_TOAST.SUCCESS,
+            content: 'Gỡ văn bản áp giá thành công'
+          });
+        },
+        onFailed: (error?: ErrorBase) => {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(error, 'Gỡ văn bản áp giá thất bại')
+          });
+        }
+      }
+    });
+  }, [loadTariffDetail, selectedDetail?.tariff]);
+
+  const onDeleteTariffDocument = useCallback(() => {
+    if (!ensureTariffDocument()) return;
+
+    showDialog({
+      title: 'Xác nhận gỡ văn bản',
+      content: `Bạn có chắc chắn gỡ văn bản áp giá ${tariffDocumentFileName} không?`,
+      type: TYPE_MESSAGE.ALERT,
+      actions: [
+        {
+          title: 'Đồng ý',
+          type: TYPE_ACTION.PRIMARY,
+          onPress: deleteTariffDocument
+        },
+        {
+          title: 'Hủy bỏ',
+          type: TYPE_ACTION.SECONDARY
+        }
+      ]
+    });
+  }, [deleteTariffDocument, ensureTariffDocument, tariffDocumentFileName]);
+
+  const onDeleteSuccess = useCallback(() => {
+    refreshAfterDelete();
+    showToast({
+      type: TYPE_TOAST.SUCCESS,
+      content: 'Xoá biểu giá điện thành công'
+    });
+  }, [refreshAfterDelete]);
+
+  const onDelete = useCallback(
+    (tariff: ElectricTariff) => {
+      if (!tariff.id) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không tìm thấy ID biểu giá điện để xoá'
+        });
         return;
       }
 
-      setTouPrices([]);
-      dispatch({
-        type: GET_ELECTRIC_TARIFF_DETAIL,
-        payload: {
-          body: { id: targetTariff.id },
-          onSuccess: (response: GetTariffDetailRes) => {
-            const detail = response.data;
-            setTouTargetTariff(detail?.tariff || targetTariff);
-            setTouPrices(getDetailPrices(detail));
-            setOpenTouForm(true);
-          },
-          onFailed: (error?: unknown) => {
-            setTouTargetTariff(undefined);
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content: getErrorMessage(error, 'Tải chi tiết biểu giá thất bại')
-            });
-          }
-        }
-      });
-    },
-    [selectedDetail?.tariff, touPriceForm]
-  );
+      const tariffLabel = tariff.tariffCode || tariff.tariffName || 'đã chọn';
 
-  const onCloseTouForm = useCallback(() => {
-    setOpenTouForm(false);
-    setTouTargetTariff(undefined);
-    touPriceForm.reset();
-  }, [touPriceForm]);
-
-  const handleCreateTouPrice = useCallback(
-    (data: TouPriceForm) => {
-      if (!touTargetTariff) return;
-
-      const body: UpdateTariffReq = {
-        id: touTargetTariff.id,
-        prices: buildTariffPriceInputs(touPrices, {
-          tou: data.tou.trim(),
-          unitPrice: parseNumber(data.unitPrice)
-        })
-      };
-
-      dispatch({
-        type: UPDATE_ELECTRIC_TARIFF,
-        payload: {
-          body,
-          onSuccess: () => {
-            showToast({
-              type: TYPE_TOAST.SUCCESS,
-              content: 'Thêm bậc giá thành công'
-            });
-            onCloseTouForm();
-
-            if (openDetail && selectedDetail?.tariff?.id) {
-              loadTariffDetail(selectedDetail.tariff.id);
-              return;
+      showDialog({
+        title: t('common:delete_confirm'),
+        content: `Bạn có chắc chắn xoá biểu giá điện ${tariffLabel} này?`,
+        type: TYPE_MESSAGE.ALERT,
+        actions: [
+          {
+            title: t('common:agree'),
+            type: TYPE_ACTION.PRIMARY,
+            onPress: () => {
+              dispatch({
+                type: DELETE_ELECTRIC_TARIFF,
+                payload: {
+                  body: { id: tariff.id },
+                  onSuccess: onDeleteSuccess,
+                  onFailed: (error?: ErrorBase) => {
+                    showToast({
+                      type: TYPE_TOAST.ERROR,
+                      content: getErrorMessage(error, 'Xoá biểu giá điện thất bại')
+                    });
+                  }
+                }
+              });
             }
-
-            refreshFirstPage();
           },
-          onFailed: (error?: unknown) => {
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content: getErrorMessage(error, 'Thêm bậc giá thất bại')
-            });
+          {
+            title: t('common:cancel'),
+            type: TYPE_ACTION.SECONDARY
           }
-        }
+        ]
       });
     },
-    [
-      loadTariffDetail,
-      onCloseTouForm,
-      openDetail,
-      refreshFirstPage,
-      selectedDetail?.tariff?.id,
-      touPrices,
-      touTargetTariff
-    ]
+    [onDeleteSuccess, t]
   );
 
   return {
@@ -441,12 +703,11 @@ export default function useElectricTariff() {
     detailLoading,
     openCreate,
     openDetail,
-    openTouForm,
     selectedDetail,
-    touTargetTariff,
     touPrices,
+    selectedTariffDocumentFile,
+    tariffDocumentFileName,
     tariffForm,
-    touPriceForm,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -455,8 +716,14 @@ export default function useElectricTariff() {
     handleCreateTariff,
     onOpenDetail,
     onCloseDetail,
-    onOpenTouCreate,
-    onCloseTouForm,
-    handleCreateTouPrice
+    onChangeTouPrice,
+    handleSaveTouPrices,
+    onSelectTariffDocumentFile,
+    onRemoveSelectedTariffDocumentFile,
+    handleUploadTariffDocument,
+    onViewTariffDocument,
+    onDownloadTariffDocument,
+    onDeleteTariffDocument,
+    onDelete
   };
 }

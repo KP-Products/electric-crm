@@ -3,17 +3,20 @@
 import { CalculatorOutlined, PlusOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
 import {
   K_SIZE_0,
-  K_SIZE_108,
+  K_SIZE_1,
+  K_SIZE_120,
   K_SIZE_130,
   K_SIZE_160,
   K_SIZE_18,
   K_SIZE_200,
   K_SIZE_220,
+  K_SIZE_24,
   K_SIZE_8,
   NULL_VALUE,
   REQUIRED_MARK
 } from '@constant';
-import { Divider, Drawer, Flex, Spin } from 'antd';
+import { Divider, Drawer, Flex, Spin, Upload } from 'antd';
+import type { UploadFile } from 'antd/es/upload/interface';
 import ButtonBase from 'components/button';
 import { AppDatePickerControl } from 'components/date-picker';
 import IconHover from 'components/icon-vec-local/icon-hover';
@@ -26,14 +29,16 @@ import { TextBase } from 'components/text';
 import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
-import { ElectricTariff, ElectricTariffTouPrice } from 'model/electric-tariff';
+import { ElectricTariff } from 'model/electric-tariff';
 import moment from 'moment';
 import { useMemo } from 'react';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
+import { formatUploadFileSize, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useElectricTariff, {
   ElectricTariffFilter,
   getPriceWithVat,
+  TariffTouPriceRow,
   TARIFF_STATUS
 } from './useElectricTariff';
 
@@ -56,12 +61,6 @@ const VOLTAGE_LEVEL_OPTIONS = [
 const STATUS_OPTIONS = [
   { value: TARIFF_STATUS.ACTIVE, label: 'Hiệu lực' },
   { value: TARIFF_STATUS.INACTIVE, label: 'Ngưng áp dụng' }
-];
-
-const TOU_OPTIONS = [
-  { value: 'BT', label: 'Bình thường' },
-  { value: 'TD', label: 'Thấp điểm' },
-  { value: 'CD', label: 'Cao điểm' }
 ];
 
 const CUSTOMER_TYPE_LABEL_MAP: Record<string, string> = {
@@ -155,12 +154,11 @@ const ElectricTariffScreen = () => {
     detailLoading,
     openCreate,
     openDetail,
-    openTouForm,
     selectedDetail,
-    touTargetTariff,
     touPrices,
+    selectedTariffDocumentFile,
+    tariffDocumentFileName,
     tariffForm,
-    touPriceForm,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -169,9 +167,15 @@ const ElectricTariffScreen = () => {
     handleCreateTariff,
     onOpenDetail,
     onCloseDetail,
-    onOpenTouCreate,
-    onCloseTouForm,
-    handleCreateTouPrice
+    onChangeTouPrice,
+    handleSaveTouPrices,
+    onSelectTariffDocumentFile,
+    onRemoveSelectedTariffDocumentFile,
+    handleUploadTariffDocument,
+    onViewTariffDocument,
+    onDownloadTariffDocument,
+    onDeleteTariffDocument,
+    onDelete
   } = useElectricTariff();
 
   const {
@@ -180,18 +184,31 @@ const ElectricTariffScreen = () => {
     formState: { isValid: isTariffValid }
   } = tariffForm;
 
-  const {
-    control: touControl,
-    handleSubmit: handleTouFormSubmit,
-    formState: { isValid: isTouValid }
-  } = touPriceForm;
-
   const activeFilters = useMemo(
     () =>
       (Object.entries(filterApplied) as [keyof ElectricTariffFilter, string][]).filter(
         ([, value]) => Boolean(value)
       ),
     [filterApplied]
+  );
+
+  const tariffDocumentUploadFileList = useMemo<UploadFile[]>(
+    () =>
+      selectedTariffDocumentFile
+        ? [
+            {
+              uid: 'selected-tariff-document',
+              name: selectedTariffDocumentFile.name,
+              status: 'done',
+              size: selectedTariffDocumentFile.size
+            }
+          ]
+        : [],
+    [selectedTariffDocumentFile]
+  );
+
+  const hasTariffDocument = Boolean(
+    selectedDetail?.tariff?.fileName || selectedDetail?.tariff?.filePath
   );
 
   const columns = useMemo<any[]>(
@@ -269,7 +286,7 @@ const ElectricTariffScreen = () => {
         title: 'Thao tác',
         fixed: 'right',
         align: 'center',
-        width: K_SIZE_108,
+        width: K_SIZE_120,
         render: (_: unknown, record: ElectricTariff) => (
           <div className="flex justify-center gap-8">
             <IconHover
@@ -280,17 +297,17 @@ const ElectricTariffScreen = () => {
               onClick={() => onOpenDetail(record)}
             />
             <IconHover
-              rootClassName="text-color-800"
-              title="Thêm bậc giá"
-              icon="IC_ADD_OUTLINE2"
+              rootClassName="text-error-500 hover:text-error-500"
+              title="Xoá"
+              icon="IC_TRASH_OUTLINE"
               iconHeight={K_SIZE_18}
-              onClick={() => onOpenTouCreate(record)}
+              onClick={() => onDelete(record)}
             />
           </div>
         )
       }
     ],
-    [onOpenDetail, onOpenTouCreate]
+    [onDelete, onOpenDetail]
   );
 
   const touColumns = useMemo<any[]>(
@@ -300,16 +317,25 @@ const ElectricTariffScreen = () => {
         dataIndex: 'tou',
         key: 'tou',
         width: K_SIZE_160,
-        render: (text: string, record: ElectricTariffTouPrice) =>
+        render: (text: string, record: TariffTouPriceRow) =>
           record.touName || TOU_LABEL_MAP[text] || text || NULL_VALUE
       },
       {
         title: 'Đơn giá',
-        dataIndex: 'unitPrice',
+        dataIndex: 'draftUnitPrice',
         key: 'unitPrice',
         align: 'right',
         width: K_SIZE_160,
-        render: (value: number) => formatCurrency(value)
+        render: (_: string, record: TariffTouPriceRow) => (
+          <AppTextField
+            name={`touPrice-${record.tou}`}
+            value={record.draftUnitPrice}
+            placeholder="Nhập đơn giá"
+            size="middle"
+            classNameMore="text-right"
+            onChange={(event) => onChangeTouPrice(record.tou, event.target.value)}
+          />
+        )
       },
       {
         title: 'VAT 10%',
@@ -317,7 +343,10 @@ const ElectricTariffScreen = () => {
         key: 'vat',
         align: 'right',
         width: K_SIZE_130,
-        render: (value: number) => formatCurrency(value ? value * 0.1 : undefined)
+        render: (value: number) =>
+          formatCurrency(
+            typeof value === 'number' && Number.isFinite(value) ? value * 0.1 : undefined
+          )
       },
       {
         title: 'Đơn giá sau VAT',
@@ -328,7 +357,7 @@ const ElectricTariffScreen = () => {
         render: (value: number) => formatCurrency(getPriceWithVat(value))
       }
     ],
-    []
+    [onChangeTouPrice]
   );
 
   const breadcrumbList = [
@@ -535,12 +564,6 @@ const ElectricTariffScreen = () => {
                   datePickerClassName="w-full"
                 />
               </div>
-              <AppSelectControl
-                name="status"
-                control={tariffControl}
-                label="Trạng thái"
-                options={STATUS_OPTIONS}
-              />
             </div>
           </Drawer>
         </form>
@@ -552,17 +575,16 @@ const ElectricTariffScreen = () => {
           placement="right"
           onClose={onCloseDetail}
           width={isTablet || isMobile ? '90vw' : '62vw'}
-          extra={
-            <ButtonBase
-              type="ghost"
-              customContent={
-                <div className="flex items-center gap-8">
-                  <PlusOutlined />
-                  <span>Thêm bậc giá</span>
-                </div>
-              }
-              onClick={() => onOpenTouCreate()}
-            />
+          footer={
+            <Flex justify="end" gap={K_SIZE_8}>
+              <ButtonBase type="ghost" customContent="Đóng" onClick={onCloseDetail} />
+              <ButtonBase
+                type="primary"
+                disabled={detailLoading}
+                customContent="Lưu bậc giá"
+                onClick={handleSaveTouPrices}
+              />
+            </Flex>
           }
         >
           <Spin spinning={detailLoading}>
@@ -611,54 +633,122 @@ const ElectricTariffScreen = () => {
                 scroll={{ x: 'max-content' }}
                 dataSource={touPrices}
                 columns={touColumns}
-                rowKey="id"
+                rowKey="tou"
                 pagination={false}
               />
             </div>
+
+            <div className="mt-20">
+              <div className="mb-8 flex items-center gap-8 text-14 font-semibold text-color-900">
+                <CalculatorOutlined />
+                <span>Văn bản áp giá</span>
+              </div>
+
+              <Upload.Dragger
+                className="block w-full overflow-hidden [&_.ant-upload-btn]:!p-0 [&_.ant-upload-drag-container]:!align-middle"
+                height={120}
+                maxCount={K_SIZE_1}
+                fileList={tariffDocumentUploadFileList}
+                showUploadList={false}
+                beforeUpload={(file) =>
+                  onSelectTariffDocumentFile(file) ? false : Upload.LIST_IGNORE
+                }
+                onRemove={onRemoveSelectedTariffDocumentFile}
+              >
+                <div className="flex min-h-[96px] w-full flex-col items-center justify-center gap-8 p-12 text-center">
+                  <ButtonBase
+                    type="secondary"
+                    size={32}
+                    leftIcon="IC_UPLOAD_OUTLINE"
+                    customContent="Chọn văn bản"
+                    heightIcon={K_SIZE_24}
+                    widthIcon={K_SIZE_24}
+                  />
+                  <TextBase
+                    text={`Tối đa ${MAX_UPLOAD_FILE_SIZE_TEXT}/file`}
+                    classNames="caption1 !text-color-700"
+                  />
+                </div>
+              </Upload.Dragger>
+
+              <div className="mt-12">
+                {selectedTariffDocumentFile ? (
+                  <div className="flex flex-wrap items-center gap-12 rounded-radius-l border border-color-400 bg-color-50 px-12 py-[10px] text-color-800">
+                    <div className="min-w-0 flex-1">
+                      <TextBase text="File đã chọn" classNames="caption1 !text-color-700" />
+                      <div
+                        className="mt-4 truncate text-14 font-medium"
+                        title={selectedTariffDocumentFile.name}
+                      >
+                        {selectedTariffDocumentFile.name}
+                      </div>
+                      <TextBase
+                        text={`Dung lượng: ${formatUploadFileSize(
+                          selectedTariffDocumentFile.size
+                        )}`}
+                        classNames="caption1 !text-color-700"
+                      />
+                    </div>
+                    <Flex gap={K_SIZE_8} className="shrink-0 mobile:w-full mobile:justify-end">
+                      <ButtonBase
+                        type="ghost"
+                        size={32}
+                        customContent="Gỡ"
+                        onClick={onRemoveSelectedTariffDocumentFile}
+                      />
+                      <ButtonBase
+                        type="primary"
+                        size={32}
+                        disabled={detailLoading}
+                        customContent="Tải lên"
+                        onClick={handleUploadTariffDocument}
+                      />
+                    </Flex>
+                  </div>
+                ) : hasTariffDocument ? (
+                  <div className="flex flex-wrap items-center gap-12 rounded-radius-l border border-color-400 bg-color-50 px-12 py-[10px] text-color-800">
+                    <div className="min-w-0 flex-1">
+                      <TextBase text="Văn bản hiện tại" classNames="caption1 !text-color-700" />
+                      <div
+                        className="mt-4 truncate text-14 font-medium"
+                        title={tariffDocumentFileName}
+                      >
+                        {tariffDocumentFileName}
+                      </div>
+                    </div>
+                    <Flex gap={K_SIZE_8} className="shrink-0 mobile:w-full mobile:justify-end">
+                      <IconHover
+                        rootClassName="text-color-800"
+                        title="Xem"
+                        icon="ICON_EYE_OPEN"
+                        iconHeight={K_SIZE_18}
+                        onClick={onViewTariffDocument}
+                      />
+                      <IconHover
+                        rootClassName="text-color-800"
+                        title="Tải xuống"
+                        icon="IC_DOWNLOAD_OUTLINE"
+                        iconHeight={K_SIZE_18}
+                        onClick={onDownloadTariffDocument}
+                      />
+                      <IconHover
+                        rootClassName="text-error-500 hover:text-error-500"
+                        title="Gỡ"
+                        icon="IC_TRASH_OUTLINE"
+                        iconHeight={K_SIZE_18}
+                        onClick={onDeleteTariffDocument}
+                      />
+                    </Flex>
+                  </div>
+                ) : (
+                  <div className="rounded-radius-l border border-dashed border-color-400 px-12 py-16 text-center text-12 text-color-700">
+                    Chưa có văn bản áp giá
+                  </div>
+                )}
+              </div>
+            </div>
           </Spin>
         </Drawer>
-
-        <form id="tou-price-form" onSubmit={handleTouFormSubmit(handleCreateTouPrice)}>
-          <Drawer
-            open={openTouForm}
-            title={`Thêm bậc giá${touTargetTariff?.tariffCode ? ` - ${touTargetTariff.tariffCode}` : ''}`}
-            destroyOnClose
-            placement="right"
-            onClose={onCloseTouForm}
-            width={isTablet || isMobile ? '82vw' : '38vw'}
-            footer={
-              <Flex justify="end" gap={K_SIZE_8}>
-                <ButtonBase type="ghost" customContent="Đóng" onClick={onCloseTouForm} />
-                <ButtonBase
-                  type="primary"
-                  form="tou-price-form"
-                  htmlType="submit"
-                  disabled={!isTouValid || detailLoading}
-                  customContent="Lưu"
-                />
-              </Flex>
-            }
-          >
-            <div className="grid gap-12">
-              <AppSelectControl
-                name="tou"
-                control={touControl}
-                label="Bậc/TOU"
-                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                placeholder="Chọn bậc/khung giờ"
-                options={TOU_OPTIONS}
-              />
-              <AppTextFieldControl
-                name="unitPrice"
-                control={touControl}
-                label="Đơn giá"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
-                placeholder="VD: 1806"
-              />
-            </div>
-          </Drawer>
-        </form>
       </section>
     </PageWithBreadcrumb>
   );

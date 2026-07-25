@@ -39,6 +39,7 @@ import {
   normalizeDateToApi
 } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
+import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 import { z } from 'zod';
 import {
   calculateNextVerificationDate,
@@ -368,6 +369,24 @@ export default function useMeterVerification() {
     fetchVerifications(currentPage);
   }, [currentPage, fetchMeters, fetchVerifications]);
 
+  const onSelectFile = useCallback((file?: File) => {
+    if (!file) {
+      setSelectedFile(undefined);
+      return true;
+    }
+
+    if (!isValidUploadFileSize(file)) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getUploadFileSizeError('file kết quả kiểm định')
+      });
+      return false;
+    }
+
+    setSelectedFile(file);
+    return true;
+  }, []);
+
   const updateFilter = useCallback(
     <K extends keyof MeterVerificationFilterForm>(
       key: K,
@@ -642,7 +661,7 @@ export default function useMeterVerification() {
     selectedMeter,
     form,
     selectedFile,
-    setSelectedFile,
+    onSelectFile,
     updateFilter,
     onApplyHistoryFilter,
     onResetHistoryFilter,

@@ -3,10 +3,11 @@ import { type AppSelectOption } from 'components/select';
 import { ErrorBase } from 'model/common';
 import { IncomingDocumentAttachmentFile } from 'services/incoming-document-services';
 import { FORMAT_DATE_API } from 'utils/date';
+import { MAX_UPLOAD_FILE_SIZE } from 'utils/upload';
 
 export const DATE_API_FORMAT = FORMAT_DATE_API;
 export const ACCEPTED_ATTACHMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'png'];
-export const MAX_ATTACHMENT_FILE_SIZE = 20 * 1024 * 1024;
+export const MAX_ATTACHMENT_FILE_SIZE = MAX_UPLOAD_FILE_SIZE;
 export const ACCEPTED_ATTACHMENT_TEXT = ACCEPTED_ATTACHMENT_EXTENSIONS.map((extension) =>
   extension.toUpperCase()
 ).join(', ');

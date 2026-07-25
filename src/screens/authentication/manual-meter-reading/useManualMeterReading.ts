@@ -11,6 +11,7 @@ import moment from 'moment';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import manualMeterReadingServices from 'services/manual-meter-reading-services';
 import { FORMAT_DATE_API, displayDateFromServer, normalizeDateToApi } from 'utils/date';
+import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 
 export interface ManualMeterReadingFilter {
   keyword: string;
@@ -175,6 +176,14 @@ export default function useManualMeterReading() {
   }, []);
 
   const onSelectPhoto = useCallback((id: number, file: File) => {
+    if (!isValidUploadFileSize(file)) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getUploadFileSizeError('file ảnh công tơ')
+      });
+      return;
+    }
+
     setRows((prev) =>
       prev.map((row) => (row.id === id ? { ...row, draftPhotoName: file.name } : row))
     );

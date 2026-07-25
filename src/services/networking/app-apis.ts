@@ -169,10 +169,12 @@ const ApiEndPoint = {
   BILLING_READING_PERIOD_CREATE: '/admin/billing/reading-periods/create',
 
   // BILLING 2.1 - DANH MUC GIA DIEN
+  BILLING_TARIFF_BASE: '/admin/billing/tariffs',
   BILLING_TARIFF_LIST: '/admin/billing/tariffs/list',
   BILLING_TARIFF_DETAIL: '/admin/billing/tariffs/detail',
   BILLING_TARIFF_CREATE: '/admin/billing/tariffs/create',
   BILLING_TARIFF_UPDATE: '/admin/billing/tariffs/update',
+  BILLING_TARIFF_DELETE: '/admin/billing/tariffs/delete',
 
   // BILLING 2.2 - DON GIA VAN HANH
   BILLING_OPERATION_PRICE_SEARCH: '/admin/billing/operation-prices/search',

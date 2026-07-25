@@ -14,6 +14,8 @@ import {
 import { DialogAction } from './dialog-action';
 import { DialogProps, stateDefault, TYPE_MESSAGE } from './type';
 
+const DIALOG_Z_INDEX = 2000;
+
 type Alert = {
   show: (data: {
     title?: ReactNode | string;
@@ -90,6 +92,7 @@ const ComponentDialog = forwardRef((_: any, ref) => {
       centered
       closeIcon={false}
       footer={null}
+      zIndex={DIALOG_Z_INDEX}
       destroyOnClose={state?.destroyOnClose}
       wrapClassName={`highest-dialog dialog ${state.isDrawerDialog && 'drawer-dialog'}`}
     >

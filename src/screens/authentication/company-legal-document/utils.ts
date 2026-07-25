@@ -2,6 +2,7 @@ import { TYPE_STATUS } from 'components/status';
 import { ErrorBase } from 'model/common';
 import { CompanyLegalDocumentAttachmentFile } from 'services/company-legal-document-services';
 import { FORMAT_DATE_API } from 'utils/date';
+import { MAX_UPLOAD_FILE_SIZE } from 'utils/upload';
 
 export const DATE_API_FORMAT = FORMAT_DATE_API;
 export const ACCEPTED_ATTACHMENT_EXTENSIONS = [
@@ -14,7 +15,7 @@ export const ACCEPTED_ATTACHMENT_EXTENSIONS = [
   'jpeg',
   'png'
 ];
-export const MAX_ATTACHMENT_FILE_SIZE = 10 * 1024 * 1024;
+export const MAX_ATTACHMENT_FILE_SIZE = MAX_UPLOAD_FILE_SIZE;
 export const ACCEPTED_ATTACHMENT_TEXT = ACCEPTED_ATTACHMENT_EXTENSIONS.map((extension) =>
   extension.toUpperCase()
 ).join(', ');

@@ -15,25 +15,19 @@ import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { useEffect, useMemo, useState } from 'react';
+import { getUploadFileSizeError, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useManageEmployeeForm from '../hooks/useManageEmployeeForm';
 import {
-  ACCEPTED_AVATAR_EXTENSIONS,
-  ACCEPTED_CONTRACT_EXTENSIONS,
   EMPLOYEE_GENDER_OPTIONS,
   EMPLOYMENT_STATUS_OPTIONS,
   EMPLOYMENT_TYPE_OPTIONS,
   MAX_AVATAR_FILE_SIZE,
   MAX_CONTRACT_FILE_SIZE,
   getContractFileName,
-  getEmployeeInitials,
-  hasAcceptedFileSignature,
-  isAcceptedAvatarFile,
-  isAcceptedContractFile
+  getEmployeeInitials
 } from '../utils';
 
 const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
-const avatarAccept = ACCEPTED_AVATAR_EXTENSIONS.map((extension) => `.${extension}`).join(',');
-const contractAccept = ACCEPTED_CONTRACT_EXTENSIONS.map((extension) => `.${extension}`).join(',');
 
 interface ManageEmployeeFormScreenProps {
   isEditMode: boolean;
@@ -344,27 +338,12 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                     <div className="min-w-0">
                       <TextBase classNames="sub-title4 mb-4" text="Ảnh đại diện" />
                       <Upload
-                        accept={avatarAccept}
                         showUploadList={false}
-                        beforeUpload={async (file) => {
-                          if (!isAcceptedAvatarFile(file)) {
-                            showToast({
-                              type: TYPE_TOAST.ERROR,
-                              content: 'Ảnh đại diện chỉ hỗ trợ JPG, JPEG, PNG'
-                            });
-                            return Upload.LIST_IGNORE;
-                          }
+                        beforeUpload={(file) => {
                           if (file.size > MAX_AVATAR_FILE_SIZE) {
                             showToast({
                               type: TYPE_TOAST.ERROR,
-                              content: 'Ảnh đại diện tối đa 5MB'
-                            });
-                            return Upload.LIST_IGNORE;
-                          }
-                          if (!(await hasAcceptedFileSignature(file))) {
-                            showToast({
-                              type: TYPE_TOAST.ERROR,
-                              content: 'Nội dung ảnh đại diện không đúng định dạng'
+                              content: getUploadFileSizeError('ảnh đại diện')
                             });
                             return Upload.LIST_IGNORE;
                           }
@@ -398,28 +377,13 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                   </div>
                   <div className="col-span-2 mobile:col-span-1">
                     <Upload.Dragger
-                      accept={contractAccept}
                       fileList={contractFileList}
                       maxCount={1}
-                      beforeUpload={async (file) => {
-                        if (!isAcceptedContractFile(file)) {
-                          showToast({
-                            type: TYPE_TOAST.ERROR,
-                            content: 'Hợp đồng chỉ hỗ trợ PDF, DOC, DOCX'
-                          });
-                          return Upload.LIST_IGNORE;
-                        }
+                      beforeUpload={(file) => {
                         if (file.size > MAX_CONTRACT_FILE_SIZE) {
                           showToast({
                             type: TYPE_TOAST.ERROR,
-                            content: 'Hợp đồng tối đa 10MB'
-                          });
-                          return Upload.LIST_IGNORE;
-                        }
-                        if (!(await hasAcceptedFileSignature(file))) {
-                          showToast({
-                            type: TYPE_TOAST.ERROR,
-                            content: 'Nội dung hợp đồng không đúng định dạng'
+                            content: getUploadFileSizeError('hợp đồng')
                           });
                           return Upload.LIST_IGNORE;
                         }
@@ -437,9 +401,7 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                         <TextBase text="Kéo thả file hợp đồng hoặc chọn file" />
                         <TextBase
                           classNames="body3 !text-color-600"
-                          text={`Định dạng: ${ACCEPTED_CONTRACT_EXTENSIONS.map((item) =>
-                            item.toUpperCase()
-                          ).join(', ')}. Tối đa 10MB/file`}
+                          text={`Tối đa ${MAX_UPLOAD_FILE_SIZE_TEXT}/file`}
                         />
                       </div>
                     </Upload.Dragger>

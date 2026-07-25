@@ -1,7 +1,10 @@
 import {
   CREATE_ELECTRIC_TARIFF,
+  DELETE_ELECTRIC_TARIFF_DOCUMENT,
+  DELETE_ELECTRIC_TARIFF,
   GET_ELECTRIC_TARIFF_DETAIL,
   SEARCH_ELECTRIC_TARIFF,
+  UPLOAD_ELECTRIC_TARIFF_DOCUMENT,
   UPDATE_ELECTRIC_TARIFF
 } from '@redux-action-type/electric-tariff';
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
@@ -9,11 +12,14 @@ import { ErrorBase } from 'model/common';
 import {
   CreateTariffReq,
   CreateTariffRes,
+  DeleteTariffRes,
   ElectricTariff,
   GetTariffDetailReq,
   GetTariffDetailRes,
   SearchTariffsReq,
   SearchTariffsRes,
+  TariffDocumentRes,
+  UploadTariffDocumentReq,
   UpdateTariffReq,
   UpdateTariffRes
 } from 'model/electric-tariff';
@@ -97,12 +103,48 @@ const updateElectricTariff = createAction(
   })
 );
 
+const deleteElectricTariff = createAction(
+  DELETE_ELECTRIC_TARIFF,
+  (
+    body: GetTariffDetailReq,
+    onSuccess?: (data: DeleteTariffRes) => void,
+    onFailed?: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
+
+const uploadElectricTariffDocument = createAction(
+  UPLOAD_ELECTRIC_TARIFF_DOCUMENT,
+  (
+    body: UploadTariffDocumentReq,
+    onSuccess?: (data: TariffDocumentRes) => void,
+    onFailed?: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
+
+const deleteElectricTariffDocument = createAction(
+  DELETE_ELECTRIC_TARIFF_DOCUMENT,
+  (
+    body: GetTariffDetailReq,
+    onSuccess?: (data: TariffDocumentRes) => void,
+    onFailed?: (error?: ErrorBase) => void
+  ) => ({
+    payload: { body, onSuccess, onFailed }
+  })
+);
+
 export const electricTariffActions = {
   ...electricTariffSlice.actions,
   searchElectricTariff,
   getElectricTariffDetail,
   createElectricTariff,
-  updateElectricTariff
+  updateElectricTariff,
+  deleteElectricTariff,
+  uploadElectricTariffDocument,
+  deleteElectricTariffDocument
 };
 
 export const electricTariffReducer = electricTariffSlice.reducer;

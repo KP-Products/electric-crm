@@ -14,12 +14,9 @@ import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { useMemo } from 'react';
+import { getUploadFileSizeError, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useCompanyLegalDocumentForm from '../hooks/useCompanyLegalDocumentForm';
-import {
-  ACCEPTED_ATTACHMENT_TEXT,
-  isAcceptedAttachmentFile,
-  MAX_ATTACHMENT_FILE_SIZE
-} from '../utils';
+import { MAX_ATTACHMENT_FILE_SIZE } from '../utils';
 
 const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
 
@@ -188,22 +185,13 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                   className="block overflow-hidden [&_.ant-upload-btn]:!p-0 [&_.ant-upload-drag-container]:!align-middle"
                   height={132}
                   maxCount={K_SIZE_1}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                   fileList={uploadFileList}
                   showUploadList={false}
                   beforeUpload={(file) => {
-                    if (!isAcceptedAttachmentFile(file)) {
-                      showToast({
-                        type: TYPE_TOAST.ERROR,
-                        content: `Chỉ hỗ trợ định dạng ${ACCEPTED_ATTACHMENT_TEXT}`
-                      });
-                      return Upload.LIST_IGNORE;
-                    }
-
                     if (file.size > MAX_ATTACHMENT_FILE_SIZE) {
                       showToast({
                         type: TYPE_TOAST.ERROR,
-                        content: 'Dung lượng file không được vượt quá 10MB'
+                        content: getUploadFileSizeError()
                       });
                       return Upload.LIST_IGNORE;
                     }
@@ -228,7 +216,7 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                       <ButtonBase type="secondary" size={32} customContent="Chọn file" />
                     </div>
                     <TextBase
-                      text={`Định dạng: ${ACCEPTED_ATTACHMENT_TEXT}. Tối đa 10MB/file`}
+                      text={`Tối đa ${MAX_UPLOAD_FILE_SIZE_TEXT}/file`}
                       classNames="caption1 !text-color-700"
                     />
                   </div>
