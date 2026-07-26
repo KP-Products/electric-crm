@@ -8,7 +8,6 @@ export interface PpeItem {
   unit?: string;
   quantity?: number;
   importDate?: string;
-  exportDate?: string;
   employeeId?: number;
   status?: string;
   note?: string;
@@ -33,7 +32,6 @@ export interface CreatePpeItemReq {
   unit?: string;
   quantity?: number;
   importDate?: string;
-  exportDate?: string;
   employeeId?: number;
   status?: string;
   note?: string;

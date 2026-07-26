@@ -8,6 +8,7 @@ import {
   DollarCircleOutlined,
   FileTextOutlined,
   FundProjectionScreenOutlined,
+  HistoryOutlined,
   IdcardOutlined,
   ProfileOutlined,
   ReconciliationOutlined,
@@ -232,6 +233,12 @@ const NavigationMenu = () => {
             icon: <SafetyCertificateOutlined />,
             type: 'item'
             // permission: PERMISSION_VIEW_ACTION.PPE_ITEM_VIEW_ACTION
+          },
+          {
+            key: ROUTES.PPE_ITEM_HISTORY,
+            label: 'Lịch sử bàn giao thiết bị',
+            icon: <HistoryOutlined />,
+            type: 'item'
           }
         ]
       },

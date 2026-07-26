@@ -104,6 +104,14 @@ const ApiEndPoint = {
   PPE_ITEM_DELETE: '/admin/ppe-items/delete',
   // PPE ITEM
 
+  // PPE ITEM HISTORY
+  PPE_ITEM_HISTORY_SEARCH: '/admin/ppe-item-history/search',
+  PPE_ITEM_HISTORY_DETAIL: '/admin/ppe-item-history/detail',
+  PPE_ITEM_HISTORY_CREATE: '/admin/ppe-item-history/create',
+  PPE_ITEM_HISTORY_UPDATE: '/admin/ppe-item-history/update',
+  PPE_ITEM_HISTORY_DELETE: '/admin/ppe-item-history/delete',
+  // PPE ITEM HISTORY
+
   // DOCUMENT
   DOCUMENT_UPLOAD: '/admin/documents/upload',
   DOCUMENT_UPDATE: '/admin/documents/update',

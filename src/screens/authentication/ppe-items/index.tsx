@@ -490,28 +490,19 @@ const PpeItemsScreen = () => {
                   wrapperClassName="w-full"
                   datePickerClassName="w-full"
                 />
-                <AppDatePickerControl
+                <AppSelectControl
+                  name="employeeId"
+                  label="Nhân viên được cấp"
+                  placeholder="Chọn nhân viên"
+                  options={employeeOptions}
+                  dropdownRender={renderEmployeeDropdown}
+                  onOpenChange={(open) => {
+                    if (open) onOpenEmployeeDropdown();
+                  }}
+                  unSeleted
                   control={control}
-                  name="exportDate"
-                  label="Ngày xuất kho"
-                  placeholder="Chọn ngày xuất kho"
-                  backendFormat={PPE_DATE_FORMAT}
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
                 />
               </div>
-              <AppSelectControl
-                name="employeeId"
-                label="Nhân viên được cấp"
-                placeholder="Chọn nhân viên"
-                options={employeeOptions}
-                dropdownRender={renderEmployeeDropdown}
-                onOpenChange={(open) => {
-                  if (open) onOpenEmployeeDropdown();
-                }}
-                unSeleted
-                control={control}
-              />
               <AppTextFieldControl
                 name="note"
                 label="Ghi chú"
