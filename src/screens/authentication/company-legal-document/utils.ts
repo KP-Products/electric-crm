@@ -1,5 +1,7 @@
 import { TYPE_STATUS } from 'components/status';
+import { type AppSelectOption } from 'components/select';
 import { ErrorBase } from 'model/common';
+import { Employee } from 'model/employee';
 import { CompanyLegalDocumentAttachmentFile } from 'services/company-legal-document-services';
 import { FORMAT_DATE_API } from 'utils/date';
 import { MAX_UPLOAD_FILE_SIZE } from 'utils/upload';
@@ -19,6 +21,113 @@ export const MAX_ATTACHMENT_FILE_SIZE = MAX_UPLOAD_FILE_SIZE;
 export const ACCEPTED_ATTACHMENT_TEXT = ACCEPTED_ATTACHMENT_EXTENSIONS.map((extension) =>
   extension.toUpperCase()
 ).join(', ');
+
+export const COMPANY_LEGAL_DOCUMENT_TYPE = {
+  QUYET_DINH: 'QUYET_DINH',
+  QUY_CHE: 'QUY_CHE',
+  QUY_DINH: 'QUY_DINH',
+  NGHI_QUYET: 'NGHI_QUYET',
+  THONG_BAO: 'THONG_BAO',
+  HUONG_DAN: 'HUONG_DAN',
+  CONG_VAN: 'CONG_VAN',
+  KHAC: 'KHAC'
+} as const;
+
+export const COMPANY_LEGAL_DOCUMENT_STATUS = {
+  ACTIVE: 'ACTIVE',
+  ARCHIVED: 'ARCHIVED'
+} as const;
+
+export const COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS: AppSelectOption[] = [
+  { value: COMPANY_LEGAL_DOCUMENT_TYPE.QUYET_DINH, label: 'Quyết định' },
+  { value: COMPANY_LEGAL_DOCUMENT_TYPE.QUY_CHE, label: 'Quy chế' },
+  { value: COMPANY_LEGAL_DOCUMENT_TYPE.QUY_DINH, label: 'Quy định' },
+  { value: COMPANY_LEGAL_DOCUMENT_TYPE.NGHI_QUYET, label: 'Nghị quyết' },
+  { value: COMPANY_LEGAL_DOCUMENT_TYPE.THONG_BAO, label: 'Thông báo' },
+  { value: COMPANY_LEGAL_DOCUMENT_TYPE.HUONG_DAN, label: 'Hướng dẫn' },
+  { value: COMPANY_LEGAL_DOCUMENT_TYPE.CONG_VAN, label: 'Công văn' },
+  { value: COMPANY_LEGAL_DOCUMENT_TYPE.KHAC, label: 'Khác' }
+];
+
+export const COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS: AppSelectOption[] = [
+  { value: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE, label: 'Đang hiệu lực' },
+  { value: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED, label: 'Đã lưu trữ' }
+];
+
+export const COMPANY_LEGAL_DOCUMENT_TYPE_FILTER_OPTIONS: AppSelectOption[] = [
+  { value: '', label: '-- Tất cả --' },
+  ...COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS
+];
+
+export const COMPANY_LEGAL_DOCUMENT_STATUS_FILTER_OPTIONS: AppSelectOption[] = [
+  { value: '', label: '-- Tất cả --' },
+  ...COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS
+];
+
+export const getCompanyLegalDocumentTypeLabel = (value?: string) =>
+  String(
+    COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS.find((option) => option.value === value)?.label ||
+      value ||
+      ''
+  );
+
+export const getCompanyLegalDocumentStatusLabel = (value?: string) =>
+  String(
+    COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS.find((option) => option.value === value)?.label ||
+      value ||
+      ''
+  );
+
+const normalizeLookupKey = (value?: string) =>
+  value
+    ?.trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || '';
+
+const COMPANY_LEGAL_DOCUMENT_TYPE_ALIAS_MAP: Record<string, string> = {
+  QUYET_DINH: COMPANY_LEGAL_DOCUMENT_TYPE.QUYET_DINH,
+  QUY_CHE: COMPANY_LEGAL_DOCUMENT_TYPE.QUY_CHE,
+  QUY_DINH: COMPANY_LEGAL_DOCUMENT_TYPE.QUY_DINH,
+  NGHI_QUYET: COMPANY_LEGAL_DOCUMENT_TYPE.NGHI_QUYET,
+  THONG_BAO: COMPANY_LEGAL_DOCUMENT_TYPE.THONG_BAO,
+  HUONG_DAN: COMPANY_LEGAL_DOCUMENT_TYPE.HUONG_DAN,
+  CONG_VAN: COMPANY_LEGAL_DOCUMENT_TYPE.CONG_VAN,
+  KHAC: COMPANY_LEGAL_DOCUMENT_TYPE.KHAC
+};
+
+const COMPANY_LEGAL_DOCUMENT_STATUS_ALIAS_MAP: Record<string, string> = {
+  ACTIVE: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE,
+  DANG_HIEU_LUC: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE,
+  CON_HIEU_LUC: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE,
+  HIEU_LUC: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE,
+  ARCHIVED: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED,
+  DA_LUU_TRU: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED,
+  LUU_TRU: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED,
+  HET_HIEU_LUC: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED,
+  INACTIVE: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED
+};
+
+export const normalizeCompanyLegalDocumentType = (value?: string) =>
+  COMPANY_LEGAL_DOCUMENT_TYPE_ALIAS_MAP[normalizeLookupKey(value)] || '';
+
+export const normalizeCompanyLegalDocumentStatus = (value?: string) =>
+  COMPANY_LEGAL_DOCUMENT_STATUS_ALIAS_MAP[normalizeLookupKey(value)] || '';
+
+export const getEmployeeLabel = (employee: Employee) =>
+  employee.fullName || employee.employeeCode || employee.email || String(employee.id);
+
+export const buildEmployeeOptions = (employees: Employee[]): AppSelectOption[] =>
+  employees
+    .filter((employee) => employee.id !== undefined && employee.id !== null)
+    .map((employee) => ({
+      value: String(employee.id),
+      label: getEmployeeLabel(employee)
+    }));
 
 export const isAcceptedAttachmentFile = (file: File) => {
   const extension = file.name.split('.').pop()?.toLowerCase();
@@ -100,13 +209,18 @@ export const getAttachmentResponseError = async (response: unknown) => {
 
 export const getStatusType = (status?: string): TYPE_STATUS => {
   if (!status) return TYPE_STATUS.DEFAULT;
+  if (status === COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE) return TYPE_STATUS.SUCCESS;
+  if (status === COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED) return TYPE_STATUS.DISABLED;
+
   const normalizedStatus = status.toLowerCase();
   if (
     normalizedStatus.includes('het') ||
     normalizedStatus.includes('hết') ||
+    normalizedStatus.includes('luu tru') ||
+    normalizedStatus.includes('lưu trữ') ||
     normalizedStatus.includes('inactive')
   ) {
-    return TYPE_STATUS.ERROR;
+    return TYPE_STATUS.DISABLED;
   }
   if (
     normalizedStatus.includes('con') ||

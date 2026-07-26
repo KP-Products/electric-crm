@@ -17,6 +17,7 @@ import {
 import { Divider, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
 import IconHover from 'components/icon-vec-local/icon-hover';
+import { AppSelect } from 'components/select';
 import Status, { KIND_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
@@ -29,7 +30,13 @@ import { useMemo } from 'react';
 import { displayDateFromServer } from 'utils/date';
 import { CompanyLegalDocumentFilterForm } from './useCompanyLegalDocuments';
 import useCompanyLegalDocuments from './useCompanyLegalDocuments';
-import { getStatusType } from './utils';
+import {
+  COMPANY_LEGAL_DOCUMENT_STATUS_FILTER_OPTIONS,
+  COMPANY_LEGAL_DOCUMENT_TYPE_FILTER_OPTIONS,
+  getCompanyLegalDocumentStatusLabel,
+  getCompanyLegalDocumentTypeLabel,
+  getStatusType
+} from './utils';
 
 const FILTER_LABEL_MAP: Record<keyof CompanyLegalDocumentFilterForm, string> = {
   documentName: 'Tên văn bản',
@@ -41,6 +48,12 @@ const FILTER_LABEL_MAP: Record<keyof CompanyLegalDocumentFilterForm, string> = {
 const displayText = (value?: string | number | null) => {
   if (value === undefined || value === null || value === '') return NULL_VALUE;
   return String(value);
+};
+
+const getFilterDisplayValue = (key: keyof CompanyLegalDocumentFilterForm, value: string) => {
+  if (key === 'documentType') return getCompanyLegalDocumentTypeLabel(value);
+  if (key === 'status') return getCompanyLegalDocumentStatusLabel(value);
+  return value;
 };
 
 const CompanyLegalDocumentScreen = () => {
@@ -111,7 +124,7 @@ const CompanyLegalDocumentScreen = () => {
         dataIndex: 'documentType',
         key: 'documentType',
         width: K_SIZE_180,
-        render: (text: string) => displayText(text)
+        render: (text: string) => displayText(getCompanyLegalDocumentTypeLabel(text))
       },
       {
         title: 'Ngày văn bản',
@@ -132,14 +145,16 @@ const CompanyLegalDocumentScreen = () => {
         dataIndex: 'draftedBy',
         key: 'draftedBy',
         width: K_SIZE_130,
-        render: (draftedBy: number) => displayText(draftedBy)
+        render: (_: number, record: CompanyLegalDocument) =>
+          displayText(record.draftedByName || record.draftedBy)
       },
       {
         title: 'Người ký duyệt',
         dataIndex: 'approvedBy',
         key: 'approvedBy',
         width: K_SIZE_130,
-        render: (approvedBy: number) => displayText(approvedBy)
+        render: (_: number, record: CompanyLegalDocument) =>
+          displayText(record.approvedByName || record.approvedBy)
       },
       {
         title: 'Trạng thái',
@@ -150,7 +165,7 @@ const CompanyLegalDocumentScreen = () => {
           <Status
             type={getStatusType(status)}
             kind={KIND_STATUS.SECONDARY}
-            content={displayText(status)}
+            content={displayText(getCompanyLegalDocumentStatusLabel(status))}
           />
         )
       },
@@ -247,21 +262,21 @@ const CompanyLegalDocumentScreen = () => {
             onChange={(event) => onChangeFilter('documentNumber', event.target.value)}
             onPressEnter={onApplyFilter}
           />
-          <AppTextField
+          <AppSelect
             name="documentType"
             label="Loại văn bản"
-            placeholder="-- Tất cả --"
             value={filter.documentType}
-            onChange={(event) => onChangeFilter('documentType', event.target.value)}
-            onPressEnter={onApplyFilter}
+            placeholder="-- Tất cả --"
+            options={COMPANY_LEGAL_DOCUMENT_TYPE_FILTER_OPTIONS}
+            onSelectOption={({ key }) => onChangeFilter('documentType', String(key))}
           />
-          <AppTextField
+          <AppSelect
             name="status"
             label="Trạng thái"
-            placeholder="-- Tất cả --"
             value={filter.status}
-            onChange={(event) => onChangeFilter('status', event.target.value)}
-            onPressEnter={onApplyFilter}
+            placeholder="-- Tất cả --"
+            options={COMPANY_LEGAL_DOCUMENT_STATUS_FILTER_OPTIONS}
+            onSelectOption={({ key }) => onChangeFilter('status', String(key))}
           />
           <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
             <ButtonBase
@@ -285,7 +300,7 @@ const CompanyLegalDocumentScreen = () => {
             {activeFilters.map(([key, value]) => (
               <TagFilter
                 key={key}
-                content={`${FILTER_LABEL_MAP[key]}: ${value}`}
+                content={`${FILTER_LABEL_MAP[key]}: ${getFilterDisplayValue(key, value)}`}
                 onClose={() => onResetFilter(key)}
               />
             ))}

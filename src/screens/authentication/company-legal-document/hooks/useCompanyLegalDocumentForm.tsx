@@ -1,4 +1,4 @@
-import { K_SIZE_1 } from '@constant';
+import { CONSTANTS, DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CREATE_COMPANY_LEGAL_DOCUMENT,
@@ -11,8 +11,10 @@ import { dispatch } from '@redux-common';
 import { selectCompanyLegalDocumentLoadingDetail } from '@redux-selector/company-legal-document';
 import { showDialog } from 'components/dialog';
 import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
+import type { AppSelectOption } from 'components/select';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
+import { debounce } from 'lodash';
 import { ROUTES } from 'config/routes';
 import {
   CompanyLegalDocument,
@@ -21,19 +23,26 @@ import {
   UpdateCompanyLegalDocumentReq
 } from 'model/company-legal-document';
 import { ErrorBase } from 'model/common';
+import { Employee } from 'model/employee';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import companyLegalDocumentServices from 'services/company-legal-document-services';
+import employeeServices from 'services/employee-services';
 import { normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
 import {
+  buildEmployeeOptions,
+  COMPANY_LEGAL_DOCUMENT_STATUS,
   DATE_API_FORMAT,
   getAttachmentResponseError,
   getAttachmentFileName,
+  getEmployeeLabel,
   getErrorContent,
-  isAttachmentFileResponse
+  isAttachmentFileResponse,
+  normalizeCompanyLegalDocumentStatus,
+  normalizeCompanyLegalDocumentType
 } from '../utils';
 
 const optionalDateSchema = z
@@ -44,7 +53,12 @@ const optionalDateSchema = z
 const companyLegalDocumentSchema = z.object({
   documentNumber: z.string().trim(),
   documentName: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập tên văn bản' }),
-  documentType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập loại văn bản' }),
+  documentType: z
+    .string()
+    .trim()
+    .refine((value) => Boolean(normalizeCompanyLegalDocumentType(value)), {
+      message: 'Vui lòng chọn loại văn bản'
+    }),
   documentDate: optionalDateSchema,
   effectiveDate: optionalDateSchema,
   expiryDate: optionalDateSchema,
@@ -61,7 +75,12 @@ const companyLegalDocumentSchema = z.object({
     .refine((value) => !value || /^\d+$/.test(value), {
       message: 'Người ký duyệt phải là ID dạng số'
     }),
-  status: z.string().trim(),
+  status: z
+    .string()
+    .trim()
+    .refine((value) => Boolean(normalizeCompanyLegalDocumentStatus(value)), {
+      message: 'Vui lòng chọn trạng thái'
+    }),
   note: z.string().trim()
 });
 
@@ -90,6 +109,11 @@ export default function useCompanyLegalDocumentForm({
   const detailLoading = useSelector(selectCompanyLegalDocumentLoadingDetail);
   const [selectedDocument, setSelectedDocument] = useState<CompanyLegalDocument>();
   const [selectedFile, setSelectedFile] = useState<File>();
+  const [employeeSearch, setEmployeeSearch] = useState<string>('');
+  const [employeeOptionsLoading, setEmployeeOptionsLoading] = useState<boolean>(false);
+  const [employeeLabelMap, setEmployeeLabelMap] = useState<Record<string, string>>({});
+  const [searchedEmployeeOptions, setSearchedEmployeeOptions] = useState<AppSelectOption[]>([]);
+  const employeeSearchRequestRef = useRef<number>(K_SIZE_0);
 
   const defaultFormValues: CompanyLegalDocumentForm = useMemo(
     () => ({
@@ -102,7 +126,7 @@ export default function useCompanyLegalDocumentForm({
       summary: '',
       draftedBy: '',
       approvedBy: '',
-      status: 'Còn hiệu lực',
+      status: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE,
       note: ''
     }),
     []
@@ -114,16 +138,133 @@ export default function useCompanyLegalDocumentForm({
     resolver: zodResolver(companyLegalDocumentSchema)
   });
 
+  const draftedByValue = form.watch('draftedBy');
+  const approvedByValue = form.watch('approvedBy');
+
   const onBack = useCallback(() => {
     router.push(ROUTES.COMPANY_LEGAL_DOCUMENTS);
   }, [router]);
 
+  const upsertEmployeeLabels = useCallback((employeeItems: Employee[]) => {
+    setEmployeeLabelMap((prev) => {
+      let hasChange = false;
+      const next = { ...prev };
+
+      employeeItems.forEach((employee) => {
+        if (employee?.id === undefined || employee.id === null) return;
+        const key = String(employee.id);
+        const label = getEmployeeLabel(employee);
+        if (next[key] === label) return;
+        next[key] = label;
+        hasChange = true;
+      });
+
+      return hasChange ? next : prev;
+    });
+  }, []);
+
+  const upsertDocumentEmployeeLabels = useCallback((document: CompanyLegalDocument) => {
+    setEmployeeLabelMap((prev) => {
+      let hasChange = false;
+      const next = { ...prev };
+
+      const addLabel = (employeeId?: number, employeeName?: string) => {
+        if (employeeId === undefined || employeeId === null || !employeeName) return;
+        const key = String(employeeId);
+        if (next[key] === employeeName) return;
+        next[key] = employeeName;
+        hasChange = true;
+      };
+
+      addLabel(document.draftedBy, document.draftedByName);
+      addLabel(document.approvedBy, document.approvedByName);
+
+      return hasChange ? next : prev;
+    });
+  }, []);
+
+  const employeeOptions = useMemo<AppSelectOption[]>(() => {
+    const optionMap = new Map<string, AppSelectOption>();
+
+    searchedEmployeeOptions.forEach((option) => {
+      optionMap.set(String(option.value), option);
+    });
+
+    const addKnownEmployeeOption = (employeeId?: string | number) => {
+      if (employeeId === undefined || employeeId === null || employeeId === '') return;
+      const key = String(employeeId);
+      const label = employeeLabelMap[key];
+      if (!label || optionMap.has(key)) return;
+      optionMap.set(key, { value: key, label });
+    };
+
+    addKnownEmployeeOption(draftedByValue);
+    addKnownEmployeeOption(approvedByValue);
+    addKnownEmployeeOption(selectedDocument?.draftedBy);
+    addKnownEmployeeOption(selectedDocument?.approvedBy);
+
+    return Array.from(optionMap.values());
+  }, [
+    approvedByValue,
+    draftedByValue,
+    employeeLabelMap,
+    searchedEmployeeOptions,
+    selectedDocument?.approvedBy,
+    selectedDocument?.draftedBy
+  ]);
+
+  const fetchEmployeeOptions = useCallback(
+    async (keyword = '') => {
+      const requestNo = employeeSearchRequestRef.current + K_SIZE_1;
+      employeeSearchRequestRef.current = requestNo;
+      setEmployeeOptionsLoading(true);
+
+      const normalizedKeyword = keyword.trim();
+      const response = await employeeServices.searchEmployees({
+        page: K_SIZE_0,
+        size: DEFAULT_PAGE_SIZE,
+        ...(normalizedKeyword ? { fullName: normalizedKeyword } : {})
+      });
+
+      if (employeeSearchRequestRef.current !== requestNo) return;
+      setEmployeeOptionsLoading(false);
+
+      if (!response || !response.data) {
+        setSearchedEmployeeOptions([]);
+        return;
+      }
+
+      const employeeItems = response.data.items || [];
+      upsertEmployeeLabels(employeeItems);
+      setSearchedEmployeeOptions(buildEmployeeOptions(employeeItems));
+    },
+    [upsertEmployeeLabels]
+  );
+
+  const debouncedFetchEmployeeOptions = useMemo(
+    () => debounce(fetchEmployeeOptions, CONSTANTS.TIME_DEBOUNCE),
+    [fetchEmployeeOptions]
+  );
+
+  const onSearchEmployees = useCallback(
+    (keyword: string) => {
+      setEmployeeSearch(keyword);
+      debouncedFetchEmployeeOptions(keyword);
+    },
+    [debouncedFetchEmployeeOptions]
+  );
+
+  const onOpenEmployeeDropdown = useCallback(() => {
+    void fetchEmployeeOptions(employeeSearch);
+  }, [employeeSearch, fetchEmployeeOptions]);
+
   const fillForm = useCallback(
     (document: CompanyLegalDocument) => {
+      upsertDocumentEmployeeLabels(document);
       form.reset({
         documentNumber: document.documentNumber || '',
         documentName: document.documentName || '',
-        documentType: document.documentType || '',
+        documentType: normalizeCompanyLegalDocumentType(document.documentType),
         documentDate: normalizeDateToApi(document.documentDate),
         effectiveDate: normalizeDateToApi(document.effectiveDate),
         expiryDate: normalizeDateToApi(document.expiryDate),
@@ -136,12 +277,18 @@ export default function useCompanyLegalDocumentForm({
           document.approvedBy !== undefined && document.approvedBy !== null
             ? String(document.approvedBy)
             : '',
-        status: document.status || '',
+        status: normalizeCompanyLegalDocumentStatus(document.status),
         note: document.note || ''
       });
     },
-    [form]
+    [form, upsertDocumentEmployeeLabels]
   );
+
+  useEffect(() => {
+    return () => {
+      debouncedFetchEmployeeOptions.cancel();
+    };
+  }, [debouncedFetchEmployeeOptions]);
 
   useEffect(() => {
     if (!isEditMode) return;
@@ -177,14 +324,14 @@ export default function useCompanyLegalDocumentForm({
     (data: CompanyLegalDocumentForm): CreateCompanyLegalDocumentReq => ({
       documentNumber: optionalString(data.documentNumber),
       documentName: data.documentName.trim(),
-      documentType: data.documentType.trim(),
+      documentType: normalizeCompanyLegalDocumentType(data.documentType),
       documentDate: optionalString(normalizeDateToApi(data.documentDate)),
       effectiveDate: optionalString(normalizeDateToApi(data.effectiveDate)),
       expiryDate: optionalString(normalizeDateToApi(data.expiryDate)),
       summary: optionalString(data.summary),
       draftedBy: optionalNumber(data.draftedBy),
       approvedBy: optionalNumber(data.approvedBy),
-      status: optionalString(data.status),
+      status: optionalString(normalizeCompanyLegalDocumentStatus(data.status)),
       note: optionalString(data.note)
     }),
     []
@@ -416,7 +563,12 @@ export default function useCompanyLegalDocumentForm({
     detailLoading,
     selectedDocument,
     selectedFile,
+    employeeOptions,
+    employeeSearch,
+    employeeOptionsLoading,
     setSelectedFile,
+    onSearchEmployees,
+    onOpenEmployeeDropdown,
     onBack,
     onSubmit,
     onDeleteAttachment,
