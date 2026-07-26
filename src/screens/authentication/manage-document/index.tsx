@@ -71,7 +71,6 @@ const DOCUMENT_TYPE_LABEL_MAP = Object.fromEntries(
 );
 
 const OWNER_TYPE_OPTIONS = [
-  { value: DOCUMENT_OWNER_TYPE.CUSTOMER, label: 'Khách hàng' },
   { value: DOCUMENT_OWNER_TYPE.CONTRACT, label: 'Hợp đồng mua bán điện' },
   { value: DOCUMENT_OWNER_TYPE.OPERATION_CONTRACT, label: 'Hợp đồng vận hành' }
 ];
