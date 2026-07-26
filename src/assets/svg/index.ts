@@ -13,6 +13,7 @@ import ICON_CHECK from './ic_check.svg';
 import ICON_CHECK_GREEN from './ic_check_green.svg';
 import IC_CLOSE_OUTLINE from './ic_close_outline2.svg';
 import ICON_CLOSE_TAKE_NOTE from './ic_close_take_note.svg';
+import IC_COPY_OUTLINE from './ic_copy_outline.svg';
 import IC_DOWNLOAD_OUTLINE from './ic_download_outline.svg';
 import ICON_DROP_DOWN from './ic_drop_down.svg';
 import ICON_EDIT from './ic_edit.svg';
@@ -45,6 +46,7 @@ export const IconSvgs = {
   ICON_WARNING,
   ICON_ERROR,
   ICON_CLOSE_TAKE_NOTE,
+  IC_COPY_OUTLINE,
   ICON_CHECK,
   ICON_ARROW_CIRCLE_UP,
   ICON_BILL,

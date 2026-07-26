@@ -45,14 +45,27 @@ import {
 const FILTER_LABEL_MAP: Record<keyof EmployeeFilterForm, string> = {
   employeeCode: 'Mã nhân sự',
   fullName: 'Họ và tên',
-  departmentCode: 'Phòng ban',
-  positionCode: 'Chức vụ',
   employmentStatus: 'Trạng thái'
 };
 
 const getFilterDisplayValue = (key: keyof EmployeeFilterForm, value: string) => {
   if (key === 'employmentStatus') return getEmploymentStatusLabel(value);
   return value;
+};
+
+const getDirectAvatarSrc = (avatarUrl?: string) => {
+  const normalizedUrl = avatarUrl?.trim();
+  if (!normalizedUrl) return undefined;
+  if (
+    normalizedUrl.startsWith('http://') ||
+    normalizedUrl.startsWith('https://') ||
+    normalizedUrl.startsWith('blob:') ||
+    normalizedUrl.startsWith('data:') ||
+    normalizedUrl.startsWith('/')
+  ) {
+    return normalizedUrl;
+  }
+  return undefined;
 };
 
 const ManageEmployeeScreen = () => {
@@ -64,6 +77,7 @@ const ManageEmployeeScreen = () => {
     pagination,
     filter,
     filterApplied,
+    avatarUrlMap,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -114,7 +128,7 @@ const ManageEmployeeScreen = () => {
           <div className="flex min-w-0 items-center gap-8">
             <Avatar
               size={32}
-              src={record.avatarUrl || undefined}
+              src={avatarUrlMap[record.id] || getDirectAvatarSrc(record.avatarUrl)}
               className="shrink-0 bg-primary-100 text-primary-700"
             >
               {getEmployeeInitials(record)}
@@ -149,14 +163,14 @@ const ManageEmployeeScreen = () => {
         dataIndex: 'departmentName',
         key: 'departmentName',
         width: K_SIZE_160,
-        render: (text: string, record: Employee) => displayText(text || record.departmentCode)
+        render: (text: string) => displayText(text)
       },
       {
         title: 'Chức vụ',
         dataIndex: 'positionName',
         key: 'positionName',
         width: K_SIZE_160,
-        render: (text: string, record: Employee) => displayText(text || record.positionCode)
+        render: (text: string) => displayText(text)
       },
       {
         title: 'SĐT',
@@ -243,7 +257,7 @@ const ManageEmployeeScreen = () => {
         )
       }
     ],
-    [currentPage, onDelete, onDownloadContractFile, onOpenDetail, onOpenUpdate]
+    [avatarUrlMap, currentPage, onDelete, onDownloadContractFile, onOpenDetail, onOpenUpdate]
   );
 
   return (
@@ -266,7 +280,7 @@ const ManageEmployeeScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-16 grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(150px,1fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-16 grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(150px,1fr)_auto] gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="employeeCode"
             label="Mã nhân sự"
@@ -281,22 +295,6 @@ const ManageEmployeeScreen = () => {
             placeholder="Nhập họ và tên"
             value={filter.fullName}
             onChange={(event) => onChangeFilter('fullName', event.target.value)}
-            onPressEnter={onApplyFilter}
-          />
-          <AppTextField
-            name="departmentCode"
-            label="Phòng ban"
-            placeholder="Nhập mã phòng ban"
-            value={filter.departmentCode}
-            onChange={(event) => onChangeFilter('departmentCode', event.target.value)}
-            onPressEnter={onApplyFilter}
-          />
-          <AppTextField
-            name="positionCode"
-            label="Chức vụ"
-            placeholder="Nhập mã chức vụ"
-            value={filter.positionCode}
-            onChange={(event) => onChangeFilter('positionCode', event.target.value)}
             onPressEnter={onApplyFilter}
           />
           <AppSelect

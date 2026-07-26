@@ -16,20 +16,15 @@ import { TYPE_TOAST } from 'components/toast/type';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { useMemo } from 'react';
 import { displayDateTimeFromServer } from 'utils/date';
+import { getUploadFileSizeError, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useIncomingDocumentForm from '../hooks/useIncomingDocumentForm';
 import {
-  ACCEPTED_ATTACHMENT_EXTENSIONS,
-  ACCEPTED_ATTACHMENT_TEXT,
   CONFIDENTIALITY_LEVEL_OPTIONS,
   MAX_ATTACHMENT_FILE_SIZE,
-  URGENCY_LEVEL_OPTIONS,
-  hasAcceptedAttachmentSignature,
-  isAcceptedAttachmentExtension,
-  isAcceptedAttachmentFile
+  URGENCY_LEVEL_OPTIONS
 } from '../utils';
 
 const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
-const uploadAccept = ACCEPTED_ATTACHMENT_EXTENSIONS.map((extension) => `.${extension}`).join(',');
 
 const formatFileSize = (size?: number) => {
   if (!size) return NULL_VALUE;
@@ -228,41 +223,13 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
                   className="block w-full overflow-hidden [&_.ant-upload-btn]:!p-0 [&_.ant-upload-drag-container]:!align-middle"
                   height={132}
                   maxCount={K_SIZE_1}
-                  accept={uploadAccept}
                   fileList={uploadFileList}
                   showUploadList={false}
-                  beforeUpload={async (file) => {
-                    if (!isAcceptedAttachmentExtension(file.name)) {
-                      showToast({
-                        type: TYPE_TOAST.ERROR,
-                        content: `Chỉ hỗ trợ định dạng ${ACCEPTED_ATTACHMENT_TEXT}`
-                      });
-                      return Upload.LIST_IGNORE;
-                    }
-
-                    if (!isAcceptedAttachmentFile(file)) {
-                      showToast({
-                        type: TYPE_TOAST.ERROR,
-                        content:
-                          'Định dạng file không khớp với phần mở rộng. Vui lòng chọn file hợp lệ'
-                      });
-                      return Upload.LIST_IGNORE;
-                    }
-
-                    const hasValidSignature = await hasAcceptedAttachmentSignature(file);
-                    if (!hasValidSignature) {
-                      showToast({
-                        type: TYPE_TOAST.ERROR,
-                        content:
-                          'Nội dung file không khớp với định dạng được chọn. Vui lòng chọn file hợp lệ'
-                      });
-                      return Upload.LIST_IGNORE;
-                    }
-
+                  beforeUpload={(file) => {
                     if (file.size > MAX_ATTACHMENT_FILE_SIZE) {
                       showToast({
                         type: TYPE_TOAST.ERROR,
-                        content: 'Dung lượng file không được vượt quá 20MB'
+                        content: getUploadFileSizeError()
                       });
                       return Upload.LIST_IGNORE;
                     }
@@ -287,7 +254,7 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
                       <ButtonBase type="secondary" size={32} customContent="Chọn file" />
                     </div>
                     <TextBase
-                      text={`Định dạng: ${ACCEPTED_ATTACHMENT_TEXT}. Tối đa 20MB/file`}
+                      text={`Tối đa ${MAX_UPLOAD_FILE_SIZE_TEXT}/file`}
                       classNames="caption1 !text-color-700"
                     />
                   </div>

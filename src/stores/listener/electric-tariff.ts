@@ -8,6 +8,32 @@ const getTariffRows = (items: Array<TariffDetail | ElectricTariff> = []) =>
     .map((item) => (item && 'tariff' in item ? item.tariff : item))
     .filter((item): item is ElectricTariff => Boolean(item));
 
+const isResponseLike = (
+  response: unknown
+): response is {
+  status?: number | string;
+  statusCode?: number | string;
+  businessErrorMessage?: unknown;
+  systemErrorMessage?: unknown;
+  detailMessage?: unknown;
+  error?: unknown;
+} => typeof response === 'object' && response !== null;
+
+const hasError = (response: unknown) => {
+  if (!response) return true;
+  if (response instanceof Error) return true;
+  if (!isResponseLike(response)) return false;
+
+  const status = Number(response.status ?? response.statusCode);
+  return Boolean(
+    (Number.isFinite(status) && status >= 400) ||
+      response.businessErrorMessage ||
+      response.systemErrorMessage ||
+      response.detailMessage ||
+      response.error
+  );
+};
+
 takeLatestListeners({
   actionCreator: electricTariffActions.searchElectricTariff,
   effect: async (action, listenerApi) => {
@@ -26,6 +52,60 @@ takeLatestListeners({
 
     listenerApi.dispatch(electricTariffActions.setTariffList(getTariffRows(response.data.items)));
     listenerApi.dispatch(electricTariffActions.setTotal(response.data.total || 0));
+    onSuccess?.(response);
+  }
+});
+
+takeLatestListeners({
+  actionCreator: electricTariffActions.deleteElectricTariff,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(electricTariffActions.setLoadingDetail(true));
+    const response = await electricTariffServices.deleteTariff(body);
+    if (listenerApi.signal.aborted) return;
+    listenerApi.dispatch(electricTariffActions.setLoadingDetail(false));
+
+    if (hasError(response)) {
+      onFailed?.(response);
+      return;
+    }
+
+    onSuccess?.(response);
+  }
+});
+
+takeLatestListeners({
+  actionCreator: electricTariffActions.uploadElectricTariffDocument,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(electricTariffActions.setLoadingDetail(true));
+    const response = await electricTariffServices.uploadTariffDocument(body);
+    if (listenerApi.signal.aborted) return;
+    listenerApi.dispatch(electricTariffActions.setLoadingDetail(false));
+
+    if (hasError(response) || !response.data) {
+      onFailed?.(response);
+      return;
+    }
+
+    onSuccess?.(response);
+  }
+});
+
+takeLatestListeners({
+  actionCreator: electricTariffActions.deleteElectricTariffDocument,
+  effect: async (action, listenerApi) => {
+    const { body, onSuccess, onFailed } = action.payload;
+    listenerApi.dispatch(electricTariffActions.setLoadingDetail(true));
+    const response = await electricTariffServices.deleteTariffDocument(body);
+    if (listenerApi.signal.aborted) return;
+    listenerApi.dispatch(electricTariffActions.setLoadingDetail(false));
+
+    if (hasError(response) || !response.data) {
+      onFailed?.(response);
+      return;
+    }
+
     onSuccess?.(response);
   }
 });

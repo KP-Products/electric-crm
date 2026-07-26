@@ -9,9 +9,9 @@ import {
   RemoteMeterReadingPeriod,
   SearchRemoteMeterReadingsReq
 } from 'model/remote-meter-reading';
+import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 
 const REMOTE_READING_TYPE_INPUT = '2';
-const MAX_EXCEL_FILE_SIZE = 10 * 1024 * 1024;
 
 const getErrorMessage = (error?: any, fallback = 'Thao tác thất bại') => {
   return (
@@ -21,10 +21,6 @@ const getErrorMessage = (error?: any, fallback = 'Thao tác thất bại') => {
     error?.message ||
     fallback
   );
-};
-
-const isAcceptedExcelFile = (file: File) => {
-  return file.name.toLowerCase().endsWith('.xlsx');
 };
 
 export default function useRemoteMeterReading() {
@@ -90,18 +86,10 @@ export default function useRemoteMeterReading() {
     async (file: File) => {
       if (importing) return;
 
-      if (!isAcceptedExcelFile(file)) {
+      if (!isValidUploadFileSize(file)) {
         showToast({
           type: TYPE_TOAST.ERROR,
-          content: 'Chỉ hỗ trợ file Excel định dạng XLSX'
-        });
-        return;
-      }
-
-      if (file.size > MAX_EXCEL_FILE_SIZE) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: 'Dung lượng file không được vượt quá 10MB'
+          content: getUploadFileSizeError()
         });
         return;
       }

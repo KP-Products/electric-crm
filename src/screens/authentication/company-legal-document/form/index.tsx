@@ -7,16 +7,22 @@ import clsx from 'clsx';
 import ButtonBase from 'components/button';
 import { AppDatePickerControl } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
+import { AppSelectControl } from 'components/select';
+import CustomDropSearchMore from 'components/select/CustomDropSearchMore';
 import { AppTakeNoteControl } from 'components/take-note';
 import { TextBase } from 'components/text';
 import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import type { ReactNode } from 'react';
 import { useMemo } from 'react';
+import { getUploadFileSizeError, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useCompanyLegalDocumentForm from '../hooks/useCompanyLegalDocumentForm';
 import {
   ACCEPTED_ATTACHMENT_TEXT,
+  COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS,
+  COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS,
   isAcceptedAttachmentFile,
   MAX_ATTACHMENT_FILE_SIZE
 } from '../utils';
@@ -34,7 +40,12 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
     detailLoading,
     selectedDocument,
     selectedFile,
+    employeeOptions,
+    employeeSearch,
+    employeeOptionsLoading,
     setSelectedFile,
+    onSearchEmployees,
+    onOpenEmployeeDropdown,
     onBack,
     onSubmit,
     onDeleteAttachment,
@@ -47,6 +58,18 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
     handleSubmit,
     formState: { isDirty, isValid }
   } = form;
+
+  const renderEmployeeDropdown = (menuInstance: ReactNode) => (
+    <CustomDropSearchMore
+      menuInstance={menuInstance}
+      searchValue={employeeSearch}
+      onChangeSearch={onSearchEmployees}
+      onMore={() => {}}
+      totalList={employeeOptions.length}
+      total={employeeOptions.length}
+      loading={employeeOptionsLoading}
+    />
+  );
 
   const uploadFileList = useMemo<UploadFile[]>(() => {
     if (!selectedFile) return [];
@@ -91,11 +114,12 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                 text="1. THÔNG TIN VĂN BẢN"
               />
               <div className="grid grid-cols-3 gap-12 mobile:grid-cols-1">
-                <AppTextFieldControl
+                <AppSelectControl
                   name="documentType"
                   label="Loại văn bản"
                   labelSuffix={requiredMark}
-                  placeholder="Nhập loại văn bản"
+                  placeholder="Chọn loại văn bản"
+                  options={COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS}
                   control={control}
                 />
                 <AppTextField
@@ -157,25 +181,36 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                     control={control}
                   />
                 </div>
-                <AppTextFieldControl
+                <AppSelectControl
                   name="draftedBy"
-                  label="Người soạn thảo (ID)"
-                  placeholder="Nhập ID người soạn thảo"
-                  type="number"
+                  label="Người soạn thảo"
+                  placeholder="Chọn người soạn thảo"
+                  options={employeeOptions}
+                  dropdownRender={renderEmployeeDropdown}
+                  onOpenChange={(open) => {
+                    if (open) onOpenEmployeeDropdown();
+                  }}
+                  unSeleted
                   control={control}
                 />
-                <AppTextFieldControl
+                <AppSelectControl
                   name="approvedBy"
-                  label="Người ký duyệt (ID)"
-                  placeholder="Nhập ID người ký duyệt"
-                  type="number"
+                  label="Người ký duyệt"
+                  placeholder="Chọn người ký duyệt"
+                  options={employeeOptions}
+                  dropdownRender={renderEmployeeDropdown}
+                  onOpenChange={(open) => {
+                    if (open) onOpenEmployeeDropdown();
+                  }}
+                  unSeleted
                   control={control}
                 />
-                <AppTextFieldControl
+                <AppSelectControl
                   name="status"
                   label="Trạng thái"
                   labelSuffix={requiredMark}
-                  placeholder="Nhập trạng thái"
+                  placeholder="Chọn trạng thái"
+                  options={COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS}
                   control={control}
                 />
               </div>
@@ -188,14 +223,13 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                   className="block overflow-hidden [&_.ant-upload-btn]:!p-0 [&_.ant-upload-drag-container]:!align-middle"
                   height={132}
                   maxCount={K_SIZE_1}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                   fileList={uploadFileList}
                   showUploadList={false}
                   beforeUpload={(file) => {
                     if (!isAcceptedAttachmentFile(file)) {
                       showToast({
                         type: TYPE_TOAST.ERROR,
-                        content: `Chỉ hỗ trợ định dạng ${ACCEPTED_ATTACHMENT_TEXT}`
+                        content: `File đính kèm chỉ hỗ trợ ${ACCEPTED_ATTACHMENT_TEXT}`
                       });
                       return Upload.LIST_IGNORE;
                     }
@@ -203,7 +237,7 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                     if (file.size > MAX_ATTACHMENT_FILE_SIZE) {
                       showToast({
                         type: TYPE_TOAST.ERROR,
-                        content: 'Dung lượng file không được vượt quá 10MB'
+                        content: getUploadFileSizeError()
                       });
                       return Upload.LIST_IGNORE;
                     }
@@ -228,22 +262,16 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                       <ButtonBase type="secondary" size={32} customContent="Chọn file" />
                     </div>
                     <TextBase
-                      text={`Định dạng: ${ACCEPTED_ATTACHMENT_TEXT}. Tối đa 10MB/file`}
+                      text={`Tối đa ${MAX_UPLOAD_FILE_SIZE_TEXT}/file`}
                       classNames="caption1 !text-color-700"
                     />
                   </div>
                 </Upload.Dragger>
 
-                <div className="mt-16 overflow-hidden rounded-radius-m border border-color-300">
-                  <div className="grid grid-cols-[48px_minmax(0,1fr)_110px] bg-color-100 px-12 py-8 text-12 font-semibold text-color-800">
-                    <div>STT</div>
-                    <div>Tên file</div>
-                    <div>Thao tác</div>
-                  </div>
+                <div className="mt-16">
                   {selectedFile ? (
-                    <div className="grid grid-cols-[48px_minmax(0,1fr)_110px] items-center px-12 py-[10px] text-12 text-color-800">
-                      <div>{K_SIZE_1}</div>
-                      <div className="truncate" title={selectedFile.name}>
+                    <div className="flex items-center justify-between gap-12 rounded-radius-m border border-color-300 bg-color-50 px-12 py-[10px] text-12 text-color-800">
+                      <div className="min-w-0 truncate font-medium" title={selectedFile.name}>
                         {selectedFile.name}
                       </div>
                       <ButtonBase
@@ -254,9 +282,11 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                       />
                     </div>
                   ) : selectedDocument?.attachmentFilePath ? (
-                    <div className="grid grid-cols-[48px_minmax(0,1fr)_110px] items-center px-12 py-[10px] text-12 text-color-800">
-                      <div>{K_SIZE_1}</div>
-                      <div className="truncate" title={selectedDocument.attachmentFilePath}>
+                    <div className="flex items-center justify-between gap-12 rounded-radius-m border border-color-300 bg-color-50 px-12 py-[10px] text-12 text-color-800">
+                      <div
+                        className="min-w-0 truncate font-medium"
+                        title={selectedDocument.attachmentFilePath}
+                      >
                         {selectedDocument.attachmentFilePath}
                       </div>
                       <Flex gap={K_SIZE_8}>
@@ -281,7 +311,7 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                       </Flex>
                     </div>
                   ) : (
-                    <div className="px-12 py-16 text-center text-12 text-color-700">
+                    <div className="rounded-radius-m border border-dashed border-color-300 px-12 py-16 text-center text-12 text-color-700">
                       Chưa có file nào
                     </div>
                   )}

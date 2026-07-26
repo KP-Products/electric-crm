@@ -15,7 +15,7 @@ import {
   normalizeMeterSearchItem
 } from 'model/meter';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { DebugUtils } from 'utils/debug-utils';
@@ -23,20 +23,34 @@ import { normalizeDateToApi } from 'utils/date';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
 import { z } from 'zod';
 import {
-  isMeterInstalled,
+  METER_TYPE,
   METER_STATUS,
   normalizeMeterType,
   normalizeMeterStatus,
-  normalizeUsagePurpose,
+  normalizeVoltageLevel,
   normalizeVoltageType
 } from '../utils/constant';
+import useCustomerLookup from '../../manage-contract/hooks/useCustomerLookup';
+import useMeterLookup from '../../manage-contract/hooks/useMeterLookup';
 
 const optionalString = z.preprocess(
   (value) => (value === null || value === undefined ? '' : value),
   z.string().trim()
 );
 
-const meterSchema = (t: TypedT) => {
+const UUID_REGEXP = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const normalizeNumberInput = (value: string) => {
+  const normalizedValue = value.trim().replace(/\s/g, '');
+  if (normalizedValue.includes(',')) {
+    return normalizedValue.replace(/\./g, '').replace(',', '.');
+  }
+  return normalizedValue;
+};
+
+const parseNumberInput = (value: string) => Number(normalizeNumberInput(value));
+
+const meterSchema = (t: TypedT, isAddMode: boolean) => {
   return z
     .object({
       meterCode: z
@@ -47,36 +61,55 @@ const meterSchema = (t: TypedT) => {
         .string()
         .trim()
         .min(K_SIZE_1, { message: t('validate:required', { name: 'Trạng thái' }) }),
-      meterType: optionalString,
-      manufacturer: optionalString,
-      purchaseDate: optionalString,
       installationDate: optionalString,
-      inspectionDate: optionalString,
-      inspectionExpiryDate: optionalString,
       voltageType: optionalString,
+      voltageLevel: optionalString,
+      meterType: optionalString,
+      parentId: optionalString,
       customerId: optionalString,
-      feederId: optionalString,
-      usagePurpose: optionalString,
       multiplier: z
         .string()
         .trim()
-        .refine((value) => !value || /^\d+(\.\d+)?$/.test(value), {
-          message: 'Hệ số nhân phải là số dương'
-        })
+        .min(K_SIZE_1, { message: t('validate:required', { name: 'Hệ số nhân' }) })
+        .refine(
+          (value) => {
+            const parsedValue = parseNumberInput(value);
+            return Number.isFinite(parsedValue) && parsedValue > 0;
+          },
+          {
+            message: 'Hệ số nhân phải lớn hơn 0'
+          }
+        ),
+      initialReading: z
+        .string()
+        .trim()
+        .min(K_SIZE_1, { message: t('validate:required', { name: 'Chỉ số đầu' }) })
+        .refine(
+          (value) => {
+            const parsedValue = parseNumberInput(value);
+            return Number.isFinite(parsedValue) && parsedValue >= 0;
+          },
+          {
+            message: 'Chỉ số đầu không được âm'
+          }
+        )
     })
     .superRefine((data, ctx) => {
-      if (!isMeterInstalled(data.status)) return;
-
-      const requiredInstalledFields: { field: keyof typeof data; label: string }[] = [
+      const requiredFields: { field: keyof typeof data; label: string }[] = [
+        { field: 'meterType', label: 'Loại công tơ' },
         { field: 'installationDate', label: 'Ngày lắp' },
-        { field: 'voltageType', label: 'Cấp điện áp' },
-        { field: 'customerId', label: 'Khách hàng' },
-        { field: 'feederId', label: 'Lộ điện' },
-        { field: 'usagePurpose', label: 'Mục đích sử dụng' },
-        { field: 'multiplier', label: 'Hệ số nhân' }
+        { field: 'voltageLevel', label: 'Cấp điện áp' }
       ];
 
-      requiredInstalledFields.forEach(({ field, label }) => {
+      if (!isAddMode) {
+        requiredFields.push({ field: 'voltageType', label: 'Kiểu điện áp' });
+      }
+
+      if (data.meterType === METER_TYPE.CUSTOMER && !data.parentId) {
+        requiredFields.push({ field: 'parentId', label: 'Công tơ cha/Lộ tổng' });
+      }
+
+      requiredFields.forEach(({ field, label }) => {
         if (!data[field]) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -85,6 +118,14 @@ const meterSchema = (t: TypedT) => {
           });
         }
       });
+
+      if (data.customerId && !UUID_REGEXP.test(data.customerId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['customerId'],
+          message: 'Mã khách hàng không hợp lệ'
+        });
+      }
     });
 };
 
@@ -97,18 +138,15 @@ export interface ManageMeterFormProps {
 
 const defaultMeterFormValues: MeterForm = {
   meterCode: '',
-  status: METER_STATUS.IN_STOCK,
+  status: METER_STATUS.ACTIVE,
   meterType: '',
-  manufacturer: '',
-  purchaseDate: '',
+  parentId: '',
   installationDate: '',
-  inspectionDate: '',
-  inspectionExpiryDate: '',
-  voltageType: '',
+  voltageLevel: '',
+  voltageType: '3P4W',
   customerId: '',
-  feederId: '',
-  usagePurpose: '',
-  multiplier: '1'
+  multiplier: '1',
+  initialReading: '0'
 };
 
 export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFormProps) {
@@ -117,6 +155,7 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
   const searchParams = useSearchParams();
   const meterList = useSelector(selectMeterList);
   const loading = useSelector(selectMeterLoadingDetail);
+  const [selectedMeter, setSelectedMeter] = useState<Meter>();
 
   const id = searchParams.get('id') || '';
 
@@ -128,31 +167,68 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
   const userForm = useForm<MeterForm>({
     mode: 'onTouched',
     defaultValues: defaultMeterFormValues,
-    resolver: zodResolver(meterSchema(t))
+    resolver: zodResolver(meterSchema(t, isAddMode))
   });
+
+  const selectedCustomerId = userForm.watch('customerId');
+  const selectedMeterType = userForm.watch('meterType');
+  const selectedParentId = userForm.watch('parentId');
+  const isCustomerMeterType = selectedMeterType === METER_TYPE.CUSTOMER;
+  const pinnedCustomerIds = useMemo(
+    () => [selectedMeter?.customerId, selectedCustomerId],
+    [selectedMeter?.customerId, selectedCustomerId]
+  );
+  const pinnedParentIds = useMemo(
+    () => [selectedMeter?.parentId, selectedParentId],
+    [selectedMeter?.parentId, selectedParentId]
+  );
+
+  const { customerOptions, onOpenCustomerDropdown, customerDropdownRender } = useCustomerLookup({
+    pinnedIds: pinnedCustomerIds,
+    showErrorToast: true
+  });
+  const {
+    meterOptions: parentMeterOptions,
+    onOpenMeterDropdown: onOpenParentMeterDropdown,
+    meterDropdownRender: parentMeterDropdownRender
+  } = useMeterLookup({
+    autoLoad: false,
+    pinnedIds: pinnedParentIds,
+    showErrorToast: true,
+    meterType: METER_TYPE.FEEDER
+  });
+
+  useEffect(() => {
+    if (!isCustomerMeterType && selectedParentId) {
+      userForm.setValue('parentId', '', { shouldDirty: false, shouldValidate: true });
+    }
+  }, [isCustomerMeterType, selectedParentId, userForm]);
 
   const mapMeterToForm = useCallback(
     (meter: Meter): MeterForm => ({
       meterCode: meter.meterCode || '',
       status: normalizeMeterStatus(meter.status),
       meterType: normalizeMeterType(meter.meterType),
-      manufacturer: meter.manufacturer || '',
-      purchaseDate: normalizeDateToApi(meter.purchaseDate),
+      parentId: meter.parentId || '',
       installationDate: normalizeDateToApi(meter.installationDate),
-      inspectionDate: normalizeDateToApi(meter.inspectionDate),
-      inspectionExpiryDate: normalizeDateToApi(meter.inspectionExpiryDate),
-      voltageType: normalizeVoltageType(meter.voltageType || meter.voltageLevel),
+      voltageLevel: normalizeVoltageLevel(meter.voltageLevel),
+      voltageType: normalizeVoltageType(meter.voltageType),
       customerId: meter.customerId || '',
-      feederId: meter.feederId || meter.feederName || '',
-      usagePurpose: normalizeUsagePurpose(meter.usagePurpose),
       multiplier:
-        meter.multiplier !== undefined && meter.multiplier !== null ? String(meter.multiplier) : '1'
+        meter.multiplier !== undefined && meter.multiplier !== null
+          ? String(meter.multiplier)
+          : '1',
+      initialReading:
+        meter.initialReading !== undefined && meter.initialReading !== null
+          ? String(meter.initialReading)
+          : '0'
     }),
     []
   );
 
   useEffect(() => {
     if (isAddMode) {
+      setSelectedMeter(undefined);
       userForm.reset(defaultMeterFormValues);
       return;
     }
@@ -164,6 +240,7 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
 
     const meterDetail = meterList.find((meter) => meter.meterId === id || meter.id === id);
     if (meterDetail) {
+      setSelectedMeter(meterDetail);
       userForm.reset(mapMeterToForm(meterDetail));
       return;
     }
@@ -171,10 +248,13 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
     dispatch({
       type: METER_DETAIL,
       payload: {
-        body: { id, meterId: id },
+        body: { meterId: id },
         onSuccess: (res: GetMeterDetailRes) => {
           const meter = normalizeMeterSearchItem(res.data);
-          if (meter) userForm.reset(mapMeterToForm(meter));
+          if (meter) {
+            setSelectedMeter(meter);
+            userForm.reset(mapMeterToForm(meter));
+          }
         },
         onFailed: (error?: ErrorBase) => {
           showToast({
@@ -213,32 +293,28 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
     [action]
   );
 
-  const buildSubmitBody = useCallback((data: MeterForm): AddMeterReq => {
-    const installed = isMeterInstalled(data.status);
-    const feeder = installed ? data.feederId.trim() : undefined;
-    const voltageType = installed ? data.voltageType : undefined;
+  const buildSubmitBody = useCallback(
+    (data: MeterForm): AddMeterReq => {
+      const body: AddMeterReq = {
+        meterCode: data.meterCode.trim(),
+        status: data.status,
+        meterType: data.meterType || undefined,
+        parentId: data.meterType === METER_TYPE.CUSTOMER ? data.parentId || undefined : undefined,
+        installationDate: normalizeDateToApi(data.installationDate) || undefined,
+        voltageLevel: data.voltageLevel || undefined,
+        multiplier: parseNumberInput(data.multiplier),
+        initialReading: parseNumberInput(data.initialReading)
+      };
 
-    return {
-      meterCode: data.meterCode.trim(),
-      status: data.status,
-      meterType: data.meterType || undefined,
-      manufacturer: data.manufacturer || undefined,
-      purchaseDate: normalizeDateToApi(data.purchaseDate) || undefined,
-      inspectionDate: normalizeDateToApi(data.inspectionDate) || undefined,
-      inspectionExpiryDate: normalizeDateToApi(data.inspectionExpiryDate) || undefined,
-      installationDate: installed
-        ? normalizeDateToApi(data.installationDate) || undefined
-        : undefined,
-      voltageType,
-      voltageLevel: voltageType,
-      customerId: installed ? data.customerId.trim() || undefined : undefined,
-      feederId: feeder,
-      feederName: feeder,
-      usagePurpose: installed ? data.usagePurpose || undefined : undefined,
-      multiplier: data.multiplier ? Number(data.multiplier) : undefined,
-      initialReading: 0
-    };
-  }, []);
+      if (!isAddMode) {
+        body.customerId = data.customerId.trim() || undefined;
+        body.voltageType = data.voltageType || undefined;
+      }
+
+      return body;
+    },
+    [isAddMode]
+  );
 
   const onSubmit = useCallback(
     (data: MeterForm) => {
@@ -256,7 +332,6 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       } else if (id) {
         const body: EditMeterReq = {
           ...buildSubmitBody(data),
-          id,
           meterId: id
         };
         dispatch({
@@ -284,6 +359,14 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
     action,
     onSubmit,
     userForm,
+    selectedMeter,
+    customerOptions,
+    onOpenCustomerDropdown,
+    customerDropdownRender,
+    parentMeterOptions,
+    onOpenParentMeterDropdown,
+    parentMeterDropdownRender,
+    isCustomerMeterType,
     loading,
     onBack,
     onEdit

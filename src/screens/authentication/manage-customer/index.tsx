@@ -30,7 +30,7 @@ import { TextBase } from 'components/text';
 import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
-import { Customer, SignedContractInfo } from 'model/customer';
+import { Customer } from 'model/customer';
 import type { ReactNode } from 'react';
 import { useCallback, useMemo } from 'react';
 import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
@@ -79,6 +79,9 @@ const ManageCustomerScreen = () => {
     listLoading,
     detailLoading,
     detailLoadFailed,
+    detailContracts,
+    detailContractsLoading,
+    detailContractsLoadFailed,
     currentPage,
     pagination,
     filter,
@@ -110,7 +113,6 @@ const ManageCustomerScreen = () => {
 
   const detailCustomer = selectedDetail?.customer;
   const detailOperationUnit = selectedDetail?.operationUnit;
-  const detailContracts = selectedDetail?.contracts || [];
 
   const activeFilters = useMemo(
     () =>
@@ -337,7 +339,7 @@ const ManageCustomerScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-12 grid grid-cols-4 items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-6 items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="customerCodeContains"
             label="Mã khách hàng"
@@ -386,15 +388,11 @@ const ManageCustomerScreen = () => {
             onChange={(event) => onChangeFilter('contactNameContains', event.target.value)}
             onPressEnter={onApplyFilter}
           />
-          <AppTextField
-            name="addressContains"
-            label="Địa chỉ"
-            placeholder="Nhập địa chỉ"
-            value={filter.addressContains}
-            onChange={(event) => onChangeFilter('addressContains', event.target.value)}
-            onPressEnter={onApplyFilter}
-          />
-          <Flex gap={K_SIZE_8}>
+          <Flex
+            justify="end"
+            gap={K_SIZE_8}
+            className="col-start-6 tablet:col-start-2 mobile:col-start-auto mobile:w-full"
+          >
             <ButtonBase
               type="ghost"
               customContent="Làm mới"
@@ -406,7 +404,7 @@ const ManageCustomerScreen = () => {
               leftIcon="IC_SEARCH_OUTLINE2"
               customContent="Tìm kiếm"
               onClick={onApplyFilter}
-              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+              classNames="min-w-[130px] mobile:flex-1 mobile:justify-center"
             />
           </Flex>
         </div>
@@ -459,7 +457,7 @@ const ManageCustomerScreen = () => {
             closable={false}
             maskClosable={!detailLoading}
             onClose={onCloseForm}
-            width={isTablet || isMobile ? '92vw' : '54vw'}
+            width={isTablet || isMobile ? '92vw' : '34vw'}
             footer={
               <Flex justify="end" gap={K_SIZE_8}>
                 <ButtonBase
@@ -490,7 +488,7 @@ const ManageCustomerScreen = () => {
             }
           >
             <div className="grid gap-12">
-              <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
+              <div className="grid grid-cols-2 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
                 <AppTextFieldControl
                   name="customerCode"
                   control={control}
@@ -498,6 +496,7 @@ const ManageCustomerScreen = () => {
                   labelSuffix={REQUIRED_MARK}
                   labelSuffixClassName="text-error-600"
                   placeholder="Nhập mã khách hàng"
+                  disabled={Boolean(selectedCustomer)}
                 />
                 <AppTextFieldControl
                   name="fullName"
@@ -505,9 +504,6 @@ const ManageCustomerScreen = () => {
                   label="Tên khách hàng"
                   placeholder="Nhập tên khách hàng"
                 />
-              </div>
-
-              <div className="grid grid-cols-3 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
                 <AppTextFieldControl
                   name="taxNo"
                   label="Mã số thuế"
@@ -526,9 +522,6 @@ const ManageCustomerScreen = () => {
                   placeholder="Nhập email"
                   control={control}
                 />
-              </div>
-
-              <div className="grid grid-cols-3 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
                 <AppTextFieldControl
                   name="contactName"
                   label="Người liên hệ"
@@ -572,7 +565,21 @@ const ManageCustomerScreen = () => {
           open={openDetail}
           title={
             <Flex justify="space-between" align="center">
-              <div>Chi tiết khách hàng</div>
+              <div className={'flex flex-1 items-center '}>
+                <TextBase>Chi tiết khách hàng</TextBase>
+                {detailCustomer ? (
+                  <IconHover
+                    rootClassName="text-color-800 ml-4"
+                    title={t('common:edit')}
+                    icon="ICON_EDIT"
+                    iconHeight={K_SIZE_18}
+                    onClick={() => {
+                      onCloseDetail();
+                      onOpenUpdate(detailCustomer);
+                    }}
+                  />
+                ) : undefined}
+              </div>
               <IconHover
                 title={t('common:close')}
                 icon="IC_CLOSE_OUTLINE"
@@ -584,20 +591,7 @@ const ManageCustomerScreen = () => {
           placement="right"
           closable={false}
           onClose={onCloseDetail}
-          width={isTablet || isMobile ? '92vw' : '54vw'}
-          extra={
-            detailCustomer ? (
-              <ButtonBase
-                type="ghost"
-                leftIcon="ICON_EDIT"
-                customContent="Sửa"
-                onClick={() => {
-                  onCloseDetail();
-                  onOpenUpdate(detailCustomer);
-                }}
-              />
-            ) : undefined
-          }
+          width={isTablet || isMobile ? '92vw' : '34vw'}
         >
           <Spin spinning={detailLoading}>
             <div className="grid gap-20">
@@ -648,24 +642,30 @@ const ManageCustomerScreen = () => {
 
               <div>
                 <TextBase classNames="sub-title3 mb-8" text="Hợp đồng đã ký" />
-                {detailLoadFailed ? (
+                {detailContractsLoadFailed ? (
                   <div className="text-14 font-medium text-color-700">
                     Không tải được danh sách hợp đồng đã ký
                   </div>
-                ) : detailContracts.length > K_SIZE_0 ? (
-                  <div className="overflow-hidden rounded-radius-l border border-color-300">
-                    <AppTable
-                      rootClassName="w-full"
-                      className="[&_.ant-pagination]:hidden"
-                      scroll={{ x: 'max-content' }}
-                      dataSource={detailContracts}
-                      columns={contractColumns}
-                      rowKey={(record: SignedContractInfo, index?: number) =>
-                        String(record.id || record.contractNumber || index)
-                      }
-                      pagination={false}
-                    />
+                ) : detailContractsLoading ? (
+                  <div className="rounded-radius-m border border-color-300 p-16 text-center">
+                    <Spin size="small" />
                   </div>
+                ) : detailContracts.length > K_SIZE_0 ? (
+                  <Spin spinning={detailContractsLoading}>
+                    <div className="overflow-hidden rounded-radius-l border border-color-300">
+                      <AppTable
+                        rootClassName="w-full"
+                        className="[&_.ant-pagination]:hidden"
+                        scroll={{ x: 'max-content' }}
+                        dataSource={detailContracts}
+                        columns={contractColumns}
+                        rowKey={(record: any, index?: number) =>
+                          String(record.id || record.contractNumber || index)
+                        }
+                        pagination={false}
+                      />
+                    </div>
+                  </Spin>
                 ) : (
                   <div className="text-14 font-medium text-color-700">Chưa có hợp đồng đã ký</div>
                 )}

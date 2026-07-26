@@ -49,7 +49,6 @@ export const DEFAULT_PPE_ITEM_FORM_VALUES: PpeItemForm = {
   unit: '',
   quantity: '',
   importDate: '',
-  exportDate: '',
   employeeId: '',
   status: PPE_ITEM_STATUS.TRONG_KHO,
   note: ''
@@ -121,7 +120,6 @@ export const buildPpeItemFormValues = (item: PpeItem): PpeItemForm => ({
   unit: item.unit || '',
   quantity: item.quantity !== undefined && item.quantity !== null ? String(item.quantity) : '',
   importDate: formatPpeItemDate(item.importDate),
-  exportDate: formatPpeItemDate(item.exportDate),
   employeeId:
     item.employeeId !== undefined && item.employeeId !== null ? String(item.employeeId) : '',
   status: item.status || PPE_ITEM_STATUS.TRONG_KHO,
@@ -135,7 +133,6 @@ export const buildCreatePpeItemBody = (data: PpeItemForm): CreatePpeItemReq => (
   unit: normalizeText(data.unit),
   quantity: toOptionalNumber(data.quantity),
   importDate: normalizeText(formatPpeItemDate(data.importDate)),
-  exportDate: normalizeText(formatPpeItemDate(data.exportDate)),
   employeeId: toOptionalNumber(data.employeeId),
   status: normalizeText(data.status),
   note: normalizeText(data.note)
@@ -148,7 +145,6 @@ export const buildUpdatePpeItemBody = (id: number, data: PpeItemForm): UpdatePpe
   unit: normalizeText(data.unit),
   quantity: toOptionalNumber(data.quantity),
   importDate: normalizeText(formatPpeItemDate(data.importDate)),
-  exportDate: normalizeText(formatPpeItemDate(data.exportDate)),
   employeeId: toOptionalNumber(data.employeeId),
   status: normalizeText(data.status),
   note: normalizeText(data.note)

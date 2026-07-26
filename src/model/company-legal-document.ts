@@ -10,11 +10,14 @@ export interface CompanyLegalDocument {
   expiryDate?: string;
   summary?: string;
   draftedBy?: number;
+  draftedByName?: string;
   approvedBy?: number;
+  approvedByName?: string;
   attachmentFilePath?: string;
   status?: string;
   note?: string;
   createdBy?: number;
+  createdByName?: string;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -19,6 +19,7 @@ import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ErrorBase } from 'model/common';
+import { Contract } from 'model/contract';
 import {
   CreateCustomerReq,
   Customer,
@@ -31,6 +32,7 @@ import { OperationUnit } from 'model/operation-unit';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import contractServices from 'services/contract-services';
 import operationUnitServices from 'services/operation-unit-services';
 import { normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
@@ -177,6 +179,9 @@ export default function useManageCustomer() {
   const [openForm, setOpenForm] = useState<boolean>(false);
   const [openDetail, setOpenDetail] = useState<boolean>(false);
   const [detailLoadFailed, setDetailLoadFailed] = useState<boolean>(false);
+  const [detailContracts, setDetailContracts] = useState<Contract[]>([]);
+  const [detailContractsLoading, setDetailContractsLoading] = useState<boolean>(false);
+  const [detailContractsLoadFailed, setDetailContractsLoadFailed] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>();
   const [selectedDetail, setSelectedDetail] = useState<CustomerDetail>();
   const [operationUnitLoading, setOperationUnitLoading] = useState<boolean>(false);
@@ -437,41 +442,77 @@ export default function useManageCustomer() {
     [buildCreateBody, buildUpdateBody, onSubmitSuccess, selectedCustomer]
   );
 
-  const onOpenDetail = useCallback((customer: Customer) => {
-    setSelectedDetail(undefined);
-    setDetailLoadFailed(false);
-    setOpenDetail(true);
+  const fetchDetailContracts = useCallback(async (customerId: string) => {
+    setDetailContractsLoading(true);
+    setDetailContractsLoadFailed(false);
 
-    if (!customer.id) {
-      setSelectedDetail({ customer });
-      setDetailLoadFailed(true);
+    const response = await contractServices.searchContract({
+      page: 0,
+      size: K_SIZE_200,
+      customerId
+    });
+
+    setDetailContractsLoading(false);
+
+    if (hasApiError(response) || !response.data) {
+      setDetailContracts([]);
+      setDetailContractsLoadFailed(true);
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getCustomerErrorMessage(response, 'Tải danh sách hợp đồng đã ký thất bại')
+      });
       return;
     }
 
-    dispatch({
-      type: CUSTOMER_DETAIL,
-      payload: {
-        body: { id: customer.id },
-        onSuccess: (response: CustomerDetailRes) => {
-          setDetailLoadFailed(false);
-          setSelectedDetail(response.data || { customer });
-        },
-        onFailed: (error?: ErrorBase) => {
-          setDetailLoadFailed(true);
-          setSelectedDetail({ customer });
-          showToast({
-            type: TYPE_TOAST.ERROR,
-            content: getCustomerErrorMessage(error, 'Tải chi tiết khách hàng thất bại')
-          });
-        }
-      }
-    });
+    setDetailContracts(Array.isArray(response.data.items) ? response.data.items : []);
   }, []);
+
+  const onOpenDetail = useCallback(
+    (customer: Customer) => {
+      setSelectedDetail(undefined);
+      setDetailContracts([]);
+      setDetailLoadFailed(false);
+      setDetailContractsLoadFailed(false);
+      setOpenDetail(true);
+
+      if (!customer.id) {
+        setSelectedDetail({ customer });
+        setDetailLoadFailed(true);
+        setDetailContractsLoadFailed(true);
+        return;
+      }
+
+      fetchDetailContracts(customer.id);
+
+      dispatch({
+        type: CUSTOMER_DETAIL,
+        payload: {
+          body: { id: customer.id },
+          onSuccess: (response: CustomerDetailRes) => {
+            setDetailLoadFailed(false);
+            setSelectedDetail(response.data || { customer });
+          },
+          onFailed: (error?: ErrorBase) => {
+            setDetailLoadFailed(true);
+            setSelectedDetail({ customer });
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content: getCustomerErrorMessage(error, 'Tải chi tiết khách hàng thất bại')
+            });
+          }
+        }
+      });
+    },
+    [fetchDetailContracts]
+  );
 
   const onCloseDetail = useCallback(() => {
     setOpenDetail(false);
     setSelectedDetail(undefined);
+    setDetailContracts([]);
     setDetailLoadFailed(false);
+    setDetailContractsLoadFailed(false);
+    setDetailContractsLoading(false);
   }, []);
 
   const onDeleteSuccess = useCallback(() => {
@@ -532,6 +573,9 @@ export default function useManageCustomer() {
     listLoading,
     detailLoading,
     detailLoadFailed,
+    detailContracts,
+    detailContractsLoading,
+    detailContractsLoadFailed,
     currentPage,
     pagination,
     filter,

@@ -188,7 +188,6 @@ const RemoteMeterReadingScreen = () => {
             />
             <Upload
               maxCount={1}
-              accept=".xlsx"
               showUploadList={false}
               disabled={importing}
               beforeUpload={(file) => {

@@ -56,7 +56,6 @@ const ppeItemSchema = z.object({
       message: 'Số lượng phải là số nguyên không âm'
     }),
   importDate: optionalString,
-  exportDate: optionalString,
   employeeId: optionalString,
   status: optionalString,
   note: optionalString

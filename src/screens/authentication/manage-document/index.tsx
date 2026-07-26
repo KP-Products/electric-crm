@@ -32,6 +32,11 @@ import { DOCUMENT_OWNER_TYPE, DOCUMENT_STATUS, DOCUMENT_TYPE, DocumentItem } fro
 import { useMemo } from 'react';
 import { displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
+import {
+  getUploadFileSizeError,
+  MAX_UPLOAD_FILE_SIZE,
+  MAX_UPLOAD_FILE_SIZE_TEXT
+} from 'utils/upload';
 import DocumentFilterDrawer, { type DocumentFilterForm } from './components/DocumentFilterDrawer';
 import useManageDocument from './useManageDocument';
 
@@ -66,7 +71,6 @@ const DOCUMENT_TYPE_LABEL_MAP = Object.fromEntries(
 );
 
 const OWNER_TYPE_OPTIONS = [
-  { value: DOCUMENT_OWNER_TYPE.CUSTOMER, label: 'Khách hàng' },
   { value: DOCUMENT_OWNER_TYPE.CONTRACT, label: 'Hợp đồng mua bán điện' },
   { value: DOCUMENT_OWNER_TYPE.OPERATION_CONTRACT, label: 'Hợp đồng vận hành' }
 ];
@@ -84,17 +88,7 @@ const DOCUMENT_FILTER_LABEL_MAP: Record<keyof DocumentFilterForm, string> = {
   operationUnitId: 'Đơn vị vận hành'
 };
 
-const ACCEPTED_DOCUMENT_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'docx'];
-const ACCEPTED_DOCUMENT_MIME_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-];
-const MAX_DOCUMENT_FILE_SIZE = 10 * 1024 * 1024;
-const ACCEPTED_DOCUMENT_TEXT = ACCEPTED_DOCUMENT_EXTENSIONS.map((extension) =>
-  extension.toUpperCase()
-).join(', ');
+const MAX_DOCUMENT_FILE_SIZE = MAX_UPLOAD_FILE_SIZE;
 
 const formatFileSize = (sizeKb?: number) => {
   if (sizeKb === undefined || sizeKb === null) return NULL_VALUE;
@@ -105,13 +99,6 @@ const formatFileSize = (sizeKb?: number) => {
 const getStatusLabel = (status?: string) => {
   if (!status) return NULL_VALUE;
   return DOCUMENT_STATUS_LABEL_MAP[status] || status;
-};
-
-const isAcceptedDocumentFile = (file: File) => {
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  const hasValidExtension = Boolean(extension && ACCEPTED_DOCUMENT_EXTENSIONS.includes(extension));
-  const hasValidMimeType = !file.type || ACCEPTED_DOCUMENT_MIME_TYPES.includes(file.type);
-  return hasValidExtension && hasValidMimeType;
 };
 
 const ManageDocumentScreen = () => {
@@ -465,21 +452,12 @@ const ManageDocumentScreen = () => {
                 </label>
                 <Upload
                   maxCount={1}
-                  accept=".pdf,.jpg,.jpeg,.png,.docx"
                   fileList={uploadFileList}
                   beforeUpload={(file) => {
-                    if (!isAcceptedDocumentFile(file)) {
-                      showToast({
-                        type: TYPE_TOAST.ERROR,
-                        content: `Chỉ hỗ trợ định dạng ${ACCEPTED_DOCUMENT_TEXT}`
-                      });
-                      return Upload.LIST_IGNORE;
-                    }
-
                     if (file.size > MAX_DOCUMENT_FILE_SIZE) {
                       showToast({
                         type: TYPE_TOAST.ERROR,
-                        content: 'Dung lượng tài liệu không được vượt quá 10MB'
+                        content: getUploadFileSizeError('tài liệu')
                       });
                       return Upload.LIST_IGNORE;
                     }
@@ -501,7 +479,7 @@ const ManageDocumentScreen = () => {
                   />
                 </Upload>
                 <TextBase
-                  text={`Hỗ trợ ${ACCEPTED_DOCUMENT_TEXT}. Tối đa 10MB.`}
+                  text={`Tối đa ${MAX_UPLOAD_FILE_SIZE_TEXT}.`}
                   classNames="caption1 mt-4 !text-color-700"
                 />
               </div>

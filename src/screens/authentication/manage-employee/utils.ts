@@ -5,6 +5,7 @@ import { EMPLOYEE_GENDER, EMPLOYMENT_STATUS, EMPLOYMENT_TYPE, Employee } from 'm
 import { CURRENCY_VND, NULL_VALUE } from 'utils/constant';
 import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
 import { formatCurrency } from 'utils/math';
+import { MAX_UPLOAD_FILE_SIZE } from 'utils/upload';
 
 export const DATE_API_FORMAT = FORMAT_DATE_API;
 
@@ -40,8 +41,8 @@ export const SALARY_CHANGE_TYPE_LABEL_MAP: Record<string, string> = {
 
 export const ACCEPTED_AVATAR_EXTENSIONS = ['jpg', 'jpeg', 'png'];
 export const ACCEPTED_CONTRACT_EXTENSIONS = ['pdf', 'doc', 'docx'];
-export const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024;
-export const MAX_CONTRACT_FILE_SIZE = 10 * 1024 * 1024;
+export const MAX_AVATAR_FILE_SIZE = MAX_UPLOAD_FILE_SIZE;
+export const MAX_CONTRACT_FILE_SIZE = MAX_UPLOAD_FILE_SIZE;
 export const INLINE_CONTRACT_MIME_TYPES = ['application/pdf'];
 export const INLINE_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png'];
 
@@ -105,6 +106,22 @@ export const getEmploymentStatusType = (value?: string): TYPE_STATUS => {
 
 export const getEmployeeDisplayName = (employee?: Employee) =>
   employee?.fullName || employee?.employeeCode || NULL_VALUE;
+
+export const getEmployeeSelectLabel = (employee: Employee) =>
+  employee.fullName || employee.employeeCode || employee.email || String(employee.id);
+
+export const buildEmployeeSelectOptions = (employees: Employee[], excludedEmployeeId?: number) =>
+  employees
+    .filter(
+      (employee) =>
+        employee.id !== undefined &&
+        employee.id !== null &&
+        (excludedEmployeeId === undefined || employee.id !== excludedEmployeeId)
+    )
+    .map((employee) => ({
+      value: String(employee.id),
+      label: getEmployeeSelectLabel(employee)
+    }));
 
 export const getEmployeeInitials = (employee?: Employee) => {
   const normalizedName = getEmployeeDisplayName(employee).split(/\s+/).filter(Boolean);

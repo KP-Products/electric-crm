@@ -8,32 +8,28 @@ import ButtonBase from 'components/button';
 import { AppDatePickerControl } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { AppSelectControl } from 'components/select';
+import CustomDropSearchMore from 'components/select/CustomDropSearchMore';
 import { AppTakeNoteControl } from 'components/take-note';
 import { TextBase } from 'components/text';
 import { AppTextFieldControl } from 'components/text-field';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { getUploadFileSizeError, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useManageEmployeeForm from '../hooks/useManageEmployeeForm';
 import {
-  ACCEPTED_AVATAR_EXTENSIONS,
-  ACCEPTED_CONTRACT_EXTENSIONS,
   EMPLOYEE_GENDER_OPTIONS,
   EMPLOYMENT_STATUS_OPTIONS,
   EMPLOYMENT_TYPE_OPTIONS,
   MAX_AVATAR_FILE_SIZE,
   MAX_CONTRACT_FILE_SIZE,
   getContractFileName,
-  getEmployeeInitials,
-  hasAcceptedFileSignature,
-  isAcceptedAvatarFile,
-  isAcceptedContractFile
+  getEmployeeInitials
 } from '../utils';
 
 const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
-const avatarAccept = ACCEPTED_AVATAR_EXTENSIONS.map((extension) => `.${extension}`).join(',');
-const contractAccept = ACCEPTED_CONTRACT_EXTENSIONS.map((extension) => `.${extension}`).join(',');
 
 interface ManageEmployeeFormScreenProps {
   isEditMode: boolean;
@@ -47,8 +43,13 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
     selectedEmployee,
     selectedAvatar,
     selectedContractFile,
+    managerOptions,
+    managerSearch,
+    managerOptionsLoading,
     setSelectedAvatar,
     setSelectedContractFile,
+    onSearchManagers,
+    onOpenManagerDropdown,
     submitLocked,
     onBack,
     onSubmit
@@ -95,6 +96,17 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
   const typeOptions = useMemo(
     () => EMPLOYMENT_TYPE_OPTIONS.filter((option) => option.value !== ''),
     []
+  );
+  const renderManagerDropdown = (menuInstance: ReactNode) => (
+    <CustomDropSearchMore
+      menuInstance={menuInstance}
+      searchValue={managerSearch}
+      onChangeSearch={onSearchManagers}
+      onMore={() => {}}
+      totalList={managerOptions.length}
+      total={managerOptions.length}
+      loading={managerOptionsLoading}
+    />
   );
 
   const title = isEditMode ? 'Cập nhật nhân sự' : 'Thêm nhân sự';
@@ -237,21 +249,9 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                 />
                 <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
                   <AppTextFieldControl
-                    name="departmentCode"
-                    label="Mã phòng ban"
-                    placeholder="Nhập mã phòng ban"
-                    control={control}
-                  />
-                  <AppTextFieldControl
                     name="departmentName"
                     label="Phòng ban"
                     placeholder="Nhập tên phòng ban"
-                    control={control}
-                  />
-                  <AppTextFieldControl
-                    name="positionCode"
-                    label="Mã chức vụ"
-                    placeholder="Nhập mã chức vụ"
                     control={control}
                   />
                   <AppTextFieldControl
@@ -260,12 +260,17 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                     placeholder="Nhập tên chức vụ"
                     control={control}
                   />
-                  <AppTextFieldControl
+                  <AppSelectControl
                     name="managerId"
                     label="Quản lý trực tiếp"
-                    placeholder="Nhập ID quản lý"
+                    placeholder="Chọn quản lý trực tiếp"
+                    options={managerOptions}
+                    dropdownRender={renderManagerDropdown}
+                    onOpenChange={(open) => {
+                      if (open) onOpenManagerDropdown();
+                    }}
+                    unSeleted
                     control={control}
-                    inputMode="numeric"
                   />
                   <AppDatePickerControl
                     name="hireDate"
@@ -344,27 +349,12 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                     <div className="min-w-0">
                       <TextBase classNames="sub-title4 mb-4" text="Ảnh đại diện" />
                       <Upload
-                        accept={avatarAccept}
                         showUploadList={false}
-                        beforeUpload={async (file) => {
-                          if (!isAcceptedAvatarFile(file)) {
-                            showToast({
-                              type: TYPE_TOAST.ERROR,
-                              content: 'Ảnh đại diện chỉ hỗ trợ JPG, JPEG, PNG'
-                            });
-                            return Upload.LIST_IGNORE;
-                          }
+                        beforeUpload={(file) => {
                           if (file.size > MAX_AVATAR_FILE_SIZE) {
                             showToast({
                               type: TYPE_TOAST.ERROR,
-                              content: 'Ảnh đại diện tối đa 5MB'
-                            });
-                            return Upload.LIST_IGNORE;
-                          }
-                          if (!(await hasAcceptedFileSignature(file))) {
-                            showToast({
-                              type: TYPE_TOAST.ERROR,
-                              content: 'Nội dung ảnh đại diện không đúng định dạng'
+                              content: getUploadFileSizeError('ảnh đại diện')
                             });
                             return Upload.LIST_IGNORE;
                           }
@@ -398,28 +388,13 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                   </div>
                   <div className="col-span-2 mobile:col-span-1">
                     <Upload.Dragger
-                      accept={contractAccept}
                       fileList={contractFileList}
                       maxCount={1}
-                      beforeUpload={async (file) => {
-                        if (!isAcceptedContractFile(file)) {
-                          showToast({
-                            type: TYPE_TOAST.ERROR,
-                            content: 'Hợp đồng chỉ hỗ trợ PDF, DOC, DOCX'
-                          });
-                          return Upload.LIST_IGNORE;
-                        }
+                      beforeUpload={(file) => {
                         if (file.size > MAX_CONTRACT_FILE_SIZE) {
                           showToast({
                             type: TYPE_TOAST.ERROR,
-                            content: 'Hợp đồng tối đa 10MB'
-                          });
-                          return Upload.LIST_IGNORE;
-                        }
-                        if (!(await hasAcceptedFileSignature(file))) {
-                          showToast({
-                            type: TYPE_TOAST.ERROR,
-                            content: 'Nội dung hợp đồng không đúng định dạng'
+                            content: getUploadFileSizeError('hợp đồng')
                           });
                           return Upload.LIST_IGNORE;
                         }
@@ -437,9 +412,7 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                         <TextBase text="Kéo thả file hợp đồng hoặc chọn file" />
                         <TextBase
                           classNames="body3 !text-color-600"
-                          text={`Định dạng: ${ACCEPTED_CONTRACT_EXTENSIONS.map((item) =>
-                            item.toUpperCase()
-                          ).join(', ')}. Tối đa 10MB/file`}
+                          text={`Tối đa ${MAX_UPLOAD_FILE_SIZE_TEXT}/file`}
                         />
                       </div>
                     </Upload.Dragger>

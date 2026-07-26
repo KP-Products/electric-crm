@@ -1,62 +1,40 @@
-import { DEFAULT_PAGE_SIZE, FILE_EXT, K_SIZE_1, MAX_PAGE_SIZE } from '@constant';
+import { DEFAULT_PAGE_SIZE, K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CUSTOMER_LIST } from '@redux-action-type/customer-type';
-import {
-  CREATE_CONTRACT,
-  DELETE_CONTRACT,
-  SEARCH_CONTRACT,
-  UPDATE_CONTRACT
-} from '@redux-action-type/contract';
-import { dispatch } from '@redux-common';
-import {
-  selectContractList,
-  selectContractLoadingDetail,
-  selectContractLoadingList,
-  selectContractTotal
-} from '@redux-selector/contract';
 import { showDialog } from 'components/dialog';
 import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
+import { ROUTES } from 'config/routes';
 import { ErrorBase } from 'model/common';
-import {
-  Contract,
-  ContractSearchReq,
-  CreateContractReq,
-  DeleteContractReq,
-  UpdateContractReq
-} from 'model/contract';
-import { Customer } from 'model/customer';
-import moment from 'moment';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Contract, UpdateContractReq } from 'model/contract';
+import { useRouter } from 'next/navigation';
+import { type Key, useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useSelector } from 'react-redux';
 import contractServices from 'services/contract-services';
-import type {
-  ContractFilterDrawerRef,
-  ContractFilterForm
-} from 'screens/authentication/manage-contract/components/ContractFilterDrawer';
-import { FORMAT_DATE_API, FORMAT_DATE_TIME_DOWNLOAD, normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
+import useCustomerLookup from './hooks/useCustomerLookup';
+import useMeterLookup from './hooks/useMeterLookup';
+import useUserLookup from './hooks/useUserLookup';
+import {
+  buildSearchContractBody,
+  CONTRACT_DATE_FORMAT,
+  CONTRACT_STATUS,
+  ContractFilter,
+  ContractStats,
+  DEFAULT_CONTRACT_FILTER,
+  formatContractDate,
+  getContractErrorMessage,
+  getContractId,
+  getContractStats
+} from './utils';
 
-const DATE_API_FORMAT = FORMAT_DATE_API;
-
-const contractSchema = z.object({
-  contractNumber: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập số hợp đồng' }),
-  customerId: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn khách hàng' }),
-  customerType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn loại khách hàng' }),
-  voltageLevelId: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn cấp điện áp' }),
-  capacityKva: z
-    .string()
-    .trim()
-    .min(K_SIZE_1, { message: 'Vui lòng nhập công suất' })
-    .refine((value) => Number(value) > 0, { message: 'Công suất phải lớn hơn 0' }),
-  signedDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày ký' }),
-  effectiveDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày hiệu lực' }),
-  expiryDate: z.string().trim(),
-  note: z.string().trim()
-});
+const EMPTY_CONTRACT_STATS: ContractStats = {
+  total: 0,
+  active: 0,
+  expiringSoon: 0,
+  expired: 0
+};
 
 const extendSchema = z.object({
   expiryDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày hết hạn mới' }),
@@ -68,75 +46,26 @@ const statusSchema = z.object({
   note: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập lý do' })
 });
 
-export type ContractForm = z.infer<typeof contractSchema>;
 export type ContractExtendForm = z.infer<typeof extendSchema>;
 export type ContractStatusForm = z.infer<typeof statusSchema>;
 
-const VOLTAGE_LEVEL_API_VALUE_MAP: Record<string, string> = {
-  V_0_4_KV: 'V_0_4_KV',
-  V_6_KV: 'V_6_KV',
-  V_22_KV: 'V_22_KV',
-  V_110_KV: 'V_110_KV',
-  '0.4kV': 'V_0_4_KV',
-  '6kV': 'V_6_KV',
-  '22kV': 'V_22_KV',
-  '110kV': 'V_110_KV'
-};
-
-const normalizeVoltageLevel = (voltageLevel?: string) =>
-  voltageLevel ? VOLTAGE_LEVEL_API_VALUE_MAP[voltageLevel] || voltageLevel : undefined;
-
-const escapeHtml = (value?: string | number) =>
-  String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-
 export default function useManageContract() {
   const { t } = useAppTranslation();
-  const contractList = useSelector(selectContractList);
-  const total = useSelector(selectContractTotal);
-  const listLoading = useSelector(selectContractLoadingList);
-  const detailLoading = useSelector(selectContractLoadingDetail);
+  const router = useRouter();
 
+  const [contractList, setContractList] = useState<Contract[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [contractStats, setContractStats] = useState<ContractStats>(EMPTY_CONTRACT_STATS);
+  const [listLoading, setListLoading] = useState<boolean>(false);
+  const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
-  const [openForm, setOpenForm] = useState<boolean>(false);
+  const [filter, setFilter] = useState<ContractFilter>(DEFAULT_CONTRACT_FILTER);
+  const [filterApplied, setFilterApplied] = useState<ContractFilter>(DEFAULT_CONTRACT_FILTER);
+  const [selectedContractKeys, setSelectedContractKeys] = useState<Key[]>([]);
   const [openExtend, setOpenExtend] = useState<boolean>(false);
   const [openStatus, setOpenStatus] = useState<boolean>(false);
-  const [exportLoading, setExportLoading] = useState<boolean>(false);
-  const [selectedContract, setSelectedContract] = useState<Contract>();
   const [selectedExtendContract, setSelectedExtendContract] = useState<Contract>();
   const [selectedStatusContract, setSelectedStatusContract] = useState<Contract>();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const filterDrawerRef = useRef<ContractFilterDrawerRef>(null);
-
-  const defaultFilter: ContractFilterForm = useMemo(
-    () => ({
-      contractNumber: '',
-      customerId: '',
-      customerType: '',
-      status: ''
-    }),
-    []
-  );
-  const [filterApplied, setFilterApplied] = useState<ContractFilterForm>(defaultFilter);
-
-  const form = useForm<ContractForm>({
-    mode: 'onTouched',
-    defaultValues: {
-      contractNumber: '',
-      customerId: '',
-      customerType: '',
-      voltageLevelId: '',
-      capacityKva: '',
-      signedDate: '',
-      effectiveDate: '',
-      expiryDate: '',
-      note: ''
-    },
-    resolver: zodResolver(contractSchema)
-  });
 
   const extendForm = useForm<ContractExtendForm>({
     mode: 'onTouched',
@@ -156,80 +85,52 @@ export default function useManageContract() {
     resolver: zodResolver(statusSchema)
   });
 
-  const customerOptions = useMemo(
-    () =>
-      customers.map((customer) => ({
-        value: customer.id,
-        label: `${customer.customerCode || customer.id} - ${customer.fullName || customer.id}`
-      })),
-    [customers]
+  const pinnedCustomerIds = useMemo(
+    () => [
+      filter.customerId,
+      filterApplied.customerId,
+      ...contractList.map((item) => item.customerId)
+    ],
+    [contractList, filter.customerId, filterApplied.customerId]
   );
 
-  const customerLabelMap = useMemo(
-    () => Object.fromEntries(customerOptions.map((option) => [option.value, option.label])),
-    [customerOptions]
+  const pinnedMeterIds = useMemo(
+    () => [
+      filter.meterId,
+      filterApplied.meterId,
+      ...contractList.map((contract) => contract.meterId)
+    ],
+    [contractList, filter.meterId, filterApplied.meterId]
   );
 
-  const buildSearchBody = useCallback(
-    (filter: ContractFilterForm, page: number): ContractSearchReq => {
-      const normalizedFilter = Object.fromEntries(
-        Object.entries(filter)
-          .map(([key, value]) => [key, value.trim()])
-          .filter(([, value]) => Boolean(value))
-      );
-
-      return {
-        page: page - K_SIZE_1,
-        size: DEFAULT_PAGE_SIZE,
-        ...normalizedFilter
-      };
-    },
-    []
+  const pinnedCreatedByIds = useMemo(
+    () => [
+      filter.createdBy,
+      filterApplied.createdBy,
+      ...contractList.map((contract) => contract.createdBy)
+    ],
+    [contractList, filter.createdBy, filterApplied.createdBy]
   );
 
-  const fetchList = useCallback(
-    (page: number) => {
-      dispatch({
-        type: SEARCH_CONTRACT,
-        payload: {
-          body: buildSearchBody(filterApplied, page),
-          onFailed: (error?: ErrorBase) => {
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content:
-                error?.businessErrorMessage ||
-                error?.systemErrorMessage ||
-                'Tải danh sách hợp đồng thất bại'
-            });
-          }
-        }
-      });
-    },
-    [buildSearchBody, filterApplied]
-  );
-
-  const fetchCustomers = useCallback(() => {
-    dispatch({
-      type: CUSTOMER_LIST,
-      payload: {
-        onSuccess: (data?: Customer[]) => setCustomers(data || []),
-        onFailed: () => {
-          showToast({
-            type: TYPE_TOAST.ERROR,
-            content: 'Tải danh sách khách hàng thất bại'
-          });
-        }
-      }
+  const { customerOptions, getCustomerDisplay, onOpenCustomerDropdown, customerDropdownRender } =
+    useCustomerLookup({
+      autoLoad: false,
+      pinnedIds: pinnedCustomerIds,
+      showErrorToast: true
     });
-  }, []);
 
-  useEffect(() => {
-    fetchList(currentPage);
-  }, [currentPage, fetchList]);
+  const { meterOptions, getMeterDisplay, onOpenMeterDropdown, meterDropdownRender } =
+    useMeterLookup({
+      autoLoad: false,
+      pinnedIds: pinnedMeterIds,
+      showErrorToast: true
+    });
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  const { userOptions, getUserDisplay, onOpenUserDropdown, userDropdownRender } = useUserLookup({
+    autoLoad: false,
+    pinnedIds: pinnedCreatedByIds,
+    showErrorToast: true
+  });
 
   const pagination = useMemo(
     () => ({
@@ -242,100 +143,133 @@ export default function useManageContract() {
     [currentPage, total]
   );
 
-  const onApplyFilter = useCallback((data: ContractFilterForm) => {
-    setFilterApplied(data);
+  const fetchContracts = useCallback(async () => {
+    setListLoading(true);
+    const response = await contractServices.searchContract(
+      buildSearchContractBody(filterApplied, currentPage)
+    );
+    setListLoading(false);
+
+    if (!response || !response.data) {
+      setContractList([]);
+      setTotal(0);
+      setContractStats(EMPTY_CONTRACT_STATS);
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getContractErrorMessage(response as ErrorBase, 'Tải danh sách hợp đồng thất bại')
+      });
+      return;
+    }
+
+    const nextList = Array.isArray(response.data.items) ? response.data.items : [];
+    const nextTotal = response.data.total || 0;
+    setContractList(nextList);
+    setTotal(nextTotal);
+    setContractStats(getContractStats(nextList, nextTotal));
+  }, [currentPage, filterApplied]);
+
+  useEffect(() => {
+    fetchContracts();
+  }, [fetchContracts]);
+
+  useEffect(() => {
+    setSelectedContractKeys([]);
+  }, [contractList]);
+
+  const onChangeFilter = useCallback(
+    (key: keyof ContractFilter, value: ContractFilter[keyof ContractFilter]) => {
+      setFilter((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
+
+  const onApplyFilter = useCallback(() => {
+    setFilterApplied(filter);
+    setCurrentPage(K_SIZE_1);
+  }, [filter]);
+
+  const onResetFilter = useCallback((key?: keyof ContractFilter) => {
+    if (key) {
+      setFilter((prev) => ({ ...prev, [key]: DEFAULT_CONTRACT_FILTER[key] }));
+      setFilterApplied((prev) => ({ ...prev, [key]: DEFAULT_CONTRACT_FILTER[key] }));
+    } else {
+      setFilter(DEFAULT_CONTRACT_FILTER);
+      setFilterApplied(DEFAULT_CONTRACT_FILTER);
+    }
     setCurrentPage(K_SIZE_1);
   }, []);
 
-  const onResetFilter = useCallback(
-    (key?: keyof ContractFilterForm) => {
-      if (key) {
-        setFilterApplied((prev) => ({ ...prev, [key]: '' }));
-      } else {
-        setFilterApplied(defaultFilter);
-      }
-      setCurrentPage(K_SIZE_1);
-    },
-    [defaultFilter]
-  );
+  const refreshCurrentPage = useCallback(() => {
+    fetchContracts();
+  }, [fetchContracts]);
 
-  const buildDefaultContractNumber = useCallback(() => {
-    const currentYear = new Date().getFullYear();
-    const nextNumber = String(total + K_SIZE_1).padStart(3, '0');
-    return `HD-${currentYear}-${nextNumber}`;
-  }, [total]);
+  const refreshAfterDelete = useCallback(() => {
+    if (contractList.length === K_SIZE_1 && currentPage > K_SIZE_1) {
+      setCurrentPage(currentPage - K_SIZE_1);
+      return;
+    }
+
+    refreshCurrentPage();
+  }, [contractList.length, currentPage, refreshCurrentPage]);
 
   const onOpenCreate = useCallback(() => {
-    setSelectedContract(undefined);
-    form.reset({
-      contractNumber: buildDefaultContractNumber(),
-      customerId: '',
-      customerType: '',
-      voltageLevelId: '',
-      capacityKva: '',
-      signedDate: '',
-      effectiveDate: '',
-      expiryDate: '',
-      note: ''
-    });
-    setOpenForm(true);
-  }, [buildDefaultContractNumber, form]);
+    router.push(ROUTES.MANAGE_CONTRACT_ADD);
+  }, [router]);
 
   const onOpenUpdate = useCallback(
     (contract: Contract) => {
-      setSelectedContract(contract);
-      form.reset({
-        contractNumber: contract.contractNumber || '',
-        customerId: contract.customerId || '',
-        customerType: contract.customerType || '',
-        voltageLevelId: normalizeVoltageLevel(contract.voltageLevelId) || '',
-        capacityKva:
-          contract.capacityKva !== undefined && contract.capacityKva !== null
-            ? String(contract.capacityKva)
-            : '',
-        signedDate: normalizeDateToApi(contract.signedDate),
-        effectiveDate: normalizeDateToApi(contract.effectiveDate),
-        expiryDate: normalizeDateToApi(contract.expiryDate),
-        note: contract.note || ''
-      });
-      setOpenForm(true);
-    },
-    [form]
-  );
-
-  const onCloseForm = useCallback(() => {
-    setOpenForm(false);
-    setSelectedContract(undefined);
-    form.reset();
-  }, [form]);
-
-  const onSubmitSuccess = useCallback(
-    (content: string) => {
-      onCloseForm();
-      if (currentPage === K_SIZE_1) {
-        fetchList(K_SIZE_1);
-      } else {
-        setCurrentPage(K_SIZE_1);
+      const contractId = getContractId(contract);
+      if (!contractId) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không tìm thấy ID hợp đồng để cập nhật'
+        });
+        return;
       }
-      showToast({
-        type: TYPE_TOAST.SUCCESS,
-        content
-      });
+
+      router.push(`${ROUTES.MANAGE_CONTRACT_EDIT}?id=${contractId}`);
     },
-    [currentPage, fetchList, onCloseForm]
+    [router]
   );
 
-  const buildBasePayloadFromRecord = useCallback(
+  const onCopyContract = useCallback(
+    (contract: Contract) => {
+      const contractId = getContractId(contract);
+      if (!contractId) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không tìm thấy ID hợp đồng để sao chép'
+        });
+        return;
+      }
+
+      router.push(`${ROUTES.MANAGE_CONTRACT_ADD}?copyId=${encodeURIComponent(contractId)}`);
+    },
+    [router]
+  );
+
+  const onOpenDetail = useCallback(
+    (contract: Contract) => {
+      const contractId = getContractId(contract);
+      if (!contractId) {
+        showToast({ type: TYPE_TOAST.ERROR, content: 'Không tìm thấy ID hợp đồng' });
+        return;
+      }
+
+      router.push(`${ROUTES.MANAGE_CONTRACT_DETAIL}?id=${contractId}`);
+    },
+    [router]
+  );
+
+  const buildPayloadFromContract = useCallback(
     (contract: Contract, override?: Partial<UpdateContractReq>): UpdateContractReq => ({
-      id: contract.id,
+      id: getContractId(contract),
       contractNumber: contract.contractNumber,
       customerId: contract.customerId,
-      voltageLevelId: normalizeVoltageLevel(contract.voltageLevelId),
-      customerType: contract.customerType || undefined,
-      capacityKva: Number(contract.capacityKva || 0),
-      signedDate: normalizeDateToApi(contract.signedDate),
-      effectiveDate: normalizeDateToApi(contract.effectiveDate || contract.signedDate),
-      expiryDate: normalizeDateToApi(contract.expiryDate) || undefined,
+      meterId: contract.meterId || undefined,
+      signedDate: formatContractDate(contract.signedDate),
+      effectiveDate: formatContractDate(contract.effectiveDate || contract.signedDate),
+      expiryDate: formatContractDate(contract.expiryDate) || undefined,
       status: contract.status || undefined,
       note: contract.note || undefined,
       ...override
@@ -343,67 +277,20 @@ export default function useManageContract() {
     []
   );
 
-  const handleSubmit = useCallback(
-    (data: ContractForm) => {
-      const body: CreateContractReq = {
-        contractNumber: data.contractNumber,
-        customerId: data.customerId,
-        voltageLevelId: normalizeVoltageLevel(data.voltageLevelId),
-        customerType: data.customerType,
-        capacityKva: Number(data.capacityKva),
-        signedDate: normalizeDateToApi(data.signedDate),
-        effectiveDate: normalizeDateToApi(data.effectiveDate),
-        expiryDate: normalizeDateToApi(data.expiryDate) || undefined,
-        note: data.note || undefined,
-        status: selectedContract?.status || undefined
-      };
-
-      if (selectedContract) {
-        dispatch({
-          type: UPDATE_CONTRACT,
-          payload: {
-            body: {
-              id: selectedContract.id,
-              ...body
-            },
-            onSuccess: () => onSubmitSuccess('Cập nhật hợp đồng thành công'),
-            onFailed: (error?: ErrorBase) => {
-              showToast({
-                type: TYPE_TOAST.ERROR,
-                content:
-                  error?.businessErrorMessage ||
-                  error?.systemErrorMessage ||
-                  'Cập nhật hợp đồng thất bại'
-              });
-            }
-          }
+  const onOpenExtend = useCallback(
+    (contract: Contract) => {
+      const contractId = getContractId(contract);
+      if (!contractId) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không tìm thấy ID hợp đồng để gia hạn'
         });
         return;
       }
 
-      dispatch({
-        type: CREATE_CONTRACT,
-        payload: {
-          body,
-          onSuccess: () => onSubmitSuccess('Tạo hợp đồng thành công'),
-          onFailed: (error?: ErrorBase) => {
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content:
-                error?.businessErrorMessage || error?.systemErrorMessage || 'Tạo hợp đồng thất bại'
-            });
-          }
-        }
-      });
-    },
-    [onSubmitSuccess, selectedContract]
-  );
-
-  const onOpenExtend = useCallback(
-    (contract: Contract) => {
       setSelectedExtendContract(contract);
       extendForm.reset({
-        expiryDate: normalizeDateToApi(contract.expiryDate),
+        expiryDate: formatContractDate(contract.expiryDate),
         note: contract.note || ''
       });
       setOpenExtend(true);
@@ -418,40 +305,44 @@ export default function useManageContract() {
   }, [extendForm]);
 
   const handleExtendSubmit = useCallback(
-    (data: ContractExtendForm) => {
+    async (data: ContractExtendForm) => {
       if (!selectedExtendContract) return;
-      const body = buildBasePayloadFromRecord(selectedExtendContract, {
-        expiryDate: normalizeDateToApi(data.expiryDate),
-        note: data.note || selectedExtendContract.note || undefined,
-        status: 'HIEU_LUC'
-      });
+      setDetailLoading(true);
+      const response = await contractServices.updateContract(
+        buildPayloadFromContract(selectedExtendContract, {
+          expiryDate: formatContractDate(data.expiryDate),
+          note: data.note || selectedExtendContract.note || undefined,
+          status: CONTRACT_STATUS.ACTIVE
+        })
+      );
+      setDetailLoading(false);
 
-      dispatch({
-        type: UPDATE_CONTRACT,
-        payload: {
-          body,
-          onSuccess: () => {
-            onCloseExtend();
-            fetchList(currentPage);
-            showToast({ type: TYPE_TOAST.SUCCESS, content: 'Gia hạn hợp đồng thành công' });
-          },
-          onFailed: (error?: ErrorBase) => {
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content:
-                error?.businessErrorMessage ||
-                error?.systemErrorMessage ||
-                'Gia hạn hợp đồng thất bại'
-            });
-          }
-        }
-      });
+      if (!response || !response.data) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getContractErrorMessage(response as ErrorBase, 'Gia hạn hợp đồng thất bại')
+        });
+        return;
+      }
+
+      onCloseExtend();
+      refreshCurrentPage();
+      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Gia hạn hợp đồng thành công' });
     },
-    [buildBasePayloadFromRecord, currentPage, fetchList, onCloseExtend, selectedExtendContract]
+    [buildPayloadFromContract, onCloseExtend, refreshCurrentPage, selectedExtendContract]
   );
 
   const onOpenStatus = useCallback(
     (contract: Contract) => {
+      const contractId = getContractId(contract);
+      if (!contractId) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không tìm thấy ID hợp đồng để cập nhật trạng thái'
+        });
+        return;
+      }
+
       setSelectedStatusContract(contract);
       statusForm.reset({
         status: contract.status || '',
@@ -469,47 +360,48 @@ export default function useManageContract() {
   }, [statusForm]);
 
   const handleStatusSubmit = useCallback(
-    (data: ContractStatusForm) => {
+    async (data: ContractStatusForm) => {
       if (!selectedStatusContract) return;
-      const body = buildBasePayloadFromRecord(selectedStatusContract, {
-        status: data.status,
-        note: data.note
-      });
+      setDetailLoading(true);
+      const response = await contractServices.updateContract(
+        buildPayloadFromContract(selectedStatusContract, {
+          status: data.status,
+          note: data.note
+        })
+      );
+      setDetailLoading(false);
 
-      dispatch({
-        type: UPDATE_CONTRACT,
-        payload: {
-          body,
-          onSuccess: () => {
-            onCloseStatus();
-            fetchList(currentPage);
-            showToast({ type: TYPE_TOAST.SUCCESS, content: 'Cập nhật trạng thái thành công' });
-          },
-          onFailed: (error?: ErrorBase) => {
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content:
-                error?.businessErrorMessage ||
-                error?.systemErrorMessage ||
-                'Cập nhật trạng thái thất bại'
-            });
-          }
-        }
-      });
+      if (!response || !response.data) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getContractErrorMessage(response as ErrorBase, 'Cập nhật trạng thái thất bại')
+        });
+        return;
+      }
+
+      onCloseStatus();
+      refreshCurrentPage();
+      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Cập nhật trạng thái thành công' });
     },
-    [buildBasePayloadFromRecord, currentPage, fetchList, onCloseStatus, selectedStatusContract]
+    [buildPayloadFromContract, onCloseStatus, refreshCurrentPage, selectedStatusContract]
   );
 
   const onDeleteSuccess = useCallback(() => {
-    fetchList(currentPage);
+    refreshAfterDelete();
     showToast({
       type: TYPE_TOAST.SUCCESS,
       content: 'Xoá hợp đồng thành công'
     });
-  }, [currentPage, fetchList]);
+  }, [refreshAfterDelete]);
 
   const onDelete = useCallback(
     (contract: Contract) => {
+      const contractId = getContractId(contract);
+      if (!contractId) {
+        showToast({ type: TYPE_TOAST.ERROR, content: 'Không tìm thấy ID hợp đồng để xoá' });
+        return;
+      }
+
       showDialog({
         title: t('common:delete_confirm'),
         content: (
@@ -522,24 +414,17 @@ export default function useManageContract() {
           {
             title: t('common:agree'),
             type: TYPE_ACTION.PRIMARY,
-            onPress: () => {
-              const body: DeleteContractReq = { id: contract.id };
-              dispatch({
-                type: DELETE_CONTRACT,
-                payload: {
-                  body,
-                  onSuccess: onDeleteSuccess,
-                  onFailed: (error?: ErrorBase) => {
-                    showToast({
-                      type: TYPE_TOAST.ERROR,
-                      content:
-                        error?.businessErrorMessage ||
-                        error?.systemErrorMessage ||
-                        'Xoá hợp đồng thất bại'
-                    });
-                  }
-                }
-              });
+            onPress: async () => {
+              const response = await contractServices.deleteContract({ id: contractId });
+              if (!response || response.businessErrorMessage || response.systemErrorMessage) {
+                showToast({
+                  type: TYPE_TOAST.ERROR,
+                  content: getContractErrorMessage(response as ErrorBase, 'Xoá hợp đồng thất bại')
+                });
+                return;
+              }
+
+              onDeleteSuccess();
             }
           },
           {
@@ -552,67 +437,24 @@ export default function useManageContract() {
     [onDeleteSuccess, t]
   );
 
-  const exportRowsToExcel = useCallback(
-    (rows: Contract[], getDisplayValue: (contract: Contract, key: string) => string) => {
-      const columns = [
-        ['contractNumber', 'Số hợp đồng'],
-        ['customerId', 'Khách hàng'],
-        ['customerType', 'Loại khách hàng'],
-        ['voltageLevelId', 'Cấp điện áp'],
-        ['capacityKva', 'Công suất (kVA)'],
-        ['signedDate', 'Ngày ký'],
-        ['effectiveDate', 'Ngày hiệu lực'],
-        ['expiryDate', 'Ngày hết hạn'],
-        ['status', 'Trạng thái'],
-        ['note', 'Ghi chú']
-      ];
-      const headerHtml = columns.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join('');
-      const bodyHtml = rows
-        .map(
-          (row) =>
-            `<tr>${columns
-              .map(([key]) => `<td>${escapeHtml(getDisplayValue(row, key))}</td>`)
-              .join('')}</tr>`
-        )
-        .join('');
-      const html = `<html><head><meta charset="UTF-8" /></head><body><table border="1"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
-      const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `CONTRACT_${moment().format(FORMAT_DATE_TIME_DOWNLOAD)}.${FILE_EXT.EXCEL2}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    },
-    []
-  );
+  const onSelectContracts = useCallback((selectedRowKeys: Key[]) => {
+    setSelectedContractKeys(selectedRowKeys);
+  }, []);
 
-  const onExport = useCallback(
-    async (getDisplayValue: (contract: Contract, key: string) => string) => {
-      setExportLoading(true);
-      const response = await contractServices.searchContract({
-        ...buildSearchBody(filterApplied, K_SIZE_1),
-        size: MAX_PAGE_SIZE
+  const onPrintContracts = useCallback(() => {
+    if (!selectedContractKeys.length) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: 'Vui lòng chọn hợp đồng cần in'
       });
-      setExportLoading(false);
+      return;
+    }
 
-      if (!response || !response.data) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content:
-            response?.businessErrorMessage ||
-            response?.systemErrorMessage ||
-            'Xuất Excel hợp đồng thất bại'
-        });
-        return;
-      }
-
-      exportRowsToExcel(response.data.items || [], getDisplayValue);
-      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Xuất Excel hợp đồng thành công' });
-    },
-    [buildSearchBody, exportRowsToExcel, filterApplied]
-  );
+    showToast({
+      type: TYPE_TOAST.INFO,
+      content: `Đã chọn ${selectedContractKeys.length} hợp đồng. Chức năng in hợp đồng đang được phát triển`
+    });
+  }, [selectedContractKeys.length]);
 
   return {
     t,
@@ -620,23 +462,32 @@ export default function useManageContract() {
     total,
     listLoading,
     detailLoading,
-    exportLoading,
     currentPage,
     pagination,
-    defaultFilter,
+    filter,
     filterApplied,
-    filterDrawerRef,
+    contractStats,
+    selectedContractKeys,
+    selectedContractCount: selectedContractKeys.length,
     customerOptions,
-    customerLabelMap,
+    meterOptions,
+    userOptions,
+    getCustomerDisplay,
+    getMeterDisplay,
+    getUserDisplay,
+    onOpenCustomerDropdown,
+    customerDropdownRender,
+    onOpenMeterDropdown,
+    meterDropdownRender,
+    onOpenUserDropdown,
+    userDropdownRender,
+    onChangeFilter,
     onApplyFilter,
     onResetFilter,
-    openForm,
-    selectedContract,
-    form,
-    handleSubmit,
     onOpenCreate,
     onOpenUpdate,
-    onCloseForm,
+    onCopyContract,
+    onOpenDetail,
     openExtend,
     extendForm,
     handleExtendSubmit,
@@ -648,7 +499,8 @@ export default function useManageContract() {
     onOpenStatus,
     onCloseStatus,
     onDelete,
-    onExport,
-    isoDateFormat: DATE_API_FORMAT
+    onSelectContracts,
+    onPrintContracts,
+    isoDateFormat: CONTRACT_DATE_FORMAT
   };
 }

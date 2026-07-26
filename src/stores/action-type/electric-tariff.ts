@@ -4,3 +4,8 @@ export const SEARCH_ELECTRIC_TARIFF = SLICE_NAME.ELECTRIC_TARIFF + '/searchElect
 export const GET_ELECTRIC_TARIFF_DETAIL = SLICE_NAME.ELECTRIC_TARIFF + '/getElectricTariffDetail';
 export const CREATE_ELECTRIC_TARIFF = SLICE_NAME.ELECTRIC_TARIFF + '/createElectricTariff';
 export const UPDATE_ELECTRIC_TARIFF = SLICE_NAME.ELECTRIC_TARIFF + '/updateElectricTariff';
+export const DELETE_ELECTRIC_TARIFF = SLICE_NAME.ELECTRIC_TARIFF + '/deleteElectricTariff';
+export const UPLOAD_ELECTRIC_TARIFF_DOCUMENT =
+  SLICE_NAME.ELECTRIC_TARIFF + '/uploadElectricTariffDocument';
+export const DELETE_ELECTRIC_TARIFF_DOCUMENT =
+  SLICE_NAME.ELECTRIC_TARIFF + '/deleteElectricTariffDocument';

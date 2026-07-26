@@ -131,7 +131,6 @@ const ReadingCard = ({
 
       <div className="mt-auto flex items-center justify-between gap-8 pt-12">
         <Upload
-          accept=".jpg,.jpeg,.png"
           showUploadList={false}
           beforeUpload={(file) => {
             onSelectPhoto(row.id, file);

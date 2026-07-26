@@ -41,9 +41,13 @@ export const ROUTES = {
   METER_VERIFICATION: '/meter-verification',
   METER_CHANGE_EVENTS: '/meter-change-events',
   PPE_ITEMS: '/ppe-items',
+  PPE_ITEM_HISTORY: '/ppe-item-history',
 
   // CONTRACT
   MANAGE_CONTRACT: '/management/contract',
+  MANAGE_CONTRACT_ADD: '/management/contract/add',
+  MANAGE_CONTRACT_EDIT: '/management/contract/edit',
+  MANAGE_CONTRACT_DETAIL: '/management/contract/detail',
   MANAGE_OPERATION_CONTRACT: '/management/operation-contract',
   MANAGE_OPERATION_CONTRACT_ADD: '/management/operation-contract/add',
   MANAGE_OPERATION_CONTRACT_EDIT: '/management/operation-contract/edit',

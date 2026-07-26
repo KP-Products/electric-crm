@@ -40,6 +40,10 @@ export interface GetTariffDetailReq {
   id: number;
 }
 
+export interface UploadTariffDocumentReq extends GetTariffDetailReq {
+  file: File;
+}
+
 export interface TariffDetail {
   tariff?: ElectricTariff;
   voltageLabel?: string;
@@ -50,6 +54,10 @@ export interface TariffDetail {
 export interface SearchTariffsRes extends ResultBase<PaginationRes<TariffDetail>> {}
 
 export interface GetTariffDetailRes extends ResultBase<TariffDetail> {}
+
+export interface DeleteTariffRes extends ResultBase<void> {}
+
+export interface TariffDocumentRes extends ResultBase<ElectricTariff> {}
 
 export interface TariffPriceInput {
   tou: string;

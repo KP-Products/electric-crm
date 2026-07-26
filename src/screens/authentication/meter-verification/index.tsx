@@ -104,7 +104,7 @@ const MeterVerificationScreen = () => {
     selectedMeter,
     form,
     selectedFile,
-    setSelectedFile,
+    onSelectFile,
     updateFilter,
     onApplyHistoryFilter,
     onResetHistoryFilter,
@@ -596,7 +596,13 @@ const MeterVerificationScreen = () => {
                 <label className="mb-4 inline-flex text-14 font-semibold leading-24 text-color-900">
                   File kết quả kiểm định
                 </label>
-                <Input type="file" onChange={(event) => setSelectedFile(event.target.files?.[0])} />
+                <Input
+                  type="file"
+                  onChange={(event) => {
+                    const isSelected = onSelectFile(event.target.files?.[0]);
+                    if (!isSelected) event.target.value = '';
+                  }}
+                />
                 {selectedFile && (
                   <TextBase
                     classNames="caption !text-color-700 mt-4"

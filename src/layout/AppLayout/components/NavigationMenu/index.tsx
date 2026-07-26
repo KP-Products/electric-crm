@@ -6,9 +6,9 @@ import {
   CloudSyncOutlined,
   CarryOutOutlined,
   DollarCircleOutlined,
-  EnvironmentOutlined,
   FileTextOutlined,
   FundProjectionScreenOutlined,
+  HistoryOutlined,
   IdcardOutlined,
   ProfileOutlined,
   ReconciliationOutlined,
@@ -125,15 +125,15 @@ const NavigationMenu = () => {
         icon: <SettingOutlined />,
         children: [
           {
-            key: ROUTES.MANAGE_CONTRACT,
-            label: 'Quản lý hợp đồng mua bán điện',
-            icon: <AuditOutlined />,
+            key: ROUTES.MANAGE_CUSTOMER,
+            label: 'Quản lý khách hàng',
+            icon: <UsergroupAddOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
-            key: ROUTES.MANAGE_OPERATION_CONTRACT,
-            label: 'Quản lý hợp đồng vận hành',
+            key: ROUTES.MANAGE_CONTRACT,
+            label: 'Quản lý hợp đồng mua bán điện',
             icon: <AuditOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
@@ -146,13 +146,6 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
-            key: ROUTES.MANAGE_CUSTOMER,
-            label: 'Quản lý khách hàng',
-            icon: <UsergroupAddOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
-          {
             key: ROUTES.MANAGE_DOCUMENT,
             label: 'Quản lý hồ sơ giấy tờ',
             icon: <FileTextOutlined />,
@@ -160,9 +153,9 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
-            key: ROUTES.MANAGE_SERVICE_LOCATION,
-            label: 'Quản lý địa điểm sử dụng điện',
-            icon: <EnvironmentOutlined />,
+            key: ROUTES.MANAGE_OPERATION_CONTRACT,
+            label: 'Quản lý hợp đồng vận hành',
+            icon: <AuditOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
@@ -240,6 +233,12 @@ const NavigationMenu = () => {
             icon: <SafetyCertificateOutlined />,
             type: 'item'
             // permission: PERMISSION_VIEW_ACTION.PPE_ITEM_VIEW_ACTION
+          },
+          {
+            key: ROUTES.PPE_ITEM_HISTORY,
+            label: 'Lịch sử bàn giao thiết bị',
+            icon: <HistoryOutlined />,
+            type: 'item'
           }
         ]
       },

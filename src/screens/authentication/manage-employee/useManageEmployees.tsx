@@ -14,7 +14,7 @@ import { ROUTES } from 'config/routes';
 import { ErrorBase } from 'model/common';
 import { Employee, SearchEmployeesReq } from 'model/employee';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import employeeServices from 'services/employee-services';
 import {
@@ -25,6 +25,7 @@ import {
 } from 'utils/blob-response';
 import { useAppTranslation } from 'utils/i18n';
 import {
+  INLINE_AVATAR_MIME_TYPES,
   INLINE_CONTRACT_MIME_TYPES,
   getContractFileName,
   getEmployeeDisplayName,
@@ -34,16 +35,12 @@ import {
 export interface EmployeeFilterForm {
   employeeCode: string;
   fullName: string;
-  departmentCode: string;
-  positionCode: string;
   employmentStatus: string;
 }
 
 const normalizeFilter = (filter: EmployeeFilterForm): EmployeeFilterForm => ({
   employeeCode: filter.employeeCode.trim(),
   fullName: filter.fullName.trim(),
-  departmentCode: filter.departmentCode.trim(),
-  positionCode: filter.positionCode.trim(),
   employmentStatus: filter.employmentStatus.trim()
 });
 
@@ -59,14 +56,15 @@ export default function useManageEmployees() {
     () => ({
       employeeCode: '',
       fullName: '',
-      departmentCode: '',
-      positionCode: '',
       employmentStatus: ''
     }),
     []
   );
   const [filter, setFilter] = useState<EmployeeFilterForm>(defaultFilter);
   const [filterApplied, setFilterApplied] = useState<EmployeeFilterForm>(defaultFilter);
+  const [avatarUrlMap, setAvatarUrlMap] = useState<Record<number, string>>({});
+  const avatarObjectUrlMapRef = useRef<Record<number, { source: string; url: string }>>({});
+  const activeAvatarSourceMapRef = useRef<Record<number, string>>({});
 
   const buildSearchBody = useCallback(
     (appliedFilter: EmployeeFilterForm, page: number): SearchEmployeesReq => {
@@ -77,8 +75,6 @@ export default function useManageEmployees() {
         size: DEFAULT_PAGE_SIZE,
         employeeCode: normalizedFilter.employeeCode || undefined,
         fullName: normalizedFilter.fullName || undefined,
-        departmentCode: normalizedFilter.departmentCode || undefined,
-        positionCode: normalizedFilter.positionCode || undefined,
         employmentStatus: normalizedFilter.employmentStatus || undefined
       };
     },
@@ -106,6 +102,77 @@ export default function useManageEmployees() {
   useEffect(() => {
     fetchList(currentPage);
   }, [currentPage, fetchList]);
+
+  useEffect(() => {
+    const activeAvatarSourceMap: Record<number, string> = {};
+
+    employeeList.forEach((employee) => {
+      if (!employee.id || !employee.avatarUrl) return;
+      activeAvatarSourceMap[employee.id] = employee.avatarUrl;
+    });
+
+    activeAvatarSourceMapRef.current = activeAvatarSourceMap;
+
+    Object.entries(avatarObjectUrlMapRef.current).forEach(([employeeId, entry]) => {
+      const activeSource = activeAvatarSourceMap[Number(employeeId)];
+      if (activeSource === entry.source) return;
+
+      URL.revokeObjectURL(entry.url);
+      delete avatarObjectUrlMapRef.current[Number(employeeId)];
+    });
+
+    setAvatarUrlMap(
+      Object.fromEntries(
+        Object.entries(avatarObjectUrlMapRef.current).map(([employeeId, entry]) => [
+          Number(employeeId),
+          entry.url
+        ])
+      )
+    );
+
+    let disposed = false;
+    Object.entries(activeAvatarSourceMap).forEach(([employeeId, source]) => {
+      const numericEmployeeId = Number(employeeId);
+      if (avatarObjectUrlMapRef.current[numericEmployeeId]?.source === source) return;
+
+      employeeServices.viewEmployeeAvatar(numericEmployeeId).then(async (response) => {
+        const fileError = await getBlobResponseError(response);
+        if (
+          disposed ||
+          activeAvatarSourceMapRef.current[numericEmployeeId] !== source ||
+          fileError ||
+          !isBlobFileResponse(response) ||
+          !canViewBlobInline(response, INLINE_AVATAR_MIME_TYPES)
+        ) {
+          return;
+        }
+
+        const avatarUrl = URL.createObjectURL(response.blob);
+        if (disposed || activeAvatarSourceMapRef.current[numericEmployeeId] !== source) {
+          URL.revokeObjectURL(avatarUrl);
+          return;
+        }
+
+        avatarObjectUrlMapRef.current[numericEmployeeId] = { source, url: avatarUrl };
+        setAvatarUrlMap((prev) => ({ ...prev, [numericEmployeeId]: avatarUrl }));
+      });
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [employeeList]);
+
+  useEffect(
+    () => () => {
+      Object.values(avatarObjectUrlMapRef.current).forEach((entry) => {
+        URL.revokeObjectURL(entry.url);
+      });
+      avatarObjectUrlMapRef.current = {};
+      activeAvatarSourceMapRef.current = {};
+    },
+    []
+  );
 
   const pagination = useMemo(
     () => ({
@@ -293,6 +360,7 @@ export default function useManageEmployees() {
     pagination,
     filter,
     filterApplied,
+    avatarUrlMap,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
