@@ -18,40 +18,43 @@ import { Divider, Flex } from 'antd';
 import clsx from 'clsx';
 import ButtonBase from 'components/button';
 import IconHover from 'components/icon-vec-local/icon-hover';
+import { AppSelect } from 'components/select';
 import Status, { KIND_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
 import TagFilter from 'components/tag-filter';
 import { TextBase } from 'components/text';
+import { AppTextField } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import { User } from 'model/user';
 import { useCallback, useMemo } from 'react';
-import UserFilterDrawer, {
-  UserFilterForm
-} from 'screens/authentication/manage-user/components/UserFilterDrawer';
+import type { UserFilterForm } from 'screens/authentication/manage-user/hooks/useManageUser';
 import useManageUser from './hooks/useManageUser';
 import useManageUserPermission from 'screens/authentication/manage-user/hooks/useManageUserPermission';
 import {
   USER_FILTER_LABEL_MAP,
+  USER_STATUS_OPTIONS,
   USER_STATUS_LABEL_MAP,
   USER_STATUS_TYPE_MAP
 } from 'screens/authentication/manage-user/utils/constant';
 import { displayDateTimeFromServer } from 'utils/date';
 import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
 
+const ALL_OPTION = { value: '', label: 'Tất cả' };
+
 const ManageUser = () => {
   const {
     t,
     router,
+    filter,
+    onChangeFilter,
     onApplyFilter,
-    defaultFilter,
     filterApplied,
     userPaginated,
     loadingUserList,
     pagination,
     onDownload,
     onResetFilter,
-    filterDrawerRef,
     roleOptions,
     onDelete
   } = useManageUser();
@@ -302,16 +305,6 @@ const ManageUser = () => {
             gap={K_SIZE_16}
             className={'mobile:w-full mobile:flex-col'}
           >
-            <Flex gap={K_SIZE_16}>
-              <ButtonBase
-                type={'ghost'}
-                customContent={t('common:advanced_filter')}
-                leftIcon={'IC_FILTER_OUTLINE'}
-                onClick={() => filterDrawerRef.current?.open(filterApplied)}
-                classNames={'mobile:flex-1 mobile:justify-center'}
-              />
-            </Flex>
-
             <ButtonBase
               type={'ghost'}
               leftIcon={'IC_ADD_OUTLINE2'}
@@ -337,6 +330,63 @@ const ManageUser = () => {
             <DashboardCard key={item.title} {...item} />
           ))}
         </div>
+        <div className="mb-12 grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(180px,1fr)_minmax(150px,1fr)_minmax(160px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <AppTextField
+            name="username"
+            label={t('login_screen:username')}
+            placeholder={t('login_screen:enter_username')}
+            value={filter.username}
+            onChange={(event) => onChangeFilter('username', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="fullName"
+            label={t('manage_user:fullname')}
+            placeholder={t('manage_user:enter_fullname')}
+            value={filter.fullName}
+            onChange={(event) => onChangeFilter('fullName', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="email"
+            label={t('manage_user:email')}
+            placeholder={t('manage_user:enter_email')}
+            value={filter.email}
+            onChange={(event) => onChangeFilter('email', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppSelect
+            name="status"
+            label={t('common:status')}
+            placeholder={t('common:select_status')}
+            value={filter.status}
+            options={[ALL_OPTION, ...USER_STATUS_OPTIONS]}
+            onSelectOption={({ key }) => onChangeFilter('status', String(key))}
+          />
+          <AppSelect
+            name="roleId"
+            label={t('manage_user:role')}
+            placeholder={t('manage_user:select_role')}
+            value={filter.roleId}
+            options={[ALL_OPTION, ...roleOptions]}
+            onSelectOption={({ key }) => onChangeFilter('roleId', String(key))}
+          />
+          <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
+            <ButtonBase
+              type="ghost"
+              customContent="Làm mới"
+              onClick={() => onResetFilter()}
+              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+            />
+            <ButtonBase
+              type="primary"
+              leftIcon="IC_SEARCH_OUTLINE2"
+              customContent="Tìm kiếm"
+              onClick={onApplyFilter}
+              classNames="min-w-[112px] mobile:flex-1 mobile:justify-center"
+            />
+          </Flex>
+        </div>
         <TagFilterGroup />
         <div className={'overflow-hidden rounded-radius-l border border-color-400 pb-4'}>
           <AppTable
@@ -354,13 +404,6 @@ const ManageUser = () => {
           currentPage={pagination.current}
           total={pagination.total}
           pagination={pagination}
-        />
-        <UserFilterDrawer
-          ref={filterDrawerRef}
-          defaultValues={defaultFilter}
-          onApplyFilter={onApplyFilter}
-          onResetFilter={onResetFilter}
-          roleOptions={roleOptions}
         />
       </div>
     </PageWithBreadcrumb>

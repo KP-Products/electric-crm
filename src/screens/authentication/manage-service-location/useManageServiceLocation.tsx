@@ -25,13 +25,9 @@ import {
   ServiceLocationSearchReq,
   UpdateServiceLocationReq
 } from 'model/service-location';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
-import type {
-  ServiceLocationFilterDrawerRef,
-  ServiceLocationFilterForm
-} from 'screens/authentication/manage-service-location/components/ServiceLocationFilterDrawer';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 
@@ -46,6 +42,14 @@ const serviceLocationSchema = z.object({
 });
 
 export type ServiceLocationForm = z.infer<typeof serviceLocationSchema>;
+
+export interface ServiceLocationFilterForm {
+  keyword: string;
+  contractId: string;
+  customerId: string;
+  voltageLevel: string;
+  usagePurpose: string;
+}
 
 const VOLTAGE_LEVEL_API_VALUE_MAP: Record<string, string> = {
   HA_AP: 'HA_AP',
@@ -92,7 +96,6 @@ export default function useManageServiceLocation() {
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
   const [openForm, setOpenForm] = useState<boolean>(false);
   const [selectedLocation, setSelectedLocation] = useState<ServiceLocation>();
-  const filterDrawerRef = useRef<ServiceLocationFilterDrawerRef>(null);
 
   const defaultFilter: ServiceLocationFilterForm = useMemo(
     () => ({
@@ -104,6 +107,7 @@ export default function useManageServiceLocation() {
     }),
     []
   );
+  const [filter, setFilter] = useState<ServiceLocationFilterForm>(defaultFilter);
   const [filterApplied, setFilterApplied] = useState<ServiceLocationFilterForm>(defaultFilter);
 
   const form = useForm<ServiceLocationForm>({
@@ -173,16 +177,22 @@ export default function useManageServiceLocation() {
     [currentPage, total]
   );
 
-  const onApplyFilter = useCallback((data: ServiceLocationFilterForm) => {
-    setFilterApplied(data);
-    setCurrentPage(K_SIZE_1);
+  const onChangeFilter = useCallback((key: keyof ServiceLocationFilterForm, value: string) => {
+    setFilter((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  const onApplyFilter = useCallback(() => {
+    setFilterApplied(filter);
+    setCurrentPage(K_SIZE_1);
+  }, [filter]);
 
   const onResetFilter = useCallback(
     (key?: keyof ServiceLocationFilterForm) => {
       if (key) {
+        setFilter((prev) => ({ ...prev, [key]: '' }));
         setFilterApplied((prev) => ({ ...prev, [key]: '' }));
       } else {
+        setFilter(defaultFilter);
         setFilterApplied(defaultFilter);
       }
       setCurrentPage(K_SIZE_1);
@@ -362,9 +372,9 @@ export default function useManageServiceLocation() {
     detailLoading,
     currentPage,
     pagination,
-    defaultFilter,
+    filter,
     filterApplied,
-    filterDrawerRef,
+    onChangeFilter,
     onApplyFilter,
     onResetFilter,
     openForm,

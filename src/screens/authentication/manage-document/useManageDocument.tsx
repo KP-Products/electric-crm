@@ -30,10 +30,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
-import type {
-  DocumentFilterDrawerRef,
-  DocumentFilterForm
-} from 'screens/authentication/manage-document/components/DocumentFilterDrawer';
 import {
   canViewBlobInline,
   downloadBlobResponse,
@@ -93,6 +89,15 @@ type DocumentByUnitClientFilter = Partial<Omit<SearchDocumentReq, 'page' | 'size
 export type AttachDocumentForm = z.infer<typeof attachDocumentSchema>;
 export type UpdateDocumentForm = z.infer<typeof updateDocumentSchema>;
 
+export interface DocumentFilterForm {
+  keyword: string;
+  ownerType: string;
+  ownerId: string;
+  docType: string;
+  status: string;
+  operationUnitId: string;
+}
+
 export default function useManageDocument() {
   const { t } = useAppTranslation();
   const documentList = useSelector(selectDocumentList);
@@ -105,7 +110,6 @@ export default function useManageDocument() {
   const [openUpdate, setOpenUpdate] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File>();
   const [selectedDocument, setSelectedDocument] = useState<DocumentItem>();
-  const filterDrawerRef = useRef<DocumentFilterDrawerRef>(null);
 
   const defaultFilter: DocumentFilterForm = useMemo(
     () => ({
@@ -118,6 +122,7 @@ export default function useManageDocument() {
     }),
     []
   );
+  const [filter, setFilter] = useState<DocumentFilterForm>(defaultFilter);
   const [filterApplied, setFilterApplied] = useState<DocumentFilterForm>(defaultFilter);
 
   const attachForm = useForm<AttachDocumentForm>({
@@ -143,8 +148,15 @@ export default function useManageDocument() {
 
   const selectedAttachOwnerType = attachForm.watch('ownerType');
   const previousAttachOwnerTypeRef = useRef<string>();
+  const selectedFilterOwnerType = filter.ownerType;
   const { ownerOptions, resetOwnerOptions, onOpenOwnerDropdown, ownerDropdownRender } =
     useDocumentOwnerLookup(selectedAttachOwnerType);
+  const {
+    ownerOptions: filterOwnerOptions,
+    resetOwnerOptions: resetFilterOwnerOptions,
+    onOpenOwnerDropdown: onOpenFilterOwnerDropdown,
+    ownerDropdownRender: filterOwnerDropdownRender
+  } = useDocumentOwnerLookup(selectedFilterOwnerType);
   const {
     operationUnitOptions,
     operationUnitLoading,
@@ -153,7 +165,7 @@ export default function useManageDocument() {
     operationUnitDropdownRender
   } = useOperationUnitLookup({
     autoLoad: false,
-    pinnedIds: [filterApplied.operationUnitId]
+    pinnedIds: [filter.operationUnitId, filterApplied.operationUnitId]
   });
 
   useEffect(() => {
@@ -254,21 +266,46 @@ export default function useManageDocument() {
     [currentPage, total]
   );
 
-  const onApplyFilter = useCallback((data: DocumentFilterForm) => {
-    setFilterApplied(data);
+  const onChangeFilter = useCallback(
+    (key: keyof DocumentFilterForm, value: string) => {
+      setFilter((prev) => ({
+        ...prev,
+        [key]: value,
+        ...(key === 'ownerType' ? { ownerId: '' } : {})
+      }));
+
+      if (key === 'ownerType') resetFilterOwnerOptions();
+    },
+    [resetFilterOwnerOptions]
+  );
+
+  const onApplyFilter = useCallback(() => {
+    setFilterApplied(filter);
     setCurrentPage(K_SIZE_1);
-  }, []);
+  }, [filter]);
 
   const onResetFilter = useCallback(
     (key?: keyof DocumentFilterForm) => {
       if (key) {
-        setFilterApplied((prev) => ({ ...prev, [key]: '' }));
+        setFilter((prev) => ({
+          ...prev,
+          [key]: '',
+          ...(key === 'ownerType' ? { ownerId: '' } : {})
+        }));
+        setFilterApplied((prev) => ({
+          ...prev,
+          [key]: '',
+          ...(key === 'ownerType' ? { ownerId: '' } : {})
+        }));
+        if (key === 'ownerType') resetFilterOwnerOptions();
       } else {
+        setFilter(defaultFilter);
         setFilterApplied(defaultFilter);
+        resetFilterOwnerOptions();
       }
       setCurrentPage(K_SIZE_1);
     },
-    [defaultFilter]
+    [defaultFilter, resetFilterOwnerOptions]
   );
 
   const onCloseAttach = useCallback(() => {
@@ -493,8 +530,12 @@ export default function useManageDocument() {
     currentPage,
     pagination,
     defaultFilter,
+    filter,
     filterApplied,
-    filterDrawerRef,
+    filterOwnerOptions,
+    onOpenFilterOwnerDropdown,
+    filterOwnerDropdownRender,
+    onChangeFilter,
     onApplyFilter,
     onResetFilter,
     openAttach,

@@ -55,18 +55,21 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
   const { t } = useAppTranslation();
   const reasonRef = useRef<InputRef>(null);
 
-  const defaultFilterCode: FilterMyTask = {
-    actionId: '',
-    actionName: '',
-    createAt: '',
-    createdBy: '',
-    operationType: '',
-    requestId: '',
-    status: [],
+  const defaultFilterCode: FilterMyTask = useMemo(
+    () => ({
+      actionId: '',
+      actionName: '',
+      createAt: '',
+      createdBy: '',
+      operationType: '',
+      requestId: '',
+      status: [],
 
-    page: K_SIZE_1,
-    size: DEFAULT_PAGE_SIZE
-  };
+      page: K_SIZE_1,
+      size: DEFAULT_PAGE_SIZE
+    }),
+    []
+  );
 
   const ACTION_KEYS = {
     APPROVE: 'APPROVE',
@@ -111,7 +114,6 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
     }
   ];
 
-  const [openFilter, setOpenFilter] = useState<boolean>(false);
   const [filter, setFilter] = useState<FilterMyTask>(defaultFilterCode);
   const [filterApplied, setFilterApplied] = useState<FilterMyTask>(defaultFilterCode);
   const [total, setTotal] = useState<number>(K_SIZE_0);
@@ -130,6 +132,30 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
       setFilterApplied((pre) => ({ ...pre, [key]: value }));
     },
     [setFieldFilter]
+  );
+
+  const onApplyFilter = useCallback(() => {
+    setFilterApplied({
+      ...filter,
+      page: K_SIZE_1
+    });
+  }, [filter]);
+
+  const onResetFilter = useCallback(
+    (key?: keyof FilterMyTask) => {
+      if (!key) {
+        setFilter(defaultFilterCode);
+        setFilterApplied(defaultFilterCode);
+        return;
+      }
+
+      const valueReset: string | number | string[] =
+        key === 'status' ? [] : key === 'page' ? K_SIZE_1 : key === 'size' ? DEFAULT_PAGE_SIZE : '';
+
+      setFilter((pre) => ({ ...pre, [key]: valueReset, page: K_SIZE_1 }));
+      setFilterApplied((pre) => ({ ...pre, [key]: valueReset, page: K_SIZE_1 }));
+    },
+    [defaultFilterCode]
   );
 
   const pagination = useMemo(
@@ -392,8 +418,6 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
             return null;
           }
           let lb = '';
-          let valueReset: string | string[] = '';
-          let actionClose = () => {};
           switch (keyF) {
             case 'actionId':
               lb = t('approve:feature');
@@ -416,7 +440,6 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
               break;
             case 'status':
               lb = t('approve:status_approve');
-              valueReset = [];
               valF = [...valF]
                 .map((sta) => {
                   const txt = FEE_CODE_STATUS_OPTION.find((s) => s.value === sta)?.label;
@@ -432,9 +455,7 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
               content={content}
               contentTooltip={content}
               onClose={() => {
-                actionClose();
-                setFieldFilter(keyF, valueReset);
-                setFieldFilterApplied(keyF, valueReset);
+                onResetFilter(keyF);
               }}
             />
           ) : null;
@@ -532,8 +553,6 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
     setTotal,
     dataFilter,
     setDataFilter,
-    openFilter,
-    setOpenFilter,
     pagination,
     defaultFilterCode,
     optionFeature,
@@ -545,6 +564,8 @@ export default function useMyPendingHook(props?: { isPendingTask?: boolean }) {
     renderAction,
     columns,
     statusOptions,
+    onApplyFilter,
+    onResetFilter,
     renderFilterTags,
     showDialogConfirm
   };

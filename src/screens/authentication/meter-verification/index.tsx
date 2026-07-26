@@ -25,7 +25,6 @@ import { TextBase } from 'components/text';
 import { AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
-import { Meter } from 'model/meter';
 import { MeterVerification } from 'model/meter-verification';
 import { useEffect, useMemo } from 'react';
 import { displayDateFromServer } from 'utils/date';
@@ -45,21 +44,6 @@ const renderTruncatedText = (text?: string, className = 'max-w-[220px]') => (
     {text || NULL_VALUE}
   </div>
 );
-
-const getAlertType = (meter: Meter) => {
-  if (meter.verification?.overdue) return TYPE_STATUS.ERROR;
-  if (meter.verification?.dueSoon) return TYPE_STATUS.PENDING;
-  const days = meter.verification?.daysUntilNextVerification;
-  if (days !== undefined && days < K_SIZE_0) return TYPE_STATUS.ERROR;
-  return TYPE_STATUS.PENDING;
-};
-
-const getAlertLabel = (meter: Meter) => {
-  const days = meter.verification?.daysUntilNextVerification;
-  if (meter.verification?.overdue || (days !== undefined && days < K_SIZE_0)) return 'Quá hạn';
-  if (days !== undefined) return `Còn ${days} ngày`;
-  return 'Sắp hết hạn';
-};
 
 type VerificationAlertInfo = Pick<
   MeterVerification,
@@ -88,8 +72,6 @@ const MeterVerificationScreen = () => {
     configs,
     meterOptions,
     alertMeters,
-    overdueCount,
-    dueSoonCount,
     verifications,
     filterDraft,
     total,
@@ -108,7 +90,6 @@ const MeterVerificationScreen = () => {
     updateFilter,
     onApplyHistoryFilter,
     onResetHistoryFilter,
-    updateConfig,
     onOpenCreate,
     onOpenUpdate,
     onDelete,
@@ -305,181 +286,60 @@ const MeterVerificationScreen = () => {
 
         <Divider className="my-16" />
 
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(320px,420px)] gap-16 tablet:grid-cols-1">
-          <div className="rounded-radius-l border border-color-400 bg-color-50 p-16">
-            <Flex justify="space-between" align="center" gap={K_SIZE_8} className="mb-12">
-              <div>
-                <TextBase classNames="sub-title3" text="Chu kỳ kiểm định theo loại" />
-                <TextBase classNames="caption !text-color-700" text="Đơn vị chu kỳ: tháng" />
-              </div>
-            </Flex>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[620px] border-collapse">
-                <thead>
-                  <tr className="border-b border-color-300 bg-color-100 text-left text-12 font-semibold uppercase text-color-700">
-                    <th className="px-12 py-[10px]">Loại thiết bị</th>
-                    <th className="w-[150px] px-12 py-[10px]">Chu kỳ (tháng)</th>
-                    <th className="w-[170px] px-12 py-[10px]">Cảnh báo trước (ngày)</th>
-                    <th className="w-[160px] px-12 py-[10px]">Ngày hiệu lực</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {configs.map((config) => (
-                    <tr key={config.equipmentType} className="border-b border-color-300">
-                      <td className="px-12 py-[10px] text-14 font-medium text-color-900">
-                        {config.label}
-                      </td>
-                      <td className="px-12 py-[10px]">
-                        <Input
-                          type="number"
-                          min={K_SIZE_1}
-                          value={config.cycleMonths}
-                          onChange={(event) =>
-                            updateConfig(config.equipmentType, 'cycleMonths', event.target.value)
-                          }
-                        />
-                      </td>
-                      <td className="px-12 py-[10px]">
-                        <Input
-                          type="number"
-                          min={K_SIZE_0}
-                          value={config.warningDays}
-                          onChange={(event) =>
-                            updateConfig(config.equipmentType, 'warningDays', event.target.value)
-                          }
-                        />
-                      </td>
-                      <td className="px-12 py-[10px]">
-                        <Input
-                          type="date"
-                          value={config.effectiveDate}
-                          onChange={(event) =>
-                            updateConfig(config.equipmentType, 'effectiveDate', event.target.value)
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <div className="mb-12 grid grid-cols-[minmax(180px,1fr)_minmax(160px,220px)_minmax(160px,220px)_auto] items-end gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <AppSelect
+            name="meterIdFilter"
+            label="Công tơ"
+            placeholder="Chọn công tơ"
+            options={meterOptions}
+            value={filterDraft.meterId}
+            onSelectOption={({ key }) => updateFilter('meterId', String(key))}
+          />
+          <AppSelect
+            name="resultStatusFilter"
+            label="Kết quả"
+            placeholder="Chọn kết quả"
+            options={RESULT_STATUS_OPTIONS}
+            value={filterDraft.resultStatus}
+            onSelectOption={({ key }) => updateFilter('resultStatus', String(key))}
+          />
+          <div>
+            <label className="mb-4 inline-flex flex-row items-center text-14 font-semibold leading-24 text-color-900">
+              Số chứng nhận
+            </label>
+            <Input
+              size="large"
+              value={filterDraft.certificateNoContains}
+              placeholder="Nhập số chứng nhận"
+              onChange={(event) => updateFilter('certificateNoContains', event.target.value || '')}
+            />
           </div>
-
-          <div className="rounded-radius-l border border-color-400 bg-color-50 p-16">
-            <Flex justify="space-between" align="start" gap={K_SIZE_8} className="mb-12">
-              <div>
-                <TextBase classNames="sub-title3" text="Cảnh báo kiểm định" />
-                <TextBase
-                  classNames="caption !text-color-700"
-                  text={`${dueSoonCount} sắp đến hạn, ${overdueCount} quá hạn`}
-                />
-              </div>
-              <Status
-                type={overdueCount > K_SIZE_0 ? TYPE_STATUS.ERROR : TYPE_STATUS.PENDING}
-                kind={KIND_STATUS.SECONDARY}
-                content={`${alertMeters.length} thiết bị`}
-              />
-            </Flex>
-            <div className="flex max-h-[320px] flex-col gap-8 overflow-auto">
-              {alertMeters.length === K_SIZE_0 && (
-                <div className="rounded-radius-m border border-color-300 p-12 text-14 text-color-700">
-                  Chưa có công tơ sắp hoặc quá hạn kiểm định.
-                </div>
-              )}
-              {alertMeters.map((meter) => (
-                <button
-                  key={meter.meterId}
-                  type="button"
-                  className="w-full rounded-radius-m border border-color-300 p-12 text-left hover:border-primary-500"
-                  onClick={() => onOpenCreate(meter)}
-                >
-                  <Flex justify="space-between" align="center" gap={K_SIZE_8}>
-                    <div>
-                      <TextBase classNames="sub-title4" text={meter.meterCode} />
-                      <TextBase
-                        classNames="caption !text-color-700"
-                        text={`Hạn: ${renderDate(meter.verification?.nextVerificationDate)}`}
-                      />
-                    </div>
-                    <Status
-                      type={getAlertType(meter)}
-                      kind={KIND_STATUS.SECONDARY}
-                      content={getAlertLabel(meter)}
-                    />
-                  </Flex>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-16 rounded-radius-l border border-color-400 bg-color-50 p-16">
-          <Flex justify="space-between" align="center" gap={K_SIZE_8} className="mb-12">
-            <div>
-              <TextBase classNames="sub-title3" text="Lịch sử kiểm định" />
-              <TextBase
-                classNames="caption !text-color-700"
-                text={`Đã lưu ${total} lần kiểm định`}
-              />
-            </div>
+          <Flex align="center" gap={K_SIZE_8} className="mobile:flex-col mobile:items-stretch">
+            <Checkbox
+              checked={filterDraft.dueSoonOnly}
+              onChange={(event) => updateFilter('dueSoonOnly', event.target.checked)}
+            >
+              Sắp đến hạn
+            </Checkbox>
+            <ButtonBase type="primary" customContent="Tìm kiếm" onClick={onApplyHistoryFilter} />
+            <ButtonBase type="ghost" customContent="Xoá lọc" onClick={onResetHistoryFilter} />
           </Flex>
-          <div className="mb-12 grid grid-cols-[minmax(180px,1fr)_minmax(160px,220px)_minmax(160px,220px)_auto] items-end gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
-            <AppSelect
-              name="meterIdFilter"
-              label="Công tơ"
-              placeholder="Chọn công tơ"
-              options={meterOptions}
-              value={filterDraft.meterId}
-              onSelectOption={({ key }) => updateFilter('meterId', String(key))}
-            />
-            <AppSelect
-              name="resultStatusFilter"
-              label="Kết quả"
-              placeholder="Chọn kết quả"
-              options={RESULT_STATUS_OPTIONS}
-              value={filterDraft.resultStatus}
-              onSelectOption={({ key }) => updateFilter('resultStatus', String(key))}
-            />
-            <div>
-              <label className="mb-4 inline-flex flex-row items-center text-14 font-semibold leading-24 text-color-900">
-                Số chứng nhận
-              </label>
-              <Input
-                size="large"
-                value={filterDraft.certificateNoContains}
-                placeholder="Nhập số chứng nhận"
-                onChange={(event) =>
-                  updateFilter('certificateNoContains', event.target.value || '')
-                }
-              />
-            </div>
-            <Flex align="center" gap={K_SIZE_8} className="mobile:flex-col mobile:items-stretch">
-              <Checkbox
-                checked={filterDraft.dueSoonOnly}
-                onChange={(event) => updateFilter('dueSoonOnly', event.target.checked)}
-              >
-                Sắp đến hạn
-              </Checkbox>
-              <ButtonBase type="primary" customContent="Tìm kiếm" onClick={onApplyHistoryFilter} />
-              <ButtonBase type="ghost" customContent="Xoá lọc" onClick={onResetHistoryFilter} />
-            </Flex>
-          </div>
-          <Spin spinning={listLoading && verifications.length > K_SIZE_0}>
-            <div className="overflow-hidden rounded-radius-l border border-color-400">
-              <AppTable
-                loading={listLoading}
-                rootClassName="w-full"
-                className="[&_.ant-pagination]:hidden"
-                scroll={{ x: 'max-content', y: '52vh' }}
-                dataSource={verifications}
-                columns={historyColumns}
-                rowKey="id"
-                pagination={pagination}
-              />
-            </div>
-            <AppPagination currentPage={currentPage} total={total} pagination={pagination} />
-          </Spin>
         </div>
+        <Spin spinning={listLoading && verifications.length > K_SIZE_0}>
+          <div className="overflow-hidden rounded-radius-l border border-color-400">
+            <AppTable
+              loading={listLoading}
+              rootClassName="w-full"
+              className="[&_.ant-pagination]:hidden"
+              scroll={{ x: 'max-content', y: '52vh' }}
+              dataSource={verifications}
+              columns={historyColumns}
+              rowKey="id"
+              pagination={pagination}
+            />
+          </div>
+          <AppPagination currentPage={currentPage} total={total} pagination={pagination} />
+        </Spin>
 
         <form id="meter-verification-form" onSubmit={handleSubmit(onSubmit)}>
           <Drawer

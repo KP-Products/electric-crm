@@ -17,23 +17,22 @@ import {
 import { Divider, Drawer, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
 import IconHover from 'components/icon-vec-local/icon-hover';
-import { AppSelectControl } from 'components/select';
+import { AppSelect, AppSelectControl } from 'components/select';
 import { AppSwitchControl } from 'components/switch';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
 import TagFilter from 'components/tag-filter';
 import { TextBase } from 'components/text';
-import { AppTextFieldControl } from 'components/text-field';
+import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { ServiceLocation } from 'model/service-location';
 import { useMemo } from 'react';
 import { displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
-import ServiceLocationFilterDrawer, {
+import useManageServiceLocation, {
   type ServiceLocationFilterForm
-} from './components/ServiceLocationFilterDrawer';
-import useManageServiceLocation from './useManageServiceLocation';
+} from './useManageServiceLocation';
 
 const VOLTAGE_LEVEL_OPTIONS = [
   { value: 'HA_AP', label: 'Hạ áp' },
@@ -47,6 +46,8 @@ const USAGE_PURPOSE_OPTIONS = [
   { value: 'KINH_DOANH', label: 'Kinh doanh' },
   { value: 'HC', label: 'HC' }
 ];
+
+const ALL_OPTION = { value: '', label: 'Tất cả' };
 
 const VOLTAGE_LEVEL_LABEL_MAP: Record<string, string> = {
   HA_AP: 'Hạ áp',
@@ -103,9 +104,9 @@ const ManageServiceLocationScreen = () => {
     detailLoading,
     currentPage,
     pagination,
-    defaultFilter,
+    filter,
     filterApplied,
-    filterDrawerRef,
+    onChangeFilter,
     onApplyFilter,
     onResetFilter,
     openForm,
@@ -254,13 +255,6 @@ const ManageServiceLocationScreen = () => {
           >
             <ButtonBase
               type="ghost"
-              leftIcon="IC_FILTER_OUTLINE"
-              customContent={t('common:advanced_filter')}
-              onClick={() => filterDrawerRef.current?.open(filterApplied)}
-              classNames="mobile:flex-1 mobile:justify-center"
-            />
-            <ButtonBase
-              type="ghost"
               leftIcon="IC_ADD_OUTLINE2"
               customContent="Thêm địa điểm"
               onClick={onOpenCreate}
@@ -269,6 +263,64 @@ const ManageServiceLocationScreen = () => {
           </Flex>
         </Flex>
         <Divider className="my-16" />
+
+        <div className="mb-12 grid grid-cols-[minmax(180px,1.2fr)_minmax(160px,1fr)_minmax(160px,1fr)_minmax(150px,1fr)_minmax(170px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <AppTextField
+            name="keyword"
+            label="Từ khóa"
+            placeholder="Nhập địa chỉ, phường/xã"
+            value={filter.keyword}
+            onChange={(event) => onChangeFilter('keyword', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="contractId"
+            label="Mã hợp đồng"
+            placeholder="Nhập mã hợp đồng"
+            value={filter.contractId}
+            onChange={(event) => onChangeFilter('contractId', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="customerId"
+            label="Mã khách hàng"
+            placeholder="Nhập mã khách hàng"
+            value={filter.customerId}
+            onChange={(event) => onChangeFilter('customerId', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppSelect
+            name="voltageLevel"
+            label="Cấp điện áp"
+            placeholder="Chọn cấp điện áp"
+            value={filter.voltageLevel}
+            options={[ALL_OPTION, ...VOLTAGE_LEVEL_OPTIONS]}
+            onSelectOption={({ key }) => onChangeFilter('voltageLevel', String(key))}
+          />
+          <AppSelect
+            name="usagePurpose"
+            label="Mục đích sử dụng"
+            placeholder="Chọn mục đích sử dụng"
+            value={filter.usagePurpose}
+            options={[ALL_OPTION, ...USAGE_PURPOSE_OPTIONS]}
+            onSelectOption={({ key }) => onChangeFilter('usagePurpose', String(key))}
+          />
+          <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
+            <ButtonBase
+              type="ghost"
+              customContent="Làm mới"
+              onClick={() => onResetFilter()}
+              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+            />
+            <ButtonBase
+              type="primary"
+              leftIcon="IC_SEARCH_OUTLINE2"
+              customContent="Tìm kiếm"
+              onClick={onApplyFilter}
+              classNames="min-w-[112px] mobile:flex-1 mobile:justify-center"
+            />
+          </Flex>
+        </div>
 
         {activeFilters.length > K_SIZE_0 && (
           <div className="mb-8 flex w-full flex-wrap items-center gap-8">
@@ -401,15 +453,6 @@ const ManageServiceLocationScreen = () => {
             </div>
           </Drawer>
         </form>
-
-        <ServiceLocationFilterDrawer
-          ref={filterDrawerRef}
-          defaultValues={defaultFilter}
-          voltageLevelOptions={VOLTAGE_LEVEL_OPTIONS}
-          usagePurposeOptions={USAGE_PURPOSE_OPTIONS}
-          onApplyFilter={onApplyFilter}
-          onResetFilter={onResetFilter}
-        />
       </section>
     </PageWithBreadcrumb>
   );

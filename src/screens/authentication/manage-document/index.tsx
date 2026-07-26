@@ -17,7 +17,7 @@ import { Divider, Drawer, Flex, Spin, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import ButtonBase from 'components/button';
 import IconHover from 'components/icon-vec-local/icon-hover';
-import { AppSelectControl } from 'components/select';
+import { AppSelect, AppSelectControl } from 'components/select';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
@@ -37,8 +37,7 @@ import {
   MAX_UPLOAD_FILE_SIZE,
   MAX_UPLOAD_FILE_SIZE_TEXT
 } from 'utils/upload';
-import DocumentFilterDrawer, { type DocumentFilterForm } from './components/DocumentFilterDrawer';
-import useManageDocument from './useManageDocument';
+import useManageDocument, { type DocumentFilterForm } from './useManageDocument';
 
 const DOCUMENT_STATUS_LABEL_MAP: Record<string, string> = {
   [DOCUMENT_STATUS.HOP_LE]: 'Hợp lệ',
@@ -89,6 +88,7 @@ const DOCUMENT_FILTER_LABEL_MAP: Record<keyof DocumentFilterForm, string> = {
 };
 
 const MAX_DOCUMENT_FILE_SIZE = MAX_UPLOAD_FILE_SIZE;
+const ALL_OPTION = { value: '', label: 'Tất cả' };
 
 const formatFileSize = (sizeKb?: number) => {
   if (sizeKb === undefined || sizeKb === null) return NULL_VALUE;
@@ -111,9 +111,12 @@ const ManageDocumentScreen = () => {
     detailLoading,
     currentPage,
     pagination,
-    defaultFilter,
+    filter,
     filterApplied,
-    filterDrawerRef,
+    filterOwnerOptions,
+    onOpenFilterOwnerDropdown,
+    filterOwnerDropdownRender,
+    onChangeFilter,
     onApplyFilter,
     onResetFilter,
     openAttach,
@@ -306,13 +309,6 @@ const ManageDocumentScreen = () => {
           >
             <ButtonBase
               type="ghost"
-              leftIcon="IC_FILTER_OUTLINE"
-              customContent={t('common:advanced_filter')}
-              onClick={() => filterDrawerRef.current?.open(filterApplied)}
-              classNames="mobile:flex-1 mobile:justify-center"
-            />
-            <ButtonBase
-              type="ghost"
               leftIcon="IC_ADD_OUTLINE2"
               customContent="Đính kèm tài liệu"
               onClick={() => setOpenAttach(true)}
@@ -321,6 +317,77 @@ const ManageDocumentScreen = () => {
           </Flex>
         </Flex>
         <Divider className="my-16" />
+
+        <div className="mb-12 grid grid-cols-[minmax(180px,1fr)_minmax(190px,1fr)_minmax(170px,1fr)_minmax(190px,1fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <AppTextField
+            name="keyword"
+            label="Từ khóa"
+            placeholder="Nhập tên file, ghi chú"
+            value={filter.keyword}
+            onChange={(event) => onChangeFilter('keyword', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppSelect
+            name="operationUnitId"
+            label="Đơn vị vận hành"
+            placeholder="Chọn đơn vị vận hành"
+            value={filter.operationUnitId}
+            options={[ALL_OPTION, ...operationUnitOptions]}
+            dropdownRender={operationUnitDropdownRender}
+            onOpenChange={onOpenOperationUnitDropdown}
+            onSelectOption={({ key }) => onChangeFilter('operationUnitId', String(key))}
+          />
+          <AppSelect
+            name="ownerType"
+            label="Loại chủ sở hữu"
+            placeholder="Chọn loại chủ sở hữu"
+            value={filter.ownerType}
+            options={[ALL_OPTION, ...OWNER_TYPE_OPTIONS]}
+            onSelectOption={({ key }) => onChangeFilter('ownerType', String(key))}
+          />
+          <AppSelect
+            name="ownerId"
+            label="Chủ sở hữu"
+            placeholder="Chọn chủ sở hữu"
+            value={filter.ownerId}
+            options={[ALL_OPTION, ...filterOwnerOptions]}
+            disabled={!filter.ownerType}
+            dropdownRender={filterOwnerDropdownRender}
+            onOpenChange={onOpenFilterOwnerDropdown}
+            onSelectOption={({ key }) => onChangeFilter('ownerId', String(key))}
+          />
+          <AppSelect
+            name="docType"
+            label="Loại tài liệu"
+            placeholder="Chọn loại tài liệu"
+            value={filter.docType}
+            options={[ALL_OPTION, ...DOCUMENT_TYPE_OPTIONS]}
+            onSelectOption={({ key }) => onChangeFilter('docType', String(key))}
+          />
+          <AppSelect
+            name="status"
+            label="Trạng thái"
+            placeholder="Chọn trạng thái"
+            value={filter.status}
+            options={[ALL_OPTION, ...DOCUMENT_STATUS_OPTIONS]}
+            onSelectOption={({ key }) => onChangeFilter('status', String(key))}
+          />
+          <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
+            <ButtonBase
+              type="ghost"
+              customContent="Làm mới"
+              onClick={() => onResetFilter()}
+              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+            />
+            <ButtonBase
+              type="primary"
+              leftIcon="IC_SEARCH_OUTLINE2"
+              customContent="Tìm kiếm"
+              onClick={onApplyFilter}
+              classNames="min-w-[112px] mobile:flex-1 mobile:justify-center"
+            />
+          </Flex>
+        </div>
 
         {activeFilters.length > K_SIZE_0 && (
           <div className="mb-8 flex w-full flex-wrap items-center gap-8">
@@ -552,19 +619,6 @@ const ManageDocumentScreen = () => {
             </div>
           </Drawer>
         </form>
-
-        <DocumentFilterDrawer
-          ref={filterDrawerRef}
-          defaultValues={defaultFilter}
-          ownerTypeOptions={OWNER_TYPE_OPTIONS}
-          documentTypeOptions={DOCUMENT_TYPE_OPTIONS}
-          documentStatusOptions={DOCUMENT_STATUS_OPTIONS}
-          operationUnitOptions={operationUnitOptions}
-          operationUnitDropdownRender={operationUnitDropdownRender}
-          onOpenOperationUnitDropdown={onOpenOperationUnitDropdown}
-          onApplyFilter={onApplyFilter}
-          onResetFilter={onResetFilter}
-        />
       </section>
     </PageWithBreadcrumb>
   );

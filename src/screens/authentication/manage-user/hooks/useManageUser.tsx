@@ -1,7 +1,7 @@
 import { DEFAULT_PAGE_SIZE, FILE_EXT, K_SIZE_1 } from '@constant';
 import { DELETE_USER, DOWNLOAD_LIST_USER, GET_USER_SEARCH_LIST } from '@redux-action-type/user';
 import { selectRoleList } from '@redux-selector/role';
-import { selectDepartmentList, selectUnitList, selectUserLoadingList } from '@redux-selector/user';
+import { selectUserLoadingList } from '@redux-selector/user';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import {
@@ -12,23 +12,27 @@ import {
   UserSearchItem
 } from 'model/user';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  UserFilterDrawerRef,
-  UserFilterForm
-} from 'screens/authentication/manage-user/components/UserFilterDrawer';
 import { DownloadUtils } from 'utils/download.utils';
 import { useAppTranslation } from 'utils/i18n';
 import { userActions } from '@redux-slice/user';
 import { showDialog } from '../../../../components/dialog';
 import { TYPE_ACTION, TYPE_MESSAGE } from '../../../../components/dialog/type';
 
+export interface UserFilterForm {
+  username: string;
+  fullName: string;
+  unitId: string;
+  departmentId: string;
+  status: string;
+  roleId: string;
+  email: string;
+}
+
 export default function useManageUser() {
   const { t } = useAppTranslation();
   const router = useRouter();
-  const unitList = useSelector(selectUnitList);
-  const departmentList = useSelector(selectDepartmentList);
   const loadingUserList = useSelector(selectUserLoadingList);
   const roleList = useSelector(selectRoleList);
   const dispatch = useDispatch();
@@ -44,12 +48,12 @@ export default function useManageUser() {
     }),
     []
   );
+  const [filter, setFilter] = useState<UserFilterForm>(defaultFilter);
   const [filterApplied, setFilterApplied] = useState<UserFilterForm>(defaultFilter);
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
   const [userList, setUserList] = useState<UserSearchItem[]>([]);
   const [totalUser, setTotalUser] = useState<number>(0);
 
-  const filterDrawerRef = useRef<UserFilterDrawerRef>(null);
   const roleOptions = useMemo(
     () => roleList.map((role) => ({ value: role.id, label: role.name })),
     [roleList]
@@ -130,35 +134,22 @@ export default function useManageUser() {
   //   dispatch({ type: GET_LIST_ROLE, payload: { body } });
   // }, []);
 
-  const onApplyFilter = useCallback(
-    (data: UserFilterForm) => {
-      setFilterApplied(data);
-      setCurrentPage(K_SIZE_1);
-      const body = {
-        usernameContains: data?.username,
-        emailContains: '',
-        fullNameContains: '',
-        status: '',
-        enabled: true,
-        roleCode: '',
-        page: 0,
-        size: 0
-      };
-      dispatch({
-        type: GET_USER_SEARCH_LIST,
-        payload: {
-          body
-        }
-      });
-    },
-    [dispatch]
-  );
+  const onChangeFilter = useCallback((key: keyof UserFilterForm, value: string) => {
+    setFilter((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const onApplyFilter = useCallback(() => {
+    setFilterApplied(filter);
+    setCurrentPage(K_SIZE_1);
+  }, [filter]);
 
   const onResetFilter = useCallback(
-    (key?: string) => {
+    (key?: keyof UserFilterForm) => {
       if (key) {
+        setFilter((prev) => ({ ...prev, [key]: '' }));
         setFilterApplied((prev) => ({ ...prev, [key]: '' }));
       } else {
+        setFilter(defaultFilter);
         setFilterApplied(defaultFilter);
       }
       setCurrentPage(K_SIZE_1);
@@ -238,6 +229,8 @@ export default function useManageUser() {
   return {
     t,
     router,
+    filter,
+    onChangeFilter,
     onApplyFilter,
     defaultFilter,
     filterApplied,
@@ -246,10 +239,7 @@ export default function useManageUser() {
     pagination,
     onDownload,
     onResetFilter,
-    filterDrawerRef,
     roleOptions,
-    unitList,
-    departmentList,
     onDelete
   };
 }

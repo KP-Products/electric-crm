@@ -1,6 +1,6 @@
 import type { Branch } from 'model/branch';
 import type { AddUserReq, EditUserReq, UserSearchItem } from 'model/user';
-import type { UserFilterForm } from 'screens/authentication/manage-user/components/UserFilterDrawer';
+import type { UserFilterForm } from 'screens/authentication/manage-user/hooks/useManageUser';
 
 export interface UserPayloadFormValues {
   username: string;

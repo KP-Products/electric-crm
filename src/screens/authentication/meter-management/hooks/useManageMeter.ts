@@ -8,7 +8,7 @@ import { ErrorBase } from 'model/common';
 import { GetListMeterReq, GetListMeterRes, Meter, normalizeMeterSearchItem } from 'model/meter';
 import moment from 'moment';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import meterServices from 'services/meter-services';
 import { DebugUtils } from 'utils/debug-utils';
@@ -72,8 +72,6 @@ export default function useManageMeter() {
   const [filterDraft, setFilterDraft] = useState<MeterFilterForm>(defaultFilter);
   const [filterApplied, setFilterApplied] = useState<MeterFilterForm>(defaultFilter);
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
-
-  const filterDrawerRef = useRef<{ open: (filter: MeterFilterForm) => void }>(null);
 
   const pinnedCustomerIds = useMemo(
     () => [
@@ -261,7 +259,6 @@ export default function useManageMeter() {
     currentPage,
     pagination,
     onResetFilter,
-    filterDrawerRef,
     meterList,
     total,
     onExport,
