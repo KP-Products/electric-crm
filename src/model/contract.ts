@@ -2,8 +2,10 @@ import { PaginationReq, PaginationRes, ResultBase } from './common';
 
 export interface Contract {
   id: string;
+  contractId?: string;
   contractNumber: string;
   customerId: string;
+  meterId?: string;
   voltageLevelId?: string;
   customerType?: string;
   capacityKva?: number;
@@ -20,17 +22,19 @@ export interface Contract {
 
 export interface ContractSearchReq extends PaginationReq {
   contractNumber?: string;
-  customerType?: string;
   customerId?: string;
+  meterId?: string;
   status?: string;
+  signedDate?: string;
+  effectiveDate?: string;
+  expiryDate?: string;
+  createdBy?: string;
 }
 
 export interface CreateContractReq {
   contractNumber: string;
   customerId: string;
-  voltageLevelId?: string;
-  customerType?: string;
-  capacityKva: number;
+  meterId?: string;
   signedDate: string;
   effectiveDate: string;
   expiryDate?: string;

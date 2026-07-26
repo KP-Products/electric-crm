@@ -14,29 +14,16 @@ import meterServices from 'services/meter-services';
 import { DebugUtils } from 'utils/debug-utils';
 import { FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
-import {
-  getInspectionStatus,
-  getMeterStatusLabel,
-  getMeterTypeLabel,
-  getUsagePurposeLabel,
-  getVoltageTypeLabel,
-  INSPECTION_STATUS_LABEL_MAP
-} from '../utils/constant';
+import useCustomerLookup from '../../manage-contract/hooks/useCustomerLookup';
+import { escapeHtml as escapeExcelHtml } from '../../manage-contract/utils';
+import { getMeterStatusLabel, getVoltageLevelLabel, getVoltageTypeLabel } from '../utils/constant';
 
 export interface MeterFilterForm {
   meterCodeContains: string;
   customerId: string;
-  voltageType: string;
   status: string;
+  voltageType: string;
 }
-
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 
 const formatDate = (value?: string) => {
   if (!value) return '-';
@@ -48,26 +35,14 @@ const getMeterDisplayValue = (meter: Meter, key: string) => {
   switch (key) {
     case 'status':
       return getMeterStatusLabel(meter.status);
-    case 'meterType':
-      return getMeterTypeLabel(meter.meterType);
-    case 'purchaseDate':
-      return formatDate(meter.purchaseDate);
     case 'installationDate':
       return formatDate(meter.installationDate);
-    case 'inspectionDate':
-      return formatDate(meter.inspectionDate);
-    case 'inspectionExpiryDate':
-      return formatDate(meter.inspectionExpiryDate);
-    case 'inspectionStatus':
-      return INSPECTION_STATUS_LABEL_MAP[getInspectionStatus(meter.inspectionExpiryDate)];
     case 'voltageType':
-      return getVoltageTypeLabel(meter.voltageType || meter.voltageLevel);
+      return getVoltageTypeLabel(meter.voltageType);
+    case 'voltageLevel':
+      return getVoltageLevelLabel(meter.voltageLevel);
     case 'customerId':
       return meter.customerName || meter.customerId || '-';
-    case 'feeder':
-      return meter.feederName || meter.feederId || '-';
-    case 'usagePurpose':
-      return getUsagePurposeLabel(meter.usagePurpose);
     case 'multiplier':
       return meter.multiplier !== undefined && meter.multiplier !== null
         ? String(meter.multiplier)
@@ -89,28 +64,47 @@ export default function useManageMeter() {
     () => ({
       meterCodeContains: '',
       customerId: '',
-      voltageType: '',
-      status: ''
+      status: '',
+      voltageType: ''
     }),
     []
   );
+  const [filterDraft, setFilterDraft] = useState<MeterFilterForm>(defaultFilter);
   const [filterApplied, setFilterApplied] = useState<MeterFilterForm>(defaultFilter);
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
 
   const filterDrawerRef = useRef<{ open: (filter: MeterFilterForm) => void }>(null);
 
+  const pinnedCustomerIds = useMemo(
+    () => [
+      filterDraft.customerId,
+      filterApplied.customerId,
+      ...meterList.map((meter) => meter.customerId)
+    ],
+    [filterApplied.customerId, filterDraft.customerId, meterList]
+  );
+
+  const { customerOptions, getCustomerDisplay, onOpenCustomerDropdown, customerDropdownRender } =
+    useCustomerLookup({
+      autoLoad: false,
+      pinnedIds: pinnedCustomerIds,
+      showErrorToast: true
+    });
+
   const buildSearchBody = useCallback(
     (filter: MeterFilterForm, page: number, size = DEFAULT_PAGE_SIZE): GetListMeterReq => {
-      const normalizedFilter = Object.fromEntries(
-        Object.entries(filter)
-          .map(([key, value]) => [key, value.trim()])
-          .filter(([, value]) => Boolean(value))
-      );
+      const normalize = (value?: string) => {
+        const normalized = value?.trim();
+        return normalized || undefined;
+      };
 
       return {
         page: page - K_SIZE_1,
         size,
-        ...normalizedFilter
+        meterCodeContains: normalize(filter.meterCodeContains),
+        customerId: normalize(filter.customerId),
+        voltageType: normalize(filter.voltageType),
+        status: normalize(filter.status)
       };
     },
     []
@@ -162,16 +156,25 @@ export default function useManageMeter() {
     [currentPage, total]
   );
 
-  const onApplyFilter = useCallback((data: MeterFilterForm) => {
-    setFilterApplied(data);
+  const onChangeFilter = useCallback(
+    (key: keyof MeterFilterForm, value: MeterFilterForm[keyof MeterFilterForm]) => {
+      setFilterDraft((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
+
+  const onApplyFilter = useCallback(() => {
+    setFilterApplied(filterDraft);
     setCurrentPage(K_SIZE_1);
-  }, []);
+  }, [filterDraft]);
 
   const onResetFilter = useCallback(
     (key?: keyof MeterFilterForm) => {
       if (key) {
+        setFilterDraft((prev) => ({ ...prev, [key]: defaultFilter[key] }));
         setFilterApplied((prev) => ({ ...prev, [key]: '' }));
       } else {
+        setFilterDraft(defaultFilter);
         setFilterApplied(defaultFilter);
       }
       setCurrentPage(K_SIZE_1);
@@ -181,27 +184,21 @@ export default function useManageMeter() {
 
   const exportRowsToExcel = useCallback((rows: Meter[]) => {
     const columns = [
-      ['meterCode', 'Số công tơ'],
-      ['status', 'Trạng thái'],
-      ['meterType', 'Loại công tơ'],
-      ['manufacturer', 'Hãng sản xuất'],
-      ['purchaseDate', 'Ngày mua'],
-      ['installationDate', 'Ngày lắp'],
-      ['inspectionDate', 'Ngày kiểm định'],
-      ['inspectionExpiryDate', 'Thời hạn kiểm định'],
-      ['inspectionStatus', 'Cảnh báo kiểm định'],
-      ['voltageType', 'Cấp điện áp'],
-      ['customerId', 'Khách hàng'],
-      ['feeder', 'Lộ điện'],
-      ['usagePurpose', 'Mục đích sử dụng'],
-      ['multiplier', 'Hệ số nhân']
+      ['meterCode', 'Mã công tơ'],
+      ['customerId', 'Mã khách hàng'],
+      ['voltageLevel', 'Cấp điện áp'],
+      ['voltageType', 'Kiểu điện áp'],
+      ['multiplier', 'Hệ số nhân'],
+      ['initialReading', 'Chỉ số đầu'],
+      ['installationDate', 'Ngày lắp đặt'],
+      ['status', 'Trạng thái']
     ];
-    const headerHtml = columns.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join('');
+    const headerHtml = columns.map(([, label]) => `<th>${escapeExcelHtml(label)}</th>`).join('');
     const bodyHtml = rows
       .map(
         (row) =>
           `<tr>${columns
-            .map(([key]) => `<td>${escapeHtml(getMeterDisplayValue(row, key))}</td>`)
+            .map(([key]) => `<td>${escapeExcelHtml(getMeterDisplayValue(row, key))}</td>`)
             .join('')}</tr>`
       )
       .join('');
@@ -240,12 +237,25 @@ export default function useManageMeter() {
     showToast({ type: TYPE_TOAST.SUCCESS, content: 'Xuất Excel danh sách công tơ thành công' });
   }, [buildSearchBody, exportRowsToExcel, filterApplied]);
 
+  const onImport = useCallback(() => {
+    showToast({
+      type: TYPE_TOAST.INFO,
+      content: 'Chức năng import Excel công tơ đang được phát triển'
+    });
+  }, []);
+
   return {
     t,
     router,
+    onChangeFilter,
     onApplyFilter,
     defaultFilter,
+    filterDraft,
     filterApplied,
+    customerOptions,
+    getCustomerDisplay,
+    onOpenCustomerDropdown,
+    customerDropdownRender,
     loadingMeterList,
     exportLoading,
     currentPage,
@@ -254,6 +264,7 @@ export default function useManageMeter() {
     filterDrawerRef,
     meterList,
     total,
-    onExport
+    onExport,
+    onImport
   };
 }

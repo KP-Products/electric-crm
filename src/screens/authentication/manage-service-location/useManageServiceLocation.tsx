@@ -48,14 +48,22 @@ const serviceLocationSchema = z.object({
 export type ServiceLocationForm = z.infer<typeof serviceLocationSchema>;
 
 const VOLTAGE_LEVEL_API_VALUE_MAP: Record<string, string> = {
-  V_0_4_KV: 'V_0_4_KV',
-  V_6_KV: 'V_6_KV',
-  V_22_KV: 'V_22_KV',
-  V_110_KV: 'V_110_KV',
-  '0.4kV': 'V_0_4_KV',
-  '6kV': 'V_6_KV',
-  '22kV': 'V_22_KV',
-  '110kV': 'V_110_KV'
+  HA_AP: 'HA_AP',
+  TRUNG_AP: 'TRUNG_AP',
+  CAO_AP: 'CAO_AP',
+  V_0_4_KV: 'HA_AP',
+  V_6_KV: 'TRUNG_AP',
+  V_22_KV: 'TRUNG_AP',
+  V_35_KV: 'TRUNG_AP',
+  V_110_KV: 'CAO_AP',
+  '0.4kV': 'HA_AP',
+  '6kV': 'TRUNG_AP',
+  '22kV': 'TRUNG_AP',
+  '35kV': 'TRUNG_AP',
+  '110kV': 'CAO_AP',
+  'Hạ áp': 'HA_AP',
+  'Trung áp': 'TRUNG_AP',
+  'Cao áp': 'CAO_AP'
 };
 
 const USAGE_PURPOSE_API_VALUE_MAP: Record<string, string> = {

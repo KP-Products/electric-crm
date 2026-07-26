@@ -1,136 +1,75 @@
 'use client';
 
 import {
+  DEFAULT_PAGE_SIZE,
   K_SIZE_0,
   K_SIZE_1,
+  K_SIZE_100,
   K_SIZE_130,
+  K_SIZE_150,
   K_SIZE_16,
-  K_SIZE_160,
   K_SIZE_18,
+  K_SIZE_180,
   K_SIZE_200,
   K_SIZE_220,
   K_SIZE_8,
-  NULL_VALUE,
   REQUIRED_MARK
 } from '@constant';
-import { AppDatePickerControl } from 'components/date-picker';
-import { Divider, Drawer, Flex, Spin } from 'antd';
+import { Divider, Drawer, Dropdown, Flex, Spin } from 'antd';
+import type { AnyObject } from 'antd/es/_util/type';
 import ButtonBase from 'components/button';
+import { AppDatePicker, AppDatePickerControl } from 'components/date-picker';
+import { IconSvgLocal } from 'components/icon-vec-local';
 import IconHover from 'components/icon-vec-local/icon-hover';
-import { AppSelectControl } from 'components/select';
-import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
+import { AppSelect, AppSelectControl, AppSelectOption } from 'components/select';
+import Status, { KIND_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
 import TagFilter from 'components/tag-filter';
 import { TextBase } from 'components/text';
-import { AppTextFieldControl } from 'components/text-field';
+import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { Contract } from 'model/contract';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useCallback, useMemo } from 'react';
-import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
+import { displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
-import ContractFilterDrawer, { type ContractFilterForm } from './components/ContractFilterDrawer';
 import useManageContract from './useManageContract';
+import {
+  CONTRACT_STATUS_OPTIONS,
+  ContractFilter,
+  displayText,
+  getContractId,
+  getContractStatusMeta,
+  renderContractDate
+} from './utils';
 
-const CUSTOMER_TYPE_OPTIONS = [
-  { value: 'SINH_HOAT', label: 'Sinh hoạt' },
-  { value: 'SAN_XUAT', label: 'Sản xuất' },
-  { value: 'KINH_DOANH', label: 'Kinh doanh' },
-  { value: 'HC', label: 'HC' }
-];
+dayjs.extend(customParseFormat);
 
-const VOLTAGE_LEVEL_OPTIONS = [
-  { value: 'V_0_4_KV', label: '0.4kV' },
-  { value: 'V_6_KV', label: '6kV' },
-  { value: 'V_22_KV', label: '22kV' },
-  { value: 'V_110_KV', label: '110kV' }
-];
+const ALL_OPTION: AppSelectOption = { value: '', label: 'Tất cả' };
+type ContractDateFilterKey = 'signedDate' | 'effectiveDate' | 'expiryDate';
 
-const CONTRACT_STATUS_OPTIONS = [
-  { value: 'HIEU_LUC', label: 'Hiệu lực' },
-  { value: 'SAP_HET_HAN', label: 'Sắp hết hạn' },
-  { value: 'HET_HAN', label: 'Hết hạn' },
-  { value: 'TAM_NGUNG', label: 'Tạm ngưng' }
-];
-
-const CUSTOMER_TYPE_LABEL_MAP: Record<string, string> = {
-  SINH_HOAT: 'Sinh hoạt',
-  SAN_XUAT: 'Sản xuất',
-  KINH_DOANH: 'Kinh doanh',
-  HC: 'HC',
-  'Sinh hoạt': 'Sinh hoạt',
-  'Sản xuất': 'Sản xuất',
-  'Kinh doanh': 'Kinh doanh'
-};
-
-const VOLTAGE_LEVEL_LABEL_MAP: Record<string, string> = {
-  V_0_4_KV: '0.4kV',
-  V_6_KV: '6kV',
-  V_22_KV: '22kV',
-  V_110_KV: '110kV',
-  '0.4kV': '0.4kV',
-  '6kV': '6kV',
-  '22kV': '22kV',
-  '110kV': '110kV'
-};
-
-const CONTRACT_STATUS_LABEL_MAP: Record<string, string> = {
-  HIEU_LUC: 'Hiệu lực',
-  SAP_HET_HAN: 'Sắp hết hạn',
-  HET_HAN: 'Hết hạn',
-  TAM_NGUNG: 'Tạm ngưng',
-  ACTIVE: 'Hiệu lực',
-  EXPIRING_SOON: 'Sắp hết hạn',
-  EXPIRED: 'Hết hạn',
-  SUSPENDED: 'Tạm ngưng',
-  'Hiệu lực': 'Hiệu lực',
-  'Sắp hết hạn': 'Sắp hết hạn',
-  'Hết hạn': 'Hết hạn',
-  'Tạm ngưng': 'Tạm ngưng'
-};
-
-const CONTRACT_STATUS_TYPE_MAP: Record<string, TYPE_STATUS> = {
-  HIEU_LUC: TYPE_STATUS.SUCCESS,
-  SAP_HET_HAN: TYPE_STATUS.PENDING,
-  HET_HAN: TYPE_STATUS.ERROR,
-  TAM_NGUNG: TYPE_STATUS.DISABLED,
-  ACTIVE: TYPE_STATUS.SUCCESS,
-  EXPIRING_SOON: TYPE_STATUS.PENDING,
-  EXPIRED: TYPE_STATUS.ERROR,
-  SUSPENDED: TYPE_STATUS.DISABLED
-};
-
-const FILTER_LABEL_MAP: Record<keyof ContractFilterForm, string> = {
+const FILTER_LABEL_MAP: Record<keyof ContractFilter, string> = {
   contractNumber: 'Số hợp đồng',
-  customerId: 'Mã khách hàng',
-  customerType: 'Loại khách hàng',
-  status: 'Trạng thái'
+  customerId: 'Khách hàng',
+  meterId: 'Công tơ',
+  status: 'Trạng thái',
+  signedDate: 'Thời gian ký',
+  effectiveDate: 'Ngày hiệu lực',
+  expiryDate: 'Ngày hết hiệu lực',
+  createdBy: 'Người tạo'
 };
 
-const renderText = (text?: string | number) => text || NULL_VALUE;
-
-const renderTruncatedText = (text?: string, className = 'max-w-[220px]') => (
-  <div title={text} className={`${className} truncate`}>
-    {text || NULL_VALUE}
+const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') => (
+  <div title={text || ''} className={`${className} truncate`}>
+    {displayText(text)}
   </div>
 );
 
-const getStatusLabel = (status?: string) => {
-  if (!status) return NULL_VALUE;
-  return (
-    CONTRACT_STATUS_LABEL_MAP[status] || CONTRACT_STATUS_LABEL_MAP[status.toUpperCase()] || status
-  );
-};
-
-const getStatusType = (status?: string) => {
-  if (!status) return TYPE_STATUS.DEFAULT;
-  return (
-    CONTRACT_STATUS_TYPE_MAP[status] ||
-    CONTRACT_STATUS_TYPE_MAP[status.toUpperCase()] ||
-    TYPE_STATUS.DEFAULT
-  );
-};
+const isFilterValueActive = (value: ContractFilter[keyof ContractFilter]) => Boolean(value);
 
 const ManageContractScreen = () => {
   const { isMobile, isTablet } = useResponsive();
@@ -140,23 +79,31 @@ const ManageContractScreen = () => {
     total,
     listLoading,
     detailLoading,
-    exportLoading,
     currentPage,
     pagination,
-    defaultFilter,
+    filter,
     filterApplied,
-    filterDrawerRef,
+    selectedContractKeys,
+    selectedContractCount,
     customerOptions,
-    customerLabelMap,
+    meterOptions,
+    userOptions,
+    getCustomerDisplay,
+    getMeterDisplay,
+    getUserDisplay,
+    onOpenCustomerDropdown,
+    customerDropdownRender,
+    onOpenMeterDropdown,
+    meterDropdownRender,
+    onOpenUserDropdown,
+    userDropdownRender,
+    onChangeFilter,
     onApplyFilter,
     onResetFilter,
-    openForm,
-    selectedContract,
-    form,
-    handleSubmit,
     onOpenCreate,
     onOpenUpdate,
-    onCloseForm,
+    onCopyContract,
+    onOpenDetail,
     openExtend,
     extendForm,
     handleExtendSubmit,
@@ -168,15 +115,11 @@ const ManageContractScreen = () => {
     onOpenStatus,
     onCloseStatus,
     onDelete,
-    onExport,
+    onSelectContracts,
+    onPrintContracts,
     isoDateFormat
   } = useManageContract();
 
-  const {
-    control,
-    handleSubmit: handleFormSubmit,
-    formState: { isValid, isDirty }
-  } = form;
   const {
     control: extendControl,
     handleSubmit: handleExtendFormSubmit,
@@ -190,57 +133,88 @@ const ManageContractScreen = () => {
 
   const activeFilters = useMemo(
     () =>
-      (Object.entries(filterApplied) as [keyof ContractFilterForm, string][]).filter(([, value]) =>
-        Boolean(value)
-      ),
+      (
+        Object.entries(filterApplied) as [
+          keyof ContractFilter,
+          ContractFilter[keyof ContractFilter]
+        ][]
+      ).filter(([, value]) => isFilterValueActive(value)),
     [filterApplied]
   );
 
-  const formatFilterValue = useCallback((key: keyof ContractFilterForm, value: string) => {
-    if (key === 'customerType') return CUSTOMER_TYPE_LABEL_MAP[value] || value;
-    if (key === 'status') return getStatusLabel(value);
-    return value;
-  }, []);
-
-  const getCustomerLabel = useCallback(
-    (customerId?: string) => (customerId ? customerLabelMap[customerId] || customerId : NULL_VALUE),
-    [customerLabelMap]
+  const formatFilterValue = useCallback(
+    (key: keyof ContractFilter, value: ContractFilter[keyof ContractFilter]) => {
+      if (key === 'customerId') return getCustomerDisplay(value);
+      if (key === 'meterId') return getMeterDisplay(value);
+      if (key === 'createdBy') return getUserDisplay(value);
+      if (key === 'status') return getContractStatusMeta(value).label;
+      if (key === 'signedDate' || key === 'effectiveDate' || key === 'expiryDate') {
+        return renderContractDate(value);
+      }
+      return value;
+    },
+    [getCustomerDisplay, getMeterDisplay, getUserDisplay]
   );
 
-  const getExportDisplayValue = useCallback(
-    (contract: Contract, key: string) => {
-      switch (key) {
-        case 'customerId':
-          return getCustomerLabel(contract.customerId);
-        case 'customerType':
-          return (
-            CUSTOMER_TYPE_LABEL_MAP[contract.customerType || ''] || contract.customerType || ''
-          );
-        case 'voltageLevelId':
-          return (
-            VOLTAGE_LEVEL_LABEL_MAP[contract.voltageLevelId || ''] || contract.voltageLevelId || ''
-          );
-        case 'signedDate':
-        case 'effectiveDate':
-        case 'expiryDate':
-          return displayDateFromServer(contract[key as keyof Contract] as string);
-        case 'status':
-          return getStatusLabel(contract.status);
-        default:
-          return String(contract[key as keyof Contract] || '');
-      }
+  const getDatePickerValue = useCallback(
+    (date?: string) => {
+      if (!date) return null;
+      const parsedDate = dayjs(date, isoDateFormat);
+      return parsedDate.isValid() ? parsedDate : null;
     },
-    [getCustomerLabel]
+    [isoDateFormat]
+  );
+
+  const onChangeDateFilter = useCallback(
+    (key: ContractDateFilterKey, date: Dayjs | null) => {
+      onChangeFilter(key, date ? date.format(isoDateFormat) : '');
+    },
+    [onChangeFilter, isoDateFormat]
+  );
+
+  const getContractRowKey = useCallback((record: AnyObject, index?: number) => {
+    const contract = record as Partial<Contract>;
+    const key = getContractId(contract as Contract) || contract.contractNumber;
+    if (key) return String(key);
+    return index !== undefined ? String(index) : '';
+  }, []);
+
+  const rowSelection = useMemo(
+    () => ({
+      selectedRowKeys: selectedContractKeys,
+      onChange: onSelectContracts,
+      getCheckboxProps: (record: AnyObject) => {
+        const contract = record as Partial<Contract>;
+        return {
+          disabled: !getContractId(contract as Contract) && !contract.contractNumber
+        };
+      }
+    }),
+    [onSelectContracts, selectedContractKeys]
   );
 
   const columns = useMemo<any[]>(
     () => [
       {
+        title: 'STT',
+        key: 'index',
+        width: K_SIZE_100,
+        align: 'center',
+        render: (_: unknown, __: Contract, index: number) =>
+          (currentPage - K_SIZE_1) * DEFAULT_PAGE_SIZE + index + K_SIZE_1
+      },
+      {
         title: 'Số hợp đồng',
         dataIndex: 'contractNumber',
         key: 'contractNumber',
-        width: K_SIZE_160,
-        render: (text: string) => renderTruncatedText(text, 'max-w-[180px]')
+        width: K_SIZE_180,
+        render: (text: string, record: Contract) => (
+          <TextBase
+            classNames="sub-title4 cursor-pointer !text-secondary-500 hover:!text-secondary-700"
+            text={displayText(text)}
+            onClick={() => onOpenDetail(record)}
+          />
+        )
       },
       {
         title: 'Khách hàng',
@@ -248,113 +222,122 @@ const ManageContractScreen = () => {
         key: 'customerId',
         width: K_SIZE_220,
         render: (customerId: string) =>
-          renderTruncatedText(getCustomerLabel(customerId), 'max-w-[260px]')
+          renderTruncatedText(getCustomerDisplay(customerId), 'max-w-[260px]')
       },
       {
-        title: 'Loại khách hàng',
-        dataIndex: 'customerType',
-        key: 'customerType',
-        width: K_SIZE_160,
-        render: (text: string) => CUSTOMER_TYPE_LABEL_MAP[text] || text || NULL_VALUE
-      },
-      {
-        title: 'Cấp điện áp',
-        dataIndex: 'voltageLevelId',
-        key: 'voltageLevelId',
-        width: K_SIZE_130,
-        render: (text: string) => VOLTAGE_LEVEL_LABEL_MAP[text] || text || NULL_VALUE
-      },
-      {
-        title: 'Công suất (kVA)',
-        dataIndex: 'capacityKva',
-        key: 'capacityKva',
-        width: K_SIZE_130,
-        render: renderText
+        title: 'Công tơ',
+        dataIndex: 'meterId',
+        key: 'meterId',
+        width: K_SIZE_150,
+        render: (meterId: string) => renderTruncatedText(getMeterDisplay(meterId), 'max-w-[180px]')
       },
       {
         title: 'Ngày ký',
         dataIndex: 'signedDate',
         key: 'signedDate',
         width: K_SIZE_130,
-        render: (date: string) => displayDateFromServer(date)
+        render: (date: string) => renderContractDate(date)
       },
       {
         title: 'Ngày hiệu lực',
         dataIndex: 'effectiveDate',
         key: 'effectiveDate',
         width: K_SIZE_130,
-        render: (date: string) => displayDateFromServer(date)
+        render: (date: string) => renderContractDate(date)
       },
       {
-        title: 'Ngày hết hạn',
+        title: 'Ngày hết hiệu lực',
         dataIndex: 'expiryDate',
         key: 'expiryDate',
-        width: K_SIZE_130,
-        render: (date: string) => displayDateFromServer(date)
+        width: K_SIZE_150,
+        render: (date: string) => renderContractDate(date)
       },
       {
         title: 'Trạng thái',
         dataIndex: 'status',
         key: 'status',
-        width: K_SIZE_130,
-        render: (status: string) => (
-          <Status
-            type={getStatusType(status)}
-            kind={KIND_STATUS.PRIMARY}
-            content={getStatusLabel(status)}
-          />
-        )
+        width: K_SIZE_150,
+        render: (status: string) => {
+          const meta = getContractStatusMeta(status);
+          return <Status type={meta.type} kind={KIND_STATUS.PRIMARY} content={meta.label} />;
+        }
       },
       {
-        title: t('common:created_at'),
+        title: 'Người tạo',
+        dataIndex: 'createdBy',
+        key: 'createdBy',
+        width: K_SIZE_150,
+        render: (createdBy: string) =>
+          renderTruncatedText(getUserDisplay(createdBy), 'max-w-[180px]')
+      },
+      {
+        title: 'Ngày tạo',
         dataIndex: 'createdAt',
         key: 'createdAt',
         width: K_SIZE_200,
-        render: (text: string) => displayDateTimeFromServer(text)
+        render: (date: string) => displayDateTimeFromServer(date)
       },
       {
-        title: t('common:action'),
+        title: 'Thao tác',
         fixed: 'right',
         align: 'center',
-        width: K_SIZE_160,
+        width: K_SIZE_100,
         render: (_: unknown, record: Contract) => (
-          <div className="flex justify-center gap-8">
-            <IconHover
-              rootClassName="text-color-800"
-              title={t('common:edit')}
-              icon="ICON_EDIT"
-              iconHeight={K_SIZE_18}
-              onClick={() => onOpenUpdate(record)}
-            />
-            <IconHover
-              rootClassName="text-color-800"
-              title="Gia hạn"
-              icon="IC_HISTORY_OUTLINE"
-              iconHeight={K_SIZE_18}
-              onClick={() => onOpenExtend(record)}
-            />
-            <IconHover
-              rootClassName="text-color-800"
-              title="Tạm ngưng / Chấm dứt"
-              icon="ICON_WARNING"
-              iconHeight={K_SIZE_18}
-              onClick={() => onOpenStatus(record)}
-            />
-            <IconHover
-              rootClassName="text-error-500 hover:text-error-500"
-              title={t('common:delete')}
-              icon="IC_TRASH_OUTLINE"
-              iconHeight={K_SIZE_18}
-              onClick={() => onDelete(record)}
-            />
-          </div>
+          <Dropdown
+            trigger={['click']}
+            placement="bottomRight"
+            arrow={{ pointAtCenter: true }}
+            menu={{
+              items: [
+                { key: 'detail', label: 'Xem chi tiết' },
+                { key: 'edit', label: t('common:edit') },
+                { key: 'copy', label: 'Sao chép' },
+                { key: 'extend', label: 'Gia hạn' },
+                { key: 'status', label: 'Tạm ngưng / Chấm dứt' },
+                { key: 'delete', label: t('common:delete'), danger: true }
+              ],
+              onClick: ({ key, domEvent }) => {
+                domEvent.stopPropagation();
+                if (key === 'detail') onOpenDetail(record);
+                if (key === 'edit') onOpenUpdate(record);
+                if (key === 'copy') onCopyContract(record);
+                if (key === 'extend') onOpenExtend(record);
+                if (key === 'status') onOpenStatus(record);
+                if (key === 'delete') onDelete(record);
+              }
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Mở menu thao tác"
+              className="inline-flex size-28 items-center justify-center rounded-radius-s text-color-800 hover:bg-color-100"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <IconSvgLocal name="ICON_MORE" height={K_SIZE_18} />
+            </button>
+          </Dropdown>
         )
       }
     ],
-    [getCustomerLabel, onDelete, onOpenExtend, onOpenStatus, onOpenUpdate, t]
+    [
+      currentPage,
+      getCustomerDisplay,
+      getMeterDisplay,
+      getUserDisplay,
+      onDelete,
+      onCopyContract,
+      onOpenDetail,
+      onOpenExtend,
+      onOpenStatus,
+      onOpenUpdate,
+      t
+    ]
   );
 
   const breadcrumbList = [
+    {
+      title: 'Trang chủ'
+    },
     {
       title: 'Hợp đồng'
     },
@@ -382,38 +365,121 @@ const ManageContractScreen = () => {
           >
             <ButtonBase
               type="ghost"
-              leftIcon="IC_FILTER_OUTLINE"
-              customContent={t('common:advanced_filter')}
-              onClick={() => filterDrawerRef.current?.open(filterApplied)}
+              leftIcon="ICON_BILL"
+              customContent={`In hợp đồng${selectedContractCount ? ` (${selectedContractCount})` : ''}`}
+              onClick={onPrintContracts}
+              disabled={selectedContractCount === K_SIZE_0}
               classNames="mobile:flex-1 mobile:justify-center"
             />
             <ButtonBase
-              type="ghost"
-              leftIcon="IC_DOWNLOAD_OUTLINE"
-              customContent={
-                <div className="flex items-center justify-center">
-                  <div>Xuất Excel</div>
-                  {exportLoading && (
-                    <div className="ml-8">
-                      <Spin size="small" />
-                    </div>
-                  )}
-                </div>
-              }
-              onClick={() => onExport(getExportDisplayValue)}
-              classNames="mobile:flex-1 mobile:justify-center"
-              disabled={exportLoading}
-            />
-            <ButtonBase
-              type="ghost"
+              type="primary"
               leftIcon="IC_ADD_OUTLINE2"
-              customContent="Tạo hợp đồng"
+              customContent="Thêm mới"
               onClick={onOpenCreate}
               classNames="mobile:flex-1 mobile:justify-center"
             />
           </Flex>
         </Flex>
         <Divider className="my-16" />
+
+        <div className="mb-12 rounded-radius-l border border-color-300 bg-color-50 p-16">
+          <div className="grid grid-cols-5 gap-16 tablet:grid-cols-2 mobile:grid-cols-1">
+            <AppTextField
+              name="contractNumber"
+              label="Số hợp đồng"
+              placeholder="Nhập số hợp đồng"
+              value={filter.contractNumber}
+              onChange={(event) => onChangeFilter('contractNumber', event.target.value)}
+              onPressEnter={onApplyFilter}
+            />
+            <AppSelect
+              name="customerId"
+              label="Khách hàng"
+              placeholder="Nhập mã hoặc tên khách hàng"
+              value={filter.customerId}
+              options={[ALL_OPTION, ...customerOptions]}
+              dropdownRender={customerDropdownRender}
+              onOpenChange={onOpenCustomerDropdown}
+              onSelectOption={({ key }) => onChangeFilter('customerId', String(key))}
+              suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
+            />
+            <AppSelect
+              name="meterId"
+              label="Công tơ"
+              placeholder="Nhập mã công tơ"
+              value={filter.meterId}
+              options={[ALL_OPTION, ...meterOptions]}
+              dropdownRender={meterDropdownRender}
+              onOpenChange={onOpenMeterDropdown}
+              onSelectOption={({ key }) => onChangeFilter('meterId', String(key))}
+              suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
+            />
+            <AppSelect
+              name="status"
+              label="Trạng thái"
+              placeholder="Chọn trạng thái"
+              value={filter.status}
+              options={[ALL_OPTION, ...CONTRACT_STATUS_OPTIONS]}
+              onSelectOption={({ key }) => onChangeFilter('status', String(key))}
+            />
+            <AppDatePicker
+              name="signedDate"
+              label="Thời gian ký"
+              placeholder="Chọn thời gian ký"
+              value={getDatePickerValue(filter.signedDate)}
+              onChange={(date) => onChangeDateFilter('signedDate', date as Dayjs | null)}
+              allowClear
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+            />
+            <AppDatePicker
+              name="effectiveDate"
+              label="Ngày hiệu lực"
+              placeholder="Chọn ngày hiệu lực"
+              value={getDatePickerValue(filter.effectiveDate)}
+              onChange={(date) => onChangeDateFilter('effectiveDate', date as Dayjs | null)}
+              allowClear
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+            />
+            <AppDatePicker
+              name="expiryDate"
+              label="Ngày hết hiệu lực"
+              placeholder="Chọn ngày hết hiệu lực"
+              value={getDatePickerValue(filter.expiryDate)}
+              onChange={(date) => onChangeDateFilter('expiryDate', date as Dayjs | null)}
+              allowClear
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+            />
+            <AppSelect
+              name="createdBy"
+              label="Người tạo"
+              placeholder="Chọn người tạo"
+              value={filter.createdBy}
+              options={[ALL_OPTION, ...userOptions]}
+              dropdownRender={userDropdownRender}
+              onOpenChange={onOpenUserDropdown}
+              onSelectOption={({ key }) => onChangeFilter('createdBy', String(key))}
+              suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
+            />
+            <div className="col-start-5 flex items-end justify-end gap-8 tablet:col-span-2 tablet:col-start-auto mobile:col-span-1 mobile:flex-col">
+              <ButtonBase
+                type="ghost"
+                customContent="Làm mới"
+                onClick={() => onResetFilter()}
+                classNames="min-w-[104px] mobile:w-full mobile:justify-center"
+              />
+              <ButtonBase
+                type="primary"
+                leftIcon="IC_SEARCH_OUTLINE2"
+                customContent="Tìm kiếm"
+                onClick={onApplyFilter}
+                classNames="min-w-[104px] mobile:w-full mobile:justify-center"
+              />
+            </div>
+          </div>
+        </div>
 
         {activeFilters.length > K_SIZE_0 && (
           <div className="mb-8 flex w-full flex-wrap items-center gap-8">
@@ -428,146 +494,29 @@ const ManageContractScreen = () => {
         )}
 
         <Spin spinning={listLoading && contractList.length > K_SIZE_0}>
-          <div className="overflow-hidden rounded-radius-l border border-color-400 duration-500">
+          <div className="overflow-hidden rounded-radius-l border border-color-400 bg-color-50 duration-500">
+            <Flex justify="space-between" align="center" className="px-16 py-12">
+              <TextBase classNames="sub-title3 !text-primary-700" text="Danh sách hợp đồng" />
+              <div className="text-14 font-medium text-color-700">
+                Hiển thị {Math.min(DEFAULT_PAGE_SIZE, total)} bản ghi
+              </div>
+            </Flex>
             <AppTable
               loading={listLoading}
               rootClassName="w-full"
               className="[&_.ant-pagination]:hidden"
-              scroll={{ x: 'max-content', y: '75vh' }}
+              scroll={{ x: 'max-content', y: '68vh' }}
               dataSource={contractList}
               columns={columns}
-              rowKey="id"
+              rowKey={getContractRowKey}
+              rowSelection={rowSelection}
               pagination={pagination}
             />
-          </div>
-          <AppPagination currentPage={currentPage} total={total} pagination={pagination} />
-        </Spin>
-
-        <form id="contract-form" onSubmit={handleFormSubmit(handleSubmit)}>
-          <Drawer
-            open={openForm}
-            title={
-              <Flex justify="space-between" align="center">
-                <div>{selectedContract ? 'Cập nhật hợp đồng' : 'Tạo hợp đồng'}</div>
-                <IconHover title="" icon="IC_CLOSE_OUTLINE" onClick={onCloseForm} />
-              </Flex>
-            }
-            destroyOnClose
-            placement="right"
-            closable={false}
-            onClose={onCloseForm}
-            width={isTablet || isMobile ? '80vw' : '44vw'}
-            footer={
-              <Flex justify="end" gap={K_SIZE_8}>
-                <ButtonBase
-                  classNames="app-common-btn"
-                  type="ghost"
-                  customContent={t('common:close')}
-                  onClick={onCloseForm}
-                />
-                <ButtonBase
-                  classNames="app-common-btn"
-                  type="primary"
-                  form="contract-form"
-                  htmlType="submit"
-                  disabled={!isValid || Boolean(selectedContract && !isDirty) || detailLoading}
-                  customContent={
-                    <div className="flex flex-row items-center justify-center">
-                      <div>{t('common:confirm')}</div>
-                      {detailLoading && (
-                        <div className="ml-8">
-                          <Spin size="small" />
-                        </div>
-                      )}
-                    </div>
-                  }
-                />
-              </Flex>
-            }
-          >
-            <div className="grid gap-12">
-              <AppTextFieldControl
-                name="contractNumber"
-                label="Số hợp đồng"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
-                placeholder="HD-YYYY-NNN"
-                control={control}
-                disabled={Boolean(selectedContract)}
-              />
-              <AppSelectControl
-                name="customerId"
-                label="Khách hàng"
-                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                placeholder="Chọn khách hàng"
-                options={customerOptions}
-                control={control}
-              />
-              <AppSelectControl
-                name="customerType"
-                label="Loại khách hàng"
-                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                placeholder="Chọn loại khách hàng"
-                options={CUSTOMER_TYPE_OPTIONS}
-                control={control}
-              />
-              <AppSelectControl
-                name="voltageLevelId"
-                label="Cấp điện áp"
-                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                placeholder="Chọn cấp điện áp"
-                options={VOLTAGE_LEVEL_OPTIONS}
-                control={control}
-              />
-              <AppTextFieldControl
-                name="capacityKva"
-                label="Công suất (kVA)"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
-                placeholder="Nhập công suất hợp đồng tối đa"
-                control={control}
-              />
-              <AppDatePickerControl
-                name="signedDate"
-                label="Ngày ký"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
-                placeholder="Chọn ngày ký"
-                backendFormat={isoDateFormat}
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-                control={control}
-              />
-              <AppDatePickerControl
-                name="effectiveDate"
-                label="Ngày hiệu lực"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
-                placeholder="Chọn ngày hiệu lực"
-                backendFormat={isoDateFormat}
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-                control={control}
-              />
-              <AppDatePickerControl
-                name="expiryDate"
-                label="Ngày hết hạn"
-                placeholder="Chọn ngày hết hạn"
-                backendFormat={isoDateFormat}
-                allowClear
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-                control={control}
-              />
-              <AppTextFieldControl
-                name="note"
-                label="Ghi chú"
-                placeholder="Nhập ghi chú"
-                control={control}
-              />
+            <div className="px-16 pb-12">
+              <AppPagination currentPage={currentPage} total={total} pagination={pagination} />
             </div>
-          </Drawer>
-        </form>
+          </div>
+        </Spin>
 
         <form id="contract-extend-form" onSubmit={handleExtendFormSubmit(handleExtendSubmit)}>
           <Drawer
@@ -677,15 +626,6 @@ const ManageContractScreen = () => {
             </div>
           </Drawer>
         </form>
-
-        <ContractFilterDrawer
-          ref={filterDrawerRef}
-          defaultValues={defaultFilter}
-          customerTypeOptions={CUSTOMER_TYPE_OPTIONS}
-          statusOptions={CONTRACT_STATUS_OPTIONS}
-          onApplyFilter={onApplyFilter}
-          onResetFilter={onResetFilter}
-        />
       </section>
     </PageWithBreadcrumb>
   );

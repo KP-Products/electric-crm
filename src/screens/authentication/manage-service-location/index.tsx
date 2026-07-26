@@ -36,10 +36,9 @@ import ServiceLocationFilterDrawer, {
 import useManageServiceLocation from './useManageServiceLocation';
 
 const VOLTAGE_LEVEL_OPTIONS = [
-  { value: 'V_0_4_KV', label: '0.4kV' },
-  { value: 'V_6_KV', label: '6kV' },
-  { value: 'V_22_KV', label: '22kV' },
-  { value: 'V_110_KV', label: '110kV' }
+  { value: 'HA_AP', label: 'Hạ áp' },
+  { value: 'TRUNG_AP', label: 'Trung áp' },
+  { value: 'CAO_AP', label: 'Cao áp' }
 ];
 
 const USAGE_PURPOSE_OPTIONS = [
@@ -50,15 +49,22 @@ const USAGE_PURPOSE_OPTIONS = [
 ];
 
 const VOLTAGE_LEVEL_LABEL_MAP: Record<string, string> = {
-  V_0_4_KV: '0.4kV',
-  V_6_KV: '6kV',
-  V_22_KV: '22kV',
-  V_110_KV: '110kV',
-  '0.4kV': '0.4kV',
-  '6kV': '6kV',
-  '22kV': '22kV',
-  '35kV': '35kV',
-  '110kV': '110kV'
+  HA_AP: 'Hạ áp',
+  TRUNG_AP: 'Trung áp',
+  CAO_AP: 'Cao áp',
+  V_0_4_KV: 'Hạ áp',
+  V_6_KV: 'Trung áp',
+  V_22_KV: 'Trung áp',
+  V_35_KV: 'Trung áp',
+  V_110_KV: 'Cao áp',
+  '0.4kV': 'Hạ áp',
+  '6kV': 'Trung áp',
+  '22kV': 'Trung áp',
+  '35kV': 'Trung áp',
+  '110kV': 'Cao áp',
+  'Hạ áp': 'Hạ áp',
+  'Trung áp': 'Trung áp',
+  'Cao áp': 'Cao áp'
 };
 
 const USAGE_PURPOSE_LABEL_MAP: Record<string, string> = {

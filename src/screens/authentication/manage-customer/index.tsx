@@ -404,7 +404,7 @@ const ManageCustomerScreen = () => {
               leftIcon="IC_SEARCH_OUTLINE2"
               customContent="Tìm kiếm"
               onClick={onApplyFilter}
-              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+              classNames="min-w-[130px] mobile:flex-1 mobile:justify-center"
             />
           </Flex>
         </div>

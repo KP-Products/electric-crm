@@ -81,16 +81,19 @@ const VOLTAGE_LEVEL_LABEL_MAP: Record<string, string> = {
   HA_AP: 'Hạ áp',
   TRUNG_AP: 'Trung áp',
   CAO_AP: 'Cao áp',
-  V_0_4_KV: '0.4kV',
-  V_6_KV: '6kV',
-  V_22_KV: '22kV',
-  V_35_KV: '35kV',
-  V_110_KV: '110kV',
-  '0.4kV': '0.4kV',
-  '6kV': '6kV',
-  '22kV': '22kV',
-  '35kV': '35kV',
-  '110kV': '110kV'
+  V_0_4_KV: 'Hạ áp',
+  V_6_KV: 'Trung áp',
+  V_22_KV: 'Trung áp',
+  V_35_KV: 'Trung áp',
+  V_110_KV: 'Cao áp',
+  '0.4kV': 'Hạ áp',
+  '6kV': 'Trung áp',
+  '22kV': 'Trung áp',
+  '35kV': 'Trung áp',
+  '110kV': 'Cao áp',
+  'Hạ áp': 'Hạ áp',
+  'Trung áp': 'Trung áp',
+  'Cao áp': 'Cao áp'
 };
 
 const TOU_LABEL_MAP: Record<string, string> = {

@@ -5,19 +5,16 @@ export interface Meter {
   meterId: string;
   meterCode: string;
   meterType?: string;
-  manufacturer?: string;
   customerId?: string;
+  locationId?: string;
   customerName?: string;
-  purchaseDate?: string;
   installationDate?: string;
   inspectionDate?: string;
   inspectionExpiryDate?: string;
   voltageLevel?: string;
   multiplier?: number;
   voltageType?: string;
-  feederId?: string;
-  feederName?: string;
-  usagePurpose?: string;
+  parentId?: string;
   initialReading?: number;
   status: string;
   createdAt?: string;
@@ -64,39 +61,32 @@ export interface GetListMeterReq extends PaginationReq {
   customerId?: string;
   voltageType?: string;
   status?: string;
+  meterType?: string;
 }
 
 export interface GetListMeterRes extends ResultBase<PaginationRes<MeterSearchItem>> {}
 
 export interface GetMeterDetailReq {
-  id?: string;
-  meterId?: string;
+  meterId: string;
 }
 
 export interface GetMeterDetailRes extends ResultBase<MeterSearchItem> {}
 
 export interface AddMeterReq {
   meterCode: string;
-  meterType?: string;
-  manufacturer?: string;
   customerId?: string;
-  purchaseDate?: string;
   installationDate?: string;
-  inspectionDate?: string;
-  inspectionExpiryDate?: string;
   voltageLevel?: string;
   multiplier?: number;
   voltageType?: string;
-  feederId?: string;
-  feederName?: string;
-  usagePurpose?: string;
+  parentId?: string;
   initialReading?: number;
   status: string;
+  meterType?: string;
 }
 
 export interface EditMeterReq extends AddMeterReq {
-  id?: string;
-  meterId?: string;
+  meterId: string;
 }
 
 export interface AddMeterRes extends ResultBase {}
