@@ -1,4 +1,4 @@
-import { K_SIZE_1 } from '@constant';
+import { CONSTANTS, DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CREATE_EMPLOYEE,
@@ -9,9 +9,11 @@ import {
 } from '@redux-action-type/employee';
 import { dispatch } from '@redux-common';
 import { selectEmployeeLoadingDetail } from '@redux-selector/employee';
+import type { AppSelectOption } from 'components/select';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
+import { debounce } from 'lodash';
 import { ErrorBase } from 'model/common';
 import {
   CreateEmployeeReq,
@@ -25,11 +27,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import employeeServices from 'services/employee-services';
 import { normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
 import {
   DATE_API_FORMAT,
+  buildEmployeeSelectOptions,
   getEmployeeErrorContent,
+  getEmployeeSelectLabel,
   optionalNumber,
   optionalString,
   toDatePickerValue
@@ -77,9 +82,7 @@ const employeeSchema = z.object({
   socialInsuranceNo: z.string().trim(),
   permanentAddress: z.string().trim(),
   currentAddress: z.string().trim(),
-  departmentCode: z.string().trim(),
   departmentName: z.string().trim(),
-  positionCode: z.string().trim(),
   positionName: z.string().trim(),
   managerId: integerStringSchema('Quản lý trực tiếp phải là ID dạng số nguyên'),
   hireDate: optionalDateSchema,
@@ -111,6 +114,11 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
   const [selectedAvatar, setSelectedAvatar] = useState<File>();
   const [selectedContractFile, setSelectedContractFile] = useState<File>();
   const [submitLocked, setSubmitLocked] = useState(false);
+  const [managerSearch, setManagerSearch] = useState<string>('');
+  const [managerOptionsLoading, setManagerOptionsLoading] = useState<boolean>(false);
+  const [managerLabelMap, setManagerLabelMap] = useState<Record<string, string>>({});
+  const [searchedManagerOptions, setSearchedManagerOptions] = useState<AppSelectOption[]>([]);
+  const managerSearchRequestRef = useRef<number>(K_SIZE_0);
 
   const defaultFormValues: EmployeeForm = useMemo(
     () => ({
@@ -127,9 +135,7 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
       socialInsuranceNo: '',
       permanentAddress: '',
       currentAddress: '',
-      departmentCode: '',
       departmentName: '',
-      positionCode: '',
       positionName: '',
       managerId: '',
       hireDate: '',
@@ -153,12 +159,116 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
     resolver: zodResolver(employeeSchema)
   });
 
+  const managerIdValue = form.watch('managerId');
+
   const onBack = useCallback(() => {
     router.push(ROUTES.EMPLOYEE_LIST);
   }, [router]);
 
+  const upsertManagerLabels = useCallback((employeeItems: Employee[]) => {
+    setManagerLabelMap((prev) => {
+      let hasChange = false;
+      const next = { ...prev };
+
+      employeeItems.forEach((employee) => {
+        if (employee?.id === undefined || employee.id === null) return;
+        const key = String(employee.id);
+        const label = getEmployeeSelectLabel(employee);
+        if (next[key] === label) return;
+        next[key] = label;
+        hasChange = true;
+      });
+
+      return hasChange ? next : prev;
+    });
+  }, []);
+
+  const selectedEmployeeId = useMemo(() => {
+    const numericId = Number(id);
+    if (id && !Number.isNaN(numericId)) return numericId;
+    return selectedEmployee?.id;
+  }, [id, selectedEmployee?.id]);
+
+  const managerOptions = useMemo<AppSelectOption[]>(() => {
+    const optionMap = new Map<string, AppSelectOption>();
+    const selectedEmployeeKey =
+      selectedEmployeeId !== undefined && selectedEmployeeId !== null
+        ? String(selectedEmployeeId)
+        : '';
+
+    searchedManagerOptions.forEach((option) => {
+      if (String(option.value) === selectedEmployeeKey) return;
+      optionMap.set(String(option.value), option);
+    });
+
+    if (managerIdValue && String(managerIdValue) !== selectedEmployeeKey) {
+      const key = String(managerIdValue);
+      optionMap.set(key, { value: key, label: managerLabelMap[key] || key });
+    }
+
+    return Array.from(optionMap.values());
+  }, [managerIdValue, managerLabelMap, searchedManagerOptions, selectedEmployeeId]);
+
+  const fetchManagerLabel = useCallback(
+    async (managerId: number) => {
+      const response = await employeeServices.getEmployeeDetail({ id: managerId });
+      const manager = response?.data?.employee;
+      if (manager) upsertManagerLabels([manager]);
+    },
+    [upsertManagerLabels]
+  );
+
+  const fetchManagerOptions = useCallback(
+    async (keyword = '') => {
+      const requestNo = managerSearchRequestRef.current + K_SIZE_1;
+      managerSearchRequestRef.current = requestNo;
+      setManagerOptionsLoading(true);
+
+      const normalizedKeyword = keyword.trim();
+      const response = await employeeServices.searchEmployees({
+        page: K_SIZE_0,
+        size: DEFAULT_PAGE_SIZE,
+        ...(normalizedKeyword ? { fullName: normalizedKeyword } : {})
+      });
+
+      if (managerSearchRequestRef.current !== requestNo) return;
+      setManagerOptionsLoading(false);
+
+      if (!response || !response.data) {
+        setSearchedManagerOptions([]);
+        return;
+      }
+
+      const managerItems = response.data.items || [];
+      upsertManagerLabels(managerItems);
+      setSearchedManagerOptions(buildEmployeeSelectOptions(managerItems, selectedEmployeeId));
+    },
+    [selectedEmployeeId, upsertManagerLabels]
+  );
+
+  const debouncedFetchManagerOptions = useMemo(
+    () => debounce(fetchManagerOptions, CONSTANTS.TIME_DEBOUNCE),
+    [fetchManagerOptions]
+  );
+
+  const onSearchManagers = useCallback(
+    (keyword: string) => {
+      setManagerSearch(keyword);
+      debouncedFetchManagerOptions(keyword);
+    },
+    [debouncedFetchManagerOptions]
+  );
+
+  const onOpenManagerDropdown = useCallback(() => {
+    void fetchManagerOptions(managerSearch);
+  }, [fetchManagerOptions, managerSearch]);
+
   const fillForm = useCallback(
     (employee: Employee) => {
+      if (employee.managerId !== undefined && employee.managerId !== null) {
+        void fetchManagerLabel(employee.managerId);
+      }
+
       form.reset({
         employeeCode: employee.employeeCode || '',
         fullName: employee.fullName || '',
@@ -173,9 +283,7 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
         socialInsuranceNo: employee.socialInsuranceNo || '',
         permanentAddress: employee.permanentAddress || '',
         currentAddress: employee.currentAddress || '',
-        departmentCode: employee.departmentCode || '',
         departmentName: employee.departmentName || '',
-        positionCode: employee.positionCode || '',
         positionName: employee.positionName || '',
         managerId:
           employee.managerId !== undefined && employee.managerId !== null
@@ -197,8 +305,14 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
         note: employee.note || ''
       });
     },
-    [form]
+    [fetchManagerLabel, form]
   );
+
+  useEffect(() => {
+    return () => {
+      debouncedFetchManagerOptions.cancel();
+    };
+  }, [debouncedFetchManagerOptions]);
 
   useEffect(() => {
     if (!isEditMode) return;
@@ -244,9 +358,7 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
       socialInsuranceNo: optionalString(data.socialInsuranceNo),
       permanentAddress: optionalString(data.permanentAddress),
       currentAddress: optionalString(data.currentAddress),
-      departmentCode: optionalString(data.departmentCode),
       departmentName: optionalString(data.departmentName),
-      positionCode: optionalString(data.positionCode),
       positionName: optionalString(data.positionName),
       managerId: optionalNumber(data.managerId),
       hireDate: optionalString(normalizeDateToApi(data.hireDate)),
@@ -416,8 +528,13 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
     selectedEmployee,
     selectedAvatar,
     selectedContractFile,
+    managerOptions,
+    managerSearch,
+    managerOptionsLoading,
     setSelectedAvatar,
     setSelectedContractFile,
+    onSearchManagers,
+    onOpenManagerDropdown,
     submitLocked,
     onBack,
     onSubmit

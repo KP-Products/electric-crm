@@ -8,12 +8,14 @@ import ButtonBase from 'components/button';
 import { AppDatePickerControl } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { AppSelectControl } from 'components/select';
+import CustomDropSearchMore from 'components/select/CustomDropSearchMore';
 import { AppTakeNoteControl } from 'components/take-note';
 import { TextBase } from 'components/text';
 import { AppTextFieldControl } from 'components/text-field';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { getUploadFileSizeError, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useManageEmployeeForm from '../hooks/useManageEmployeeForm';
@@ -41,8 +43,13 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
     selectedEmployee,
     selectedAvatar,
     selectedContractFile,
+    managerOptions,
+    managerSearch,
+    managerOptionsLoading,
     setSelectedAvatar,
     setSelectedContractFile,
+    onSearchManagers,
+    onOpenManagerDropdown,
     submitLocked,
     onBack,
     onSubmit
@@ -89,6 +96,17 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
   const typeOptions = useMemo(
     () => EMPLOYMENT_TYPE_OPTIONS.filter((option) => option.value !== ''),
     []
+  );
+  const renderManagerDropdown = (menuInstance: ReactNode) => (
+    <CustomDropSearchMore
+      menuInstance={menuInstance}
+      searchValue={managerSearch}
+      onChangeSearch={onSearchManagers}
+      onMore={() => {}}
+      totalList={managerOptions.length}
+      total={managerOptions.length}
+      loading={managerOptionsLoading}
+    />
   );
 
   const title = isEditMode ? 'Cập nhật nhân sự' : 'Thêm nhân sự';
@@ -231,21 +249,9 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                 />
                 <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
                   <AppTextFieldControl
-                    name="departmentCode"
-                    label="Mã phòng ban"
-                    placeholder="Nhập mã phòng ban"
-                    control={control}
-                  />
-                  <AppTextFieldControl
                     name="departmentName"
                     label="Phòng ban"
                     placeholder="Nhập tên phòng ban"
-                    control={control}
-                  />
-                  <AppTextFieldControl
-                    name="positionCode"
-                    label="Mã chức vụ"
-                    placeholder="Nhập mã chức vụ"
                     control={control}
                   />
                   <AppTextFieldControl
@@ -254,12 +260,17 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                     placeholder="Nhập tên chức vụ"
                     control={control}
                   />
-                  <AppTextFieldControl
+                  <AppSelectControl
                     name="managerId"
                     label="Quản lý trực tiếp"
-                    placeholder="Nhập ID quản lý"
+                    placeholder="Chọn quản lý trực tiếp"
+                    options={managerOptions}
+                    dropdownRender={renderManagerDropdown}
+                    onOpenChange={(open) => {
+                      if (open) onOpenManagerDropdown();
+                    }}
+                    unSeleted
                     control={control}
-                    inputMode="numeric"
                   />
                   <AppDatePickerControl
                     name="hireDate"

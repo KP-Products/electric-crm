@@ -107,6 +107,22 @@ export const getEmploymentStatusType = (value?: string): TYPE_STATUS => {
 export const getEmployeeDisplayName = (employee?: Employee) =>
   employee?.fullName || employee?.employeeCode || NULL_VALUE;
 
+export const getEmployeeSelectLabel = (employee: Employee) =>
+  employee.fullName || employee.employeeCode || employee.email || String(employee.id);
+
+export const buildEmployeeSelectOptions = (employees: Employee[], excludedEmployeeId?: number) =>
+  employees
+    .filter(
+      (employee) =>
+        employee.id !== undefined &&
+        employee.id !== null &&
+        (excludedEmployeeId === undefined || employee.id !== excludedEmployeeId)
+    )
+    .map((employee) => ({
+      value: String(employee.id),
+      label: getEmployeeSelectLabel(employee)
+    }));
+
 export const getEmployeeInitials = (employee?: Employee) => {
   const normalizedName = getEmployeeDisplayName(employee).split(/\s+/).filter(Boolean);
   if (!normalizedName.length || normalizedName[0] === NULL_VALUE) return 'NS';
