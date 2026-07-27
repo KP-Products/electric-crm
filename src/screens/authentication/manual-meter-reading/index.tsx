@@ -5,10 +5,7 @@ import {
   CheckCircleOutlined,
   DeleteOutlined,
   FileTextOutlined,
-  HomeOutlined,
-  InfoCircleOutlined,
   ReloadOutlined,
-  SaveOutlined,
   SearchOutlined,
   UploadOutlined
 } from '@ant-design/icons';
@@ -17,6 +14,7 @@ import { Divider, Flex, Image, Input, Upload } from 'antd';
 import ButtonBase from 'components/button';
 import { AppDatePicker } from 'components/date-picker';
 import { AppSelect } from 'components/select';
+import CustomDropSearchMore from 'components/select/CustomDropSearchMore';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import { TextBase } from 'components/text';
 import { AppTextField } from 'components/text-field';
@@ -24,7 +22,7 @@ import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { useMemo } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
 import {
   ManualReadingMeter,
@@ -64,31 +62,6 @@ const getStatusType = (status: ManualReadingStatus) => {
   if (status === 'DRAFT') return TYPE_STATUS.SUCCESS;
   return TYPE_STATUS.DISABLED;
 };
-
-const SummaryTile = ({
-  icon,
-  label,
-  value,
-  valueClassName
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  valueClassName?: string;
-}) => (
-  <div className="flex min-h-[72px] items-center gap-12 rounded-radius-m border border-color-300 bg-color-50 px-16 py-12">
-    <div className="flex size-28 shrink-0 items-center justify-center rounded-[50%] bg-link-50 text-link-600">
-      {icon}
-    </div>
-    <div className="min-w-0">
-      <TextBase classNames="caption1 truncate !text-color-700" text={label} />
-      <TextBase
-        classNames={`sub-title3 truncate !text-color-900 ${valueClassName || ''}`}
-        text={value}
-      />
-    </div>
-  </div>
-);
 
 const InfoBox = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="rounded-radius-m border border-color-300 bg-color-50 px-12 py-[10px]">
@@ -151,16 +124,20 @@ const ManualMeterReadingScreen = () => {
     selectedMeter,
     selectedMeterId,
     selectedMeterMetrics,
-    summary,
     periodInfo,
     searchByOptions,
+    searchLookupField,
+    searchLookupOptions,
+    searchLookupSearch,
+    searchLookupLoading,
     periodOptions,
     maxPhotoCount,
     hasUnsyncedFilter,
     loadingMeters,
     loadingDetail,
-    savingDraft,
     savingConfirm,
+    onSearchLookupOptions,
+    onOpenSearchLookupDropdown,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -172,8 +149,6 @@ const ManualMeterReadingScreen = () => {
     onRemovePendingPhoto,
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
-    onSaveSelectedMeter,
-    onSaveDraft,
     onConfirmAndSave
   } = useManualMeterReading();
 
@@ -183,6 +158,21 @@ const ManualMeterReadingScreen = () => {
       { title: 'Nhập chỉ số thủ công', key: ROUTES.MANUAL_METER_READING }
     ],
     []
+  );
+
+  const renderSearchLookupDropdown = useCallback(
+    (menuInstance: ReactNode) => (
+      <CustomDropSearchMore
+        menuInstance={menuInstance}
+        searchValue={searchLookupSearch}
+        onChangeSearch={onSearchLookupOptions}
+        onMore={() => {}}
+        totalList={searchLookupOptions.length}
+        total={searchLookupOptions.length}
+        loading={searchLookupLoading}
+      />
+    ),
+    [onSearchLookupOptions, searchLookupLoading, searchLookupOptions.length, searchLookupSearch]
   );
 
   return (
@@ -203,20 +193,6 @@ const ManualMeterReadingScreen = () => {
           </div>
           <Flex justify="end" gap={K_SIZE_8} className="mobile:w-full mobile:flex-col">
             <ButtonBase
-              type="ghost"
-              customContent={
-                <div className="flex items-center gap-8">
-                  <SaveOutlined />
-                  <span>{savingDraft ? 'Đang lưu...' : 'Lưu nháp'}</span>
-                </div>
-              }
-              disabled={
-                savingDraft || savingConfirm || loadingMeters || loadingDetail || hasUnsyncedFilter
-              }
-              onClick={onSaveDraft}
-              classNames="mobile:w-full mobile:justify-center"
-            />
-            <ButtonBase
               type="primary"
               customContent={
                 <div className="flex items-center gap-8">
@@ -224,9 +200,7 @@ const ManualMeterReadingScreen = () => {
                   <span>{savingConfirm ? 'Đang lưu...' : 'Xác nhận & Lưu'}</span>
                 </div>
               }
-              disabled={
-                savingDraft || savingConfirm || loadingMeters || loadingDetail || hasUnsyncedFilter
-              }
+              disabled={savingConfirm || loadingMeters || loadingDetail || hasUnsyncedFilter}
               onClick={onConfirmAndSave}
               classNames="mobile:w-full mobile:justify-center"
             />
@@ -258,13 +232,16 @@ const ManualMeterReadingScreen = () => {
               value={filterDraft.searchBy}
               onSelectOption={({ key }) => onChangeFilter('searchBy', String(key))}
             />
-            <AppTextField
+            <AppSelect
               name="customerCode"
-              label="Mã khách hàng"
-              placeholder="Nhập mã khách hàng"
+              label={searchLookupField.label}
+              placeholder={searchLookupField.placeholder}
               value={filterDraft.customerCode}
-              onChange={(event) => onChangeFilter('customerCode', event.target.value)}
-              onPressEnter={onApplyFilter}
+              options={searchLookupOptions}
+              dropdownRender={renderSearchLookupDropdown}
+              onOpenChange={onOpenSearchLookupDropdown}
+              onSelectOption={({ key }) => onChangeFilter('customerCode', String(key))}
+              suffix={<SearchOutlined className="text-color-600" />}
             />
             <AppSelect
               name="periodCode"
@@ -655,20 +632,8 @@ const ManualMeterReadingScreen = () => {
                       </div>
                     }
                     onClick={onClearSelectedMeter}
-                    disabled={savingDraft || savingConfirm}
+                    disabled={savingConfirm}
                     classNames="min-w-[120px] mobile:flex-1 mobile:justify-center"
-                  />
-                  <ButtonBase
-                    type="primary"
-                    customContent={
-                      <div className="flex items-center gap-8">
-                        <SaveOutlined />
-                        <span>Lưu cho công tơ</span>
-                      </div>
-                    }
-                    onClick={onSaveSelectedMeter}
-                    disabled={savingDraft || savingConfirm}
-                    classNames="min-w-[150px] mobile:flex-1 mobile:justify-center"
                   />
                 </Flex>
               </>
@@ -677,39 +642,6 @@ const ManualMeterReadingScreen = () => {
                 Chọn hoặc tìm kiếm khách hàng để nhập chỉ số công tơ.
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="mt-12 rounded-radius-l border border-color-300 bg-color-50 p-12">
-          <TextBase classNames="sub-title4 mb-12 !text-primary-700" text="3. Tổng hợp nhập liệu" />
-          <div className="grid grid-cols-[repeat(4,minmax(140px,1fr))_minmax(220px,1.4fr)] gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
-            <SummaryTile
-              icon={<HomeOutlined />}
-              label="Tổng số công tơ"
-              value={String(summary.totalMeters)}
-            />
-            <SummaryTile
-              icon={<CheckCircleOutlined />}
-              label="Chưa nhập"
-              value={String(summary.notEntered)}
-              valueClassName="!text-success-700"
-            />
-            <SummaryTile
-              icon={<FileTextOutlined />}
-              label="Đã nhập"
-              value={String(summary.saved)}
-            />
-            <SummaryTile
-              icon={<InfoCircleOutlined />}
-              label="Tổng sản lượng quy đổi"
-              value={`${formatNumber(summary.totalAdjustedKwh)} kWh`}
-              valueClassName="!text-pending-700"
-            />
-            <div className="rounded-radius-m border border-pending-200 bg-pending-50 px-16 py-12 text-13 text-pending-700">
-              <div className="mb-4 font-semibold">Lưu ý</div>
-              <div>Các trường có dấu * là bắt buộc.</div>
-              <div>Vui lòng kiểm tra chỉ số trước khi xác nhận lưu.</div>
-            </div>
           </div>
         </div>
       </section>

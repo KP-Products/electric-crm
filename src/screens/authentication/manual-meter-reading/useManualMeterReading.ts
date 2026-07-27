@@ -1,8 +1,10 @@
-import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1, K_SIZE_5 } from '@constant';
+import { CONSTANTS, DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1, K_SIZE_5 } from '@constant';
+import type { AppSelectOption } from 'components/select';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
+import { debounce } from 'lodash';
 import {
   MeterReading,
   MeterSearchForReadingRow,
@@ -12,8 +14,12 @@ import {
   ReadingPeriodStatus,
   ReadingPhoto
 } from 'model/manual-meter-reading';
+import { Customer } from 'model/customer';
+import { Meter, normalizeMeterSearchItem } from 'model/meter';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import customerServices from 'services/customer-services';
 import manualMeterReadingServices from 'services/manual-meter-reading-services';
+import meterServices from 'services/meter-services';
 import { FORMAT_DATE_API } from 'utils/date';
 import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 
@@ -70,13 +76,6 @@ export interface ManualReadingMeter {
   pendingPhotos: ManualReadingPendingPhoto[];
 }
 
-export interface ManualReadingSummary {
-  totalMeters: number;
-  notEntered: number;
-  saved: number;
-  totalAdjustedKwh: number;
-}
-
 const MANUAL_READING_TYPE_INPUT = 'MANUAL';
 const MAX_READING_PHOTOS = K_SIZE_5;
 const SEARCH_BY_OPTIONS = [
@@ -84,6 +83,21 @@ const SEARCH_BY_OPTIONS = [
   { value: 'CUSTOMER_NAME', label: 'Tên khách hàng' },
   { value: 'METER_CODE', label: 'Mã công tơ' }
 ];
+
+const SEARCH_LOOKUP_FIELD_META = {
+  CUSTOMER_CODE: {
+    label: 'Mã khách hàng',
+    placeholder: 'Chọn mã khách hàng'
+  },
+  CUSTOMER_NAME: {
+    label: 'Tên khách hàng',
+    placeholder: 'Chọn tên khách hàng'
+  },
+  METER_CODE: {
+    label: 'Mã công tơ',
+    placeholder: 'Chọn mã công tơ'
+  }
+} as const;
 
 const TOU_REGISTERS = [
   { tou: 'CD', label: 'T1 - Cao điểm' },
@@ -152,6 +166,48 @@ const optionalValue = (value?: string) => {
   const trimmedValue = value?.trim();
   return trimmedValue || undefined;
 };
+
+const getSearchLookupFieldMeta = (searchBy?: string) =>
+  SEARCH_LOOKUP_FIELD_META[searchBy as keyof typeof SEARCH_LOOKUP_FIELD_META] ||
+  SEARCH_LOOKUP_FIELD_META.CUSTOMER_CODE;
+
+const getSearchMeterParamsByField = (searchBy: string, searchValue?: string) => {
+  const normalizedValue = optionalValue(searchValue);
+
+  return {
+    customerCode: searchBy === 'CUSTOMER_CODE' ? normalizedValue : undefined,
+    customerName: searchBy === 'CUSTOMER_NAME' ? normalizedValue : undefined,
+    meterCode: searchBy === 'METER_CODE' ? normalizedValue : undefined
+  };
+};
+
+function buildUniqueLookupOptions<T>(
+  rows: T[],
+  getValue: (row: T) => string | number | undefined | null
+): AppSelectOption[] {
+  const optionMap = new Map<string, AppSelectOption>();
+
+  rows.forEach((row) => {
+    const value = String(getValue(row) ?? '').trim();
+    if (!value || optionMap.has(value)) return;
+
+    optionMap.set(value, {
+      value,
+      label: value,
+      data: row
+    });
+  });
+
+  return Array.from(optionMap.values());
+}
+
+const buildCustomerLookupOptions = (customers: Customer[], searchBy: string): AppSelectOption[] =>
+  buildUniqueLookupOptions(customers, (customer) =>
+    searchBy === 'CUSTOMER_NAME' ? customer.fullName : customer.customerCode
+  );
+
+const buildMeterLookupOptions = (meters: Meter[]): AppSelectOption[] =>
+  buildUniqueLookupOptions(meters, (meter) => meter.meterCode);
 
 const toNumber = (value?: string | number) => {
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
@@ -463,14 +519,17 @@ export const getStatusMeta = (status: ManualReadingStatus) => {
 
 export default function useManualMeterReading() {
   const objectUrlsRef = useRef<Set<string>>(new Set());
+  const searchLookupRequestIdRef = useRef<number>(K_SIZE_0);
   const [filterDraft, setFilterDraft] = useState<ManualReadingFilter>(DEFAULT_FILTER);
   const [filterApplied, setFilterApplied] = useState<ManualReadingFilter>(DEFAULT_FILTER);
   const [meters, setMeters] = useState<ManualReadingMeter[]>([]);
   const [selectedMeterId, setSelectedMeterId] = useState<string>('');
   const [loadingMeters, setLoadingMeters] = useState<boolean>(false);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
-  const [savingDraft, setSavingDraft] = useState<boolean>(false);
   const [savingConfirm, setSavingConfirm] = useState<boolean>(false);
+  const [searchLookupOptions, setSearchLookupOptions] = useState<AppSelectOption[]>([]);
+  const [searchLookupSearch, setSearchLookupSearch] = useState<string>('');
+  const [searchLookupLoading, setSearchLookupLoading] = useState<boolean>(false);
 
   const filteredMeters = meters;
   const hasUnsyncedFilter = useMemo(
@@ -481,6 +540,63 @@ export default function useManualMeterReading() {
       filterDraft.periodCode !== filterApplied.periodCode ||
       filterDraft.readingDate !== filterApplied.readingDate,
     [filterApplied, filterDraft]
+  );
+
+  const searchLookupField = useMemo(
+    () => getSearchLookupFieldMeta(filterDraft.searchBy),
+    [filterDraft.searchBy]
+  );
+
+  const fetchSearchLookupOptions = useCallback(async (searchBy: string, search = '') => {
+    const requestId = searchLookupRequestIdRef.current + K_SIZE_1;
+    searchLookupRequestIdRef.current = requestId;
+    setSearchLookupLoading(true);
+
+    if (searchBy === 'METER_CODE') {
+      const normalizedSearch = optionalValue(search);
+      const response = await meterServices.getMeterSearchList({
+        page: K_SIZE_0,
+        size: DEFAULT_PAGE_SIZE,
+        meterCodeContains: normalizedSearch,
+        filter: normalizedSearch
+      });
+
+      if (requestId !== searchLookupRequestIdRef.current) return;
+      setSearchLookupLoading(false);
+
+      if (hasApiError(response) || !response.data) {
+        setSearchLookupOptions([]);
+        return;
+      }
+
+      const meters = (response.data.items || [])
+        .map(normalizeMeterSearchItem)
+        .filter(Boolean) as Meter[];
+      setSearchLookupOptions(buildMeterLookupOptions(meters));
+      return;
+    }
+
+    const response = await customerServices.searchCustomer({
+      page: K_SIZE_0,
+      size: DEFAULT_PAGE_SIZE,
+      customerCodeContains: searchBy === 'CUSTOMER_CODE' ? optionalValue(search) : undefined,
+      fullNameContains: searchBy === 'CUSTOMER_NAME' ? optionalValue(search) : undefined
+    });
+
+    if (requestId !== searchLookupRequestIdRef.current) return;
+    setSearchLookupLoading(false);
+
+    if (hasApiError(response) || !response.data) {
+      setSearchLookupOptions([]);
+      return;
+    }
+
+    setSearchLookupOptions(buildCustomerLookupOptions(response.data.items || [], searchBy));
+  }, []);
+
+  const debouncedFetchSearchLookupOptions = useMemo(
+    () => debounce(fetchSearchLookupOptions, CONSTANTS.TIME_DEBOUNCE),
+    [fetchSearchLookupOptions]
   );
 
   const createObjectUrl = useCallback((blob: Blob | File) => {
@@ -503,6 +619,13 @@ export default function useManualMeterReading() {
     []
   );
 
+  useEffect(
+    () => () => {
+      debouncedFetchSearchLookupOptions.cancel();
+    },
+    [debouncedFetchSearchLookupOptions]
+  );
+
   const selectedMeter = useMemo(
     () => filteredMeters.find((meter) => meter.id === selectedMeterId) || filteredMeters[K_SIZE_0],
     [filteredMeters, selectedMeterId]
@@ -512,21 +635,6 @@ export default function useManualMeterReading() {
     () => getMeterReadingMetrics(selectedMeter),
     [selectedMeter]
   );
-
-  const summary = useMemo<ManualReadingSummary>(() => {
-    const saved = meters.filter(
-      (meter) => meter.status === 'SAVED' || meter.status === 'CONFIRMED'
-    ).length;
-    return {
-      totalMeters: meters.length,
-      notEntered: meters.length - saved,
-      saved,
-      totalAdjustedKwh: meters.reduce(
-        (sum, meter) => sum + getMeterReadingMetrics(meter).totalAdjustedKwh,
-        K_SIZE_0
-      )
-    };
-  }, [meters]);
 
   const periodInfo = useMemo(() => {
     const range = getPeriodDateRange(filterApplied.periodCode || DEFAULT_FILTER.periodCode);
@@ -651,14 +759,11 @@ export default function useManualMeterReading() {
     async (nextFilter: ManualReadingFilter) => {
       setLoadingMeters(true);
       const keyword = optionalValue(nextFilter.keyword);
+      const searchValue = optionalValue(nextFilter.customerCode) || keyword;
       const response = await manualMeterReadingServices.searchMetersForReading({
         page: K_SIZE_0,
         size: DEFAULT_PAGE_SIZE,
-        customerCode:
-          optionalValue(nextFilter.customerCode) ||
-          (nextFilter.searchBy === 'CUSTOMER_CODE' ? keyword : undefined),
-        customerName: nextFilter.searchBy === 'CUSTOMER_NAME' ? keyword : undefined,
-        meterCode: nextFilter.searchBy === 'METER_CODE' ? keyword : undefined
+        ...getSearchMeterParamsByField(nextFilter.searchBy, searchValue)
       });
       setLoadingMeters(false);
 
@@ -688,9 +793,45 @@ export default function useManualMeterReading() {
     fetchMeters(DEFAULT_FILTER);
   }, [fetchMeters]);
 
-  const onChangeFilter = useCallback((key: keyof ManualReadingFilter, value: string) => {
-    setFilterDraft((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const onSearchLookupOptions = useCallback(
+    (search: string) => {
+      setSearchLookupSearch(search);
+      debouncedFetchSearchLookupOptions(filterDraft.searchBy, search);
+    },
+    [debouncedFetchSearchLookupOptions, filterDraft.searchBy]
+  );
+
+  const onOpenSearchLookupDropdown = useCallback(
+    (open?: boolean) => {
+      if (open && !searchLookupOptions.length && !searchLookupLoading) {
+        fetchSearchLookupOptions(filterDraft.searchBy, searchLookupSearch);
+      }
+    },
+    [
+      fetchSearchLookupOptions,
+      filterDraft.searchBy,
+      searchLookupLoading,
+      searchLookupOptions.length,
+      searchLookupSearch
+    ]
+  );
+
+  const onChangeFilter = useCallback(
+    (key: keyof ManualReadingFilter, value: string) => {
+      if (key === 'searchBy') {
+        searchLookupRequestIdRef.current += K_SIZE_1;
+        debouncedFetchSearchLookupOptions.cancel();
+        setSearchLookupSearch('');
+        setSearchLookupOptions([]);
+        setSearchLookupLoading(false);
+        setFilterDraft((prev) => ({ ...prev, searchBy: value, customerCode: '' }));
+        return;
+      }
+
+      setFilterDraft((prev) => ({ ...prev, [key]: value }));
+    },
+    [debouncedFetchSearchLookupOptions]
+  );
 
   const onApplyFilter = useCallback(async () => {
     setFilterApplied(filterDraft);
@@ -698,10 +839,15 @@ export default function useManualMeterReading() {
   }, [fetchMeters, filterDraft]);
 
   const onResetFilter = useCallback(async () => {
+    searchLookupRequestIdRef.current += K_SIZE_1;
+    debouncedFetchSearchLookupOptions.cancel();
+    setSearchLookupSearch('');
+    setSearchLookupOptions([]);
+    setSearchLookupLoading(false);
     setFilterDraft(DEFAULT_FILTER);
     setFilterApplied(DEFAULT_FILTER);
     await fetchMeters(DEFAULT_FILTER);
-  }, [fetchMeters]);
+  }, [debouncedFetchSearchLookupOptions, fetchMeters]);
 
   const onSelectMeter = useCallback(
     (meterId: string) => {
@@ -1048,13 +1194,6 @@ export default function useManualMeterReading() {
     ]
   );
 
-  const onSaveSelectedMeter = useCallback(async () => {
-    if (!selectedMeter) return;
-    setSavingConfirm(true);
-    await saveMeterToServer(selectedMeter, 'SUBMIT');
-    setSavingConfirm(false);
-  }, [saveMeterToServer, selectedMeter]);
-
   const saveAllValidMeters = useCallback(
     async (saveMode: ReadingPeriodSaveMode, confirmAfterSave = false) => {
       if (hasUnsyncedFilter) {
@@ -1092,15 +1231,9 @@ export default function useManualMeterReading() {
     [hasUnsyncedFilter, meters, saveMeterToServer]
   );
 
-  const onSaveDraft = useCallback(async () => {
-    setSavingDraft(true);
-    await saveAllValidMeters('DRAFT');
-    setSavingDraft(false);
-  }, [saveAllValidMeters]);
-
   const onConfirmAndSave = useCallback(async () => {
     setSavingConfirm(true);
-    await saveAllValidMeters('SUBMIT', true);
+    await saveAllValidMeters('DRAFT', true);
     setSavingConfirm(false);
   }, [saveAllValidMeters]);
 
@@ -1111,16 +1244,20 @@ export default function useManualMeterReading() {
     selectedMeter,
     selectedMeterId,
     selectedMeterMetrics,
-    summary,
     periodInfo,
     searchByOptions: SEARCH_BY_OPTIONS,
+    searchLookupField,
+    searchLookupOptions,
+    searchLookupSearch,
+    searchLookupLoading,
     periodOptions: PERIOD_OPTIONS,
     maxPhotoCount: MAX_READING_PHOTOS,
     hasUnsyncedFilter,
     loadingMeters,
     loadingDetail,
-    savingDraft,
     savingConfirm,
+    onSearchLookupOptions,
+    onOpenSearchLookupDropdown,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -1133,8 +1270,6 @@ export default function useManualMeterReading() {
     onRemovePendingPhoto,
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
-    onSaveSelectedMeter,
-    onSaveDraft,
     onConfirmAndSave
   };
 }
