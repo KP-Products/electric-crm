@@ -5,18 +5,16 @@ import {
   CheckCircleOutlined,
   DeleteOutlined,
   FileTextOutlined,
-  HomeOutlined,
-  InfoCircleOutlined,
   ReloadOutlined,
-  SaveOutlined,
   SearchOutlined,
   UploadOutlined
 } from '@ant-design/icons';
-import { K_SIZE_0, K_SIZE_1, K_SIZE_8, NULL_VALUE, REQUIRED_MARK } from '@constant';
+import { K_SIZE_0, K_SIZE_8, NULL_VALUE, REQUIRED_MARK } from '@constant';
 import { Divider, Flex, Image, Input, Upload } from 'antd';
 import ButtonBase from 'components/button';
 import { AppDatePicker } from 'components/date-picker';
 import { AppSelect } from 'components/select';
+import CustomDropSearchMore from 'components/select/CustomDropSearchMore';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import { TextBase } from 'components/text';
 import { AppTextField } from 'components/text-field';
@@ -24,7 +22,7 @@ import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { useMemo } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
 import {
   ManualReadingMeter,
@@ -45,12 +43,9 @@ const formatNumber = (value?: number) => {
 
 const parseNumber = (value?: string | number) => {
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
-  const parsed = Number(
-    String(value ?? '')
-      .replace(/\s/g, '')
-      .replace(/\./g, '')
-      .replace(',', '.')
-  );
+  const normalizedValue = String(value ?? '').trim();
+  if (!normalizedValue) return undefined;
+  const parsed = Number(normalizedValue.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
@@ -61,35 +56,12 @@ const getRegisterUsage = (register: ManualReadingRegister) => {
 };
 
 const getStatusType = (status: ManualReadingStatus) => {
+  if (status === 'CONFIRMED') return TYPE_STATUS.SUCCESS;
+  if (status === 'REJECTED') return TYPE_STATUS.ERROR;
   if (status === 'SAVED') return TYPE_STATUS.PENDING;
   if (status === 'DRAFT') return TYPE_STATUS.SUCCESS;
   return TYPE_STATUS.DISABLED;
 };
-
-const SummaryTile = ({
-  icon,
-  label,
-  value,
-  valueClassName
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  valueClassName?: string;
-}) => (
-  <div className="flex min-h-[72px] items-center gap-12 rounded-radius-m border border-color-300 bg-color-50 px-16 py-12">
-    <div className="flex size-28 shrink-0 items-center justify-center rounded-[50%] bg-link-50 text-link-600">
-      {icon}
-    </div>
-    <div className="min-w-0">
-      <TextBase classNames="caption1 truncate !text-color-700" text={label} />
-      <TextBase
-        classNames={`sub-title3 truncate !text-color-900 ${valueClassName || ''}`}
-        text={value}
-      />
-    </div>
-  </div>
-);
 
 const InfoBox = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="rounded-radius-m border border-color-300 bg-color-50 px-12 py-[10px]">
@@ -152,25 +124,31 @@ const ManualMeterReadingScreen = () => {
     selectedMeter,
     selectedMeterId,
     selectedMeterMetrics,
-    summary,
     periodInfo,
     searchByOptions,
+    searchLookupField,
+    searchLookupOptions,
+    searchLookupSearch,
+    searchLookupLoading,
     periodOptions,
-    savingDraft,
+    maxPhotoCount,
+    hasUnsyncedFilter,
+    loadingMeters,
+    loadingDetail,
     savingConfirm,
+    onSearchLookupOptions,
+    onOpenSearchLookupDropdown,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
     onSelectMeter,
     onChangeRegister,
     onChangeReactiveIndex,
-    onChangeReactiveUnitPrice,
     onChangeNote,
     onSelectPhoto,
-    onRemovePhoto,
+    onRemovePendingPhoto,
+    onRemoveUploadedPhoto,
     onClearSelectedMeter,
-    onSaveSelectedMeter,
-    onSaveDraft,
     onConfirmAndSave
   } = useManualMeterReading();
 
@@ -180,6 +158,21 @@ const ManualMeterReadingScreen = () => {
       { title: 'Nhập chỉ số thủ công', key: ROUTES.MANUAL_METER_READING }
     ],
     []
+  );
+
+  const renderSearchLookupDropdown = useCallback(
+    (menuInstance: ReactNode) => (
+      <CustomDropSearchMore
+        menuInstance={menuInstance}
+        searchValue={searchLookupSearch}
+        onChangeSearch={onSearchLookupOptions}
+        onMore={() => {}}
+        totalList={searchLookupOptions.length}
+        total={searchLookupOptions.length}
+        loading={searchLookupLoading}
+      />
+    ),
+    [onSearchLookupOptions, searchLookupLoading, searchLookupOptions.length, searchLookupSearch]
   );
 
   return (
@@ -200,18 +193,6 @@ const ManualMeterReadingScreen = () => {
           </div>
           <Flex justify="end" gap={K_SIZE_8} className="mobile:w-full mobile:flex-col">
             <ButtonBase
-              type="ghost"
-              customContent={
-                <div className="flex items-center gap-8">
-                  <SaveOutlined />
-                  <span>{savingDraft ? 'Đang lưu...' : 'Lưu nháp'}</span>
-                </div>
-              }
-              disabled={savingDraft || savingConfirm}
-              onClick={onSaveDraft}
-              classNames="mobile:w-full mobile:justify-center"
-            />
-            <ButtonBase
               type="primary"
               customContent={
                 <div className="flex items-center gap-8">
@@ -219,7 +200,7 @@ const ManualMeterReadingScreen = () => {
                   <span>{savingConfirm ? 'Đang lưu...' : 'Xác nhận & Lưu'}</span>
                 </div>
               }
-              disabled={savingDraft || savingConfirm}
+              disabled={savingConfirm || loadingMeters || loadingDetail || hasUnsyncedFilter}
               onClick={onConfirmAndSave}
               classNames="mobile:w-full mobile:justify-center"
             />
@@ -251,13 +232,16 @@ const ManualMeterReadingScreen = () => {
               value={filterDraft.searchBy}
               onSelectOption={({ key }) => onChangeFilter('searchBy', String(key))}
             />
-            <AppTextField
+            <AppSelect
               name="customerCode"
-              label="Mã khách hàng"
-              placeholder="Nhập mã khách hàng"
+              label={searchLookupField.label}
+              placeholder={searchLookupField.placeholder}
               value={filterDraft.customerCode}
-              onChange={(event) => onChangeFilter('customerCode', event.target.value)}
-              onPressEnter={onApplyFilter}
+              options={searchLookupOptions}
+              dropdownRender={renderSearchLookupDropdown}
+              onOpenChange={onOpenSearchLookupDropdown}
+              onSelectOption={({ key }) => onChangeFilter('customerCode', String(key))}
+              suffix={<SearchOutlined className="text-color-600" />}
             />
             <AppSelect
               name="periodCode"
@@ -287,8 +271,9 @@ const ManualMeterReadingScreen = () => {
               <ButtonBase
                 type="primary"
                 leftIcon="IC_SEARCH_OUTLINE2"
-                customContent="Tìm kiếm"
+                customContent={loadingMeters ? 'Đang tìm...' : 'Tìm kiếm'}
                 onClick={onApplyFilter}
+                disabled={loadingMeters}
                 classNames="min-w-[112px] mobile:flex-1 mobile:justify-center"
               />
               <ButtonBase
@@ -311,10 +296,15 @@ const ManualMeterReadingScreen = () => {
               <b>{periodInfo.readingDate || NULL_VALUE}</b>
             </span>
           </div>
+          {hasUnsyncedFilter && (
+            <div className="mt-8 rounded-radius-m border border-pending-200 bg-pending-50 px-12 py-8 text-13 font-semibold text-pending-700">
+              Bộ lọc đã thay đổi. Vui lòng tìm kiếm lại trước khi lưu chỉ số.
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-[320px_minmax(0,1fr)] gap-12 tablet:grid-cols-1">
-          <aside className="rounded-radius-l border border-color-300 bg-color-50 p-12">
+          <aside className="flex min-h-[520px] flex-col rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:min-h-0">
             <TextBase
               classNames="sub-title4 !text-primary-700"
               text="2. Danh sách công tơ của khách hàng"
@@ -324,7 +314,11 @@ const ManualMeterReadingScreen = () => {
               text={`Tổng số công tơ: ${filteredMeters.length}`}
             />
             <div className="mt-12 flex max-h-[480px] flex-col gap-8 overflow-auto pr-4">
-              {filteredMeters.length === K_SIZE_0 ? (
+              {loadingMeters ? (
+                <div className="rounded-radius-m border border-color-300 p-12 text-14 text-color-700">
+                  Đang tải danh sách công tơ...
+                </div>
+              ) : filteredMeters.length === K_SIZE_0 ? (
                 <div className="rounded-radius-m border border-color-300 p-12 text-14 text-color-700">
                   Không tìm thấy công tơ phù hợp.
                 </div>
@@ -348,12 +342,17 @@ const ManualMeterReadingScreen = () => {
                 </div>
               }
               onClick={onApplyFilter}
-              classNames="mt-12 w-full justify-center"
+              disabled={loadingMeters}
+              classNames="mt-auto w-fit justify-center px-16"
             />
           </aside>
 
-          <div className="rounded-radius-l border border-color-300 bg-color-50 p-12">
-            {selectedMeter ? (
+          <div className="min-h-[520px] rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:min-h-0">
+            {loadingDetail ? (
+              <div className="flex min-h-[460px] items-center justify-center rounded-radius-m border border-dashed border-color-300 text-14 text-color-700">
+                Đang tải kỳ ghi chỉ số...
+              </div>
+            ) : selectedMeter ? (
               <>
                 <Flex
                   justify="space-between"
@@ -477,16 +476,30 @@ const ManualMeterReadingScreen = () => {
                     />
                   </div>
                   <div className="rounded-radius-m border border-color-300 bg-color-50 p-12">
-                    <TextBase classNames="caption1 !text-color-700" text="Chỉ số hiệu dụng (kWh)" />
+                    <TextBase classNames="caption1 !text-color-700">
+                      Chỉ số hữu công (kWh) {requiredMark}
+                    </TextBase>
                     <Input
                       className="mt-8"
                       value={formatNumber(selectedMeterMetrics.effectiveIndex)}
-                      disabled
+                      readOnly
                     />
-                    <TextBase
-                      classNames="caption1 mt-4 !text-success-700"
-                      text={`+${formatNumber(selectedMeterMetrics.totalAdjustedKwh)} kWh so với kỳ trước`}
-                    />
+                    {selectedMeterMetrics.canSave ? (
+                      <div className="mt-8 flex items-start gap-4 text-12 font-semibold leading-16 text-success-700">
+                        <CheckCircleOutlined className="mt-[1px] text-12" />
+                        <span>
+                          Hợp lệ: Tổng TOU x Hệ số nhân ={' '}
+                          {formatNumber(selectedMeterMetrics.totalAdjustedKwh)} kWh (
+                          {formatNumber(selectedMeterMetrics.effectiveIndex)} -{' '}
+                          {formatNumber(selectedMeterMetrics.oldEffectiveIndex)} ={' '}
+                          {formatNumber(selectedMeterMetrics.totalRawKwh)})
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="mt-8 text-12 font-semibold leading-16 text-color-700">
+                        Nhập đủ chỉ số TOU để tính chỉ số hữu công.
+                      </div>
+                    )}
                   </div>
                   <div className="rounded-radius-m border border-color-300 bg-color-50 p-12">
                     <TextBase classNames="caption1 !text-color-700" text="Chỉ số vô công (kVArh)" />
@@ -499,39 +512,86 @@ const ManualMeterReadingScreen = () => {
                         onChangeReactiveIndex(selectedMeter.id, event.target.value)
                       }
                     />
+                    <TextBase classNames="caption1 mt-12 !text-color-700" text="Ghi chú (nếu có)" />
                     <Input
                       className="mt-8"
-                      value={selectedMeter.reactiveUnitPrice}
-                      inputMode="decimal"
-                      placeholder="Ghi chú giá trị"
-                      onChange={(event) =>
-                        onChangeReactiveUnitPrice(selectedMeter.id, event.target.value)
-                      }
+                      value={selectedMeter.note}
+                      placeholder="Nhập ghi chú..."
+                      onChange={(event) => onChangeNote(selectedMeter.id, event.target.value)}
                     />
                   </div>
                   <div className="rounded-radius-m border border-color-300 bg-color-50 p-12">
                     <TextBase
                       classNames="caption1 !text-color-700"
-                      text="Ảnh chụp từ công tơ để đối chiếu"
+                      text={`Ảnh chụp từ công tơ để đối chiếu (${selectedMeter.uploadedPhotos.length + selectedMeter.pendingPhotos.length}/${maxPhotoCount})`}
                     />
-                    <div className="mt-8 min-h-[96px] rounded-radius-m border border-dashed border-color-300 bg-color-100 p-8">
-                      {selectedMeter.photoPreviewUrl ? (
-                        <Image
-                          src={selectedMeter.photoPreviewUrl}
-                          alt="Ảnh công tơ"
-                          preview={false}
-                          rootClassName="w-full"
-                          className="!h-[72px] !w-full rounded-radius-m object-cover"
-                        />
+                    <div className="mt-8 flex min-h-[146px] flex-col items-center justify-center rounded-radius-m border border-dashed border-color-300 bg-color-100 p-8 text-center">
+                      {selectedMeter.uploadedPhotos.length + selectedMeter.pendingPhotos.length ? (
+                        <div className="mx-auto mb-8 flex max-w-full flex-wrap items-center justify-center gap-8">
+                          {selectedMeter.uploadedPhotos.map((photo) => (
+                            <div
+                              key={`uploaded-${photo.id}`}
+                              className="relative size-[54px] overflow-hidden rounded-radius-m border border-color-300 bg-color-50"
+                            >
+                              {photo.previewUrl ? (
+                                <Image
+                                  src={photo.previewUrl}
+                                  alt={photo.fileName || 'Ảnh công tơ'}
+                                  preview
+                                  rootClassName="w-full"
+                                  className="!h-[54px] !w-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-full items-center justify-center px-4 text-center text-10 text-color-700">
+                                  {photo.fileName || 'Ảnh'}
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                className="absolute right-0 top-0 flex size-16 items-center justify-center rounded-[50%] bg-color-50 text-11 font-bold text-color-800 hover:text-error-600"
+                                onClick={() => onRemoveUploadedPhoto(selectedMeter.id, photo.id)}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          {selectedMeter.pendingPhotos.map((photo) => (
+                            <div
+                              key={`pending-${photo.uid}`}
+                              className="relative size-[54px] overflow-hidden rounded-radius-m border border-pending-300 bg-pending-50"
+                            >
+                              <Image
+                                src={photo.previewUrl}
+                                alt={photo.name}
+                                preview
+                                rootClassName="w-full"
+                                className="!h-[54px] !w-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                className="absolute right-0 top-0 flex size-16 items-center justify-center rounded-[50%] bg-color-50 text-11 font-bold text-color-800 hover:text-error-600"
+                                onClick={() => onRemovePendingPhoto(selectedMeter.id, photo.uid)}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
-                        <div className="flex h-[72px] items-center justify-center rounded-radius-m bg-color-50 text-13 text-color-700">
-                          {selectedMeter.photoName || 'Kéo thả ảnh hoặc bấm chọn'}
+                        <div className="flex h-[72px] w-full items-center justify-center rounded-radius-m bg-color-50 text-13 text-color-700">
+                          Kéo thả ảnh vào đây hoặc bấm chọn
                         </div>
                       )}
                       <Upload
-                        maxCount={K_SIZE_1}
+                        multiple
+                        maxCount={maxPhotoCount}
                         showUploadList={false}
-                        accept="image/*"
+                        accept="image/jpeg,image/png"
+                        disabled={
+                          selectedMeter.uploadedPhotos.length +
+                            selectedMeter.pendingPhotos.length >=
+                          maxPhotoCount
+                        }
                         beforeUpload={(file) => {
                           onSelectPhoto(selectedMeter.id, file);
                           return Upload.LIST_IGNORE;
@@ -539,100 +599,49 @@ const ManualMeterReadingScreen = () => {
                       >
                         <ButtonBase
                           type="ghost"
+                          size={32}
                           customContent={
-                            <div className="flex items-center justify-center gap-8">
-                              <UploadOutlined />
-                              <span>Chọn ảnh</span>
+                            <div className="flex items-center justify-center gap-4 text-13 leading-16">
+                              <UploadOutlined className="text-14" />
+                              <span className="text-13">Chọn ảnh</span>
                             </div>
                           }
-                          classNames="mt-8 w-full justify-center"
+                          classNames="mt-8 min-w-[104px] justify-center px-12"
+                          disabled={
+                            selectedMeter.uploadedPhotos.length +
+                              selectedMeter.pendingPhotos.length >=
+                            maxPhotoCount
+                          }
                         />
                       </Upload>
+                      <TextBase
+                        classNames="caption1 mt-8 !text-color-700"
+                        text={`Hỗ trợ: JPG, PNG | Tối đa ${maxPhotoCount} ảnh`}
+                      />
                     </div>
-                    {selectedMeter.photoName && (
-                      <button
-                        type="button"
-                        className="mt-[6px] text-12 font-semibold text-color-700 hover:text-error-600"
-                        onClick={() => onRemovePhoto(selectedMeter.id)}
-                      >
-                        Xóa ảnh đã chọn
-                      </button>
-                    )}
                   </div>
                 </div>
 
-                <div className="mt-12 grid grid-cols-[minmax(220px,1fr)_auto] items-end gap-12 tablet:grid-cols-1">
-                  <AppTextField
-                    name="note"
-                    label="Ghi chú"
-                    placeholder="Nhập ghi chú"
-                    value={selectedMeter.note}
-                    onChange={(event) => onChangeNote(selectedMeter.id, event.target.value)}
+                <Flex justify="end" gap={K_SIZE_8} className="mt-12 mobile:w-full mobile:flex-col">
+                  <ButtonBase
+                    type="ghost"
+                    customContent={
+                      <div className="flex items-center gap-8">
+                        <DeleteOutlined />
+                        <span>Xóa chỉ số</span>
+                      </div>
+                    }
+                    onClick={onClearSelectedMeter}
+                    disabled={savingConfirm}
+                    classNames="min-w-[120px] mobile:flex-1 mobile:justify-center"
                   />
-                  <Flex justify="end" gap={K_SIZE_8} className="mobile:w-full">
-                    <ButtonBase
-                      type="ghost"
-                      customContent={
-                        <div className="flex items-center gap-8">
-                          <DeleteOutlined />
-                          <span>Xóa chỉ số</span>
-                        </div>
-                      }
-                      onClick={onClearSelectedMeter}
-                      classNames="min-w-[120px] mobile:flex-1 mobile:justify-center"
-                    />
-                    <ButtonBase
-                      type="primary"
-                      customContent={
-                        <div className="flex items-center gap-8">
-                          <SaveOutlined />
-                          <span>Lưu cho công tơ</span>
-                        </div>
-                      }
-                      onClick={onSaveSelectedMeter}
-                      classNames="min-w-[150px] mobile:flex-1 mobile:justify-center"
-                    />
-                  </Flex>
-                </div>
+                </Flex>
               </>
             ) : (
               <div className="flex min-h-[460px] items-center justify-center rounded-radius-m border border-dashed border-color-300 text-14 text-color-700">
                 Chọn hoặc tìm kiếm khách hàng để nhập chỉ số công tơ.
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="mt-12 rounded-radius-l border border-color-300 bg-color-50 p-12">
-          <TextBase classNames="sub-title4 mb-12 !text-primary-700" text="3. Tổng hợp nhập liệu" />
-          <div className="grid grid-cols-[repeat(4,minmax(140px,1fr))_minmax(220px,1.4fr)] gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
-            <SummaryTile
-              icon={<HomeOutlined />}
-              label="Tổng số công tơ"
-              value={String(summary.totalMeters)}
-            />
-            <SummaryTile
-              icon={<CheckCircleOutlined />}
-              label="Chưa nhập"
-              value={String(summary.notEntered)}
-              valueClassName="!text-success-700"
-            />
-            <SummaryTile
-              icon={<FileTextOutlined />}
-              label="Đã nhập"
-              value={String(summary.saved)}
-            />
-            <SummaryTile
-              icon={<InfoCircleOutlined />}
-              label="Tổng sản lượng quy đổi"
-              value={`${formatNumber(summary.totalAdjustedKwh)} kWh`}
-              valueClassName="!text-pending-700"
-            />
-            <div className="rounded-radius-m border border-pending-200 bg-pending-50 px-16 py-12 text-13 text-pending-700">
-              <div className="mb-4 font-semibold">Lưu ý</div>
-              <div>Các trường có dấu * là bắt buộc.</div>
-              <div>Vui lòng kiểm tra chỉ số trước khi xác nhận lưu.</div>
-            </div>
           </div>
         </div>
       </section>
