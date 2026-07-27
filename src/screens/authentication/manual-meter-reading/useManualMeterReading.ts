@@ -1,15 +1,25 @@
-import { K_SIZE_0 } from '@constant';
+import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1, K_SIZE_5 } from '@constant';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  MeterReading,
+  MeterSearchForReadingRow,
+  ReadingItem,
+  ReadingPeriodDetail,
+  ReadingPeriodSaveMode,
+  ReadingPeriodStatus,
+  ReadingPhoto
+} from 'model/manual-meter-reading';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import manualMeterReadingServices from 'services/manual-meter-reading-services';
 import { FORMAT_DATE_API } from 'utils/date';
 import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 
 dayjs.extend(customParseFormat);
 
-export type ManualReadingStatus = 'NOT_ENTERED' | 'DRAFT' | 'SAVED';
+export type ManualReadingStatus = 'NOT_ENTERED' | ReadingPeriodStatus;
 
 export interface ManualReadingFilter {
   keyword: string;
@@ -21,27 +31,43 @@ export interface ManualReadingFilter {
 
 export interface ManualReadingRegister {
   id: string;
+  tou: string;
   label: string;
   oldIndex: number;
   newIndex: string;
   multiplier: number;
 }
 
+export interface ManualReadingUploadedPhoto extends ReadingPhoto {
+  previewUrl?: string;
+}
+
+export interface ManualReadingPendingPhoto {
+  uid: string;
+  name: string;
+  file: File;
+  previewUrl: string;
+}
+
 export interface ManualReadingMeter {
   id: string;
+  periodId?: number;
+  customerId?: number | string;
   meterCode: string;
   serialNo: string;
   customerCode: string;
   customerName: string;
   address: string;
+  voltageLevel?: string;
+  meterType?: string;
   multiplier: number;
   status: ManualReadingStatus;
   registers: ManualReadingRegister[];
   reactiveIndex: string;
   reactiveUnitPrice: string;
   note: string;
-  photoName?: string;
-  photoPreviewUrl?: string;
+  uploadedPhotos: ManualReadingUploadedPhoto[];
+  pendingPhotos: ManualReadingPendingPhoto[];
 }
 
 export interface ManualReadingSummary {
@@ -51,99 +77,93 @@ export interface ManualReadingSummary {
   totalAdjustedKwh: number;
 }
 
-const DEFAULT_FILTER: ManualReadingFilter = {
-  keyword: '',
-  searchBy: 'CUSTOMER_CODE',
-  customerCode: '1001',
-  periodCode: '07/2026',
-  readingDate: '22-07-2026'
-};
-
-const MOCK_METERS: ManualReadingMeter[] = [
-  {
-    id: 'ct-11',
-    meterCode: 'CT-11',
-    serialNo: '19001234',
-    customerCode: '1001',
-    customerName: 'Khách hàng 1001',
-    address: '123 Đường Láng, Đống Đa, Hà Nội',
-    multiplier: 1,
-    status: 'DRAFT',
-    registers: [
-      { id: 'peak', label: 'T1 - Cao điểm', oldIndex: 1250, newIndex: '1380', multiplier: 1 },
-      { id: 'normal', label: 'T2 - Bình thường', oldIndex: 2340, newIndex: '2520', multiplier: 1 },
-      { id: 'offPeak', label: 'T3 - Thấp điểm', oldIndex: 890, newIndex: '1000', multiplier: 1 }
-    ],
-    reactiveIndex: '150',
-    reactiveUnitPrice: '',
-    note: '',
-    photoName: 'cong-to-ct11.jpg'
-  },
-  {
-    id: 'ct-12',
-    meterCode: 'CT-12',
-    serialNo: '19001235',
-    customerCode: '1001',
-    customerName: 'Khách hàng 1001',
-    address: '123 Đường Láng, Đống Đa, Hà Nội',
-    multiplier: 1,
-    status: 'NOT_ENTERED',
-    registers: [
-      { id: 'peak', label: 'T1 - Cao điểm', oldIndex: 940, newIndex: '', multiplier: 1 },
-      { id: 'normal', label: 'T2 - Bình thường', oldIndex: 1860, newIndex: '', multiplier: 1 },
-      { id: 'offPeak', label: 'T3 - Thấp điểm', oldIndex: 760, newIndex: '', multiplier: 1 }
-    ],
-    reactiveIndex: '',
-    reactiveUnitPrice: '',
-    note: ''
-  },
-  {
-    id: 'ct-13',
-    meterCode: 'CT-13',
-    serialNo: '19001236',
-    customerCode: '1001',
-    customerName: 'Khách hàng 1001',
-    address: '123 Đường Láng, Đống Đa, Hà Nội',
-    multiplier: 1,
-    status: 'SAVED',
-    registers: [
-      { id: 'peak', label: 'T1 - Cao điểm', oldIndex: 1540, newIndex: '1620', multiplier: 1 },
-      { id: 'normal', label: 'T2 - Bình thường', oldIndex: 2760, newIndex: '2910', multiplier: 1 },
-      { id: 'offPeak', label: 'T3 - Thấp điểm', oldIndex: 1040, newIndex: '1120', multiplier: 1 }
-    ],
-    reactiveIndex: '96',
-    reactiveUnitPrice: '',
-    note: 'Đã đối soát ảnh công tơ',
-    photoName: 'ct13-072026.jpg'
-  }
-];
-
+const MANUAL_READING_TYPE_INPUT = 'MANUAL';
+const MAX_READING_PHOTOS = K_SIZE_5;
 const SEARCH_BY_OPTIONS = [
   { value: 'CUSTOMER_CODE', label: 'Mã khách hàng' },
   { value: 'CUSTOMER_NAME', label: 'Tên khách hàng' },
   { value: 'METER_CODE', label: 'Mã công tơ' }
 ];
 
-const PERIOD_OPTIONS = [
-  { value: '07/2026', label: '07/2026' },
-  { value: '06/2026', label: '06/2026' },
-  { value: '05/2026', label: '05/2026' }
+const TOU_REGISTERS = [
+  { tou: 'CD', label: 'T1 - Cao điểm' },
+  { tou: 'BT', label: 'T2 - Bình thường' },
+  { tou: 'TD', label: 'T3 - Thấp điểm' }
 ];
+
+const DEFAULT_FILTER: ManualReadingFilter = {
+  keyword: '',
+  searchBy: 'CUSTOMER_CODE',
+  customerCode: '',
+  periodCode: dayjs().format('MM/YYYY'),
+  readingDate: dayjs().format(FORMAT_DATE_API)
+};
+
+const PERIOD_OPTIONS = Array.from({ length: 12 }, (_, index) => {
+  const value = dayjs().subtract(index, 'month').format('MM/YYYY');
+  return { value, label: value };
+});
+
+const SUCCESS_MESSAGES = ['success', 'ok'];
+const SUCCESS_CODE_STATUSES = ['0', '00', '000', '0000', '00000', '000000', '200', '201', '204'];
+
+const normalizeApiText = (value?: unknown) =>
+  String(value || '')
+    .trim()
+    .toLowerCase();
+
+const hasApiError = (response?: any) => {
+  if (!response) return true;
+
+  const status = Number(response.status ?? response.statusCode);
+  const codeStatus = normalizeApiText(response.codeStatus);
+  const message = normalizeApiText(response.message);
+
+  if (
+    (Number.isFinite(status) && status >= 400) ||
+    response.businessErrorMessage ||
+    response.systemErrorMessage ||
+    response.detailMessage ||
+    response.error
+  ) {
+    return true;
+  }
+
+  if (SUCCESS_MESSAGES.includes(message)) return false;
+
+  return Boolean(
+    codeStatus &&
+      !SUCCESS_CODE_STATUSES.includes(codeStatus) &&
+      !codeStatus.startsWith('2') &&
+      codeStatus !== 'success'
+  );
+};
+
+const getErrorMessage = (error?: any, fallback = 'Thao tác thất bại') => {
+  const message =
+    error?.businessErrorMessage ||
+    error?.systemErrorMessage ||
+    error?.detailMessage ||
+    error?.message;
+  return message && !SUCCESS_MESSAGES.includes(normalizeApiText(message)) ? message : fallback;
+};
+
+const optionalValue = (value?: string) => {
+  const trimmedValue = value?.trim();
+  return trimmedValue || undefined;
+};
 
 const toNumber = (value?: string | number) => {
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
   const normalized = String(value ?? '')
+    .trim()
     .replace(/\s/g, '')
     .replace(/\./g, '')
     .replace(',', '.');
+  if (!normalized) return undefined;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : undefined;
 };
-
-const normalizeKeyword = (value?: string | number) =>
-  String(value ?? '')
-    .trim()
-    .toLowerCase();
 
 const getRegisterRawKwh = (register: ManualReadingRegister) => {
   const newIndex = toNumber(register.newIndex);
@@ -156,6 +176,204 @@ const isRegisterValid = (register: ManualReadingRegister) => {
   return rawKwh !== undefined && rawKwh >= K_SIZE_0;
 };
 
+const getTouLabel = (tou?: string) => {
+  const normalizedTou = String(tou || '').toUpperCase();
+  return TOU_REGISTERS.find((item) => item.tou === normalizedTou)?.label || normalizedTou || 'TOU';
+};
+
+const buildDefaultRegisters = (multiplier: number): ManualReadingRegister[] =>
+  TOU_REGISTERS.map((register) => ({
+    id: register.tou,
+    tou: register.tou,
+    label: register.label,
+    oldIndex: K_SIZE_0,
+    newIndex: '',
+    multiplier
+  }));
+
+const mapMeterSearchRowToManualMeter = (row: MeterSearchForReadingRow): ManualReadingMeter => {
+  const meterCode = row.meterCode || row.meterId || '';
+  const multiplier = row.multiplier || K_SIZE_1;
+
+  return {
+    id: row.meterId || meterCode,
+    customerId: row.customerId,
+    meterCode,
+    serialNo: meterCode,
+    customerCode: row.customerCode || '',
+    customerName: row.customerName || '',
+    address: '',
+    voltageLevel: row.voltageLevel,
+    meterType: row.meterType,
+    multiplier,
+    status: 'NOT_ENTERED',
+    registers: buildDefaultRegisters(multiplier),
+    reactiveIndex: '',
+    reactiveUnitPrice: '',
+    note: '',
+    uploadedPhotos: [],
+    pendingPhotos: []
+  };
+};
+
+const mapReadingsToRegisters = (
+  readings: MeterReading[] | undefined,
+  multiplier: number
+): ManualReadingRegister[] => {
+  if (!readings?.length) return buildDefaultRegisters(multiplier);
+
+  return readings.map((reading) => ({
+    id: reading.tou,
+    tou: reading.tou,
+    label: getTouLabel(reading.tou),
+    oldIndex: toNumber(reading.oldIndex) ?? K_SIZE_0,
+    newIndex:
+      reading.newIndex === undefined || reading.newIndex === null ? '' : String(reading.newIndex),
+    multiplier
+  }));
+};
+
+const mapPreviousReadingsToRegisters = (
+  previousReadings: MeterReading[] | undefined,
+  multiplier: number
+): ManualReadingRegister[] => {
+  if (!previousReadings?.length) return buildDefaultRegisters(multiplier);
+
+  const previousByTou = new Map(
+    previousReadings.map((reading) => [String(reading.tou || '').toUpperCase(), reading])
+  );
+
+  return TOU_REGISTERS.map((register) => {
+    const previousReading = previousByTou.get(register.tou);
+    const oldIndex =
+      toNumber(previousReading?.newIndex) ?? toNumber(previousReading?.oldIndex) ?? K_SIZE_0;
+
+    return {
+      id: register.tou,
+      tou: register.tou,
+      label: register.label,
+      oldIndex,
+      newIndex: '',
+      multiplier
+    };
+  });
+};
+
+const mapPeriodDetailToMeter = (
+  meter: ManualReadingMeter,
+  detail?: ReadingPeriodDetail,
+  photos?: ManualReadingUploadedPhoto[]
+): ManualReadingMeter => {
+  const period = detail?.period;
+  const nextPhotos = photos || meter.uploadedPhotos;
+
+  if (!period) {
+    return {
+      ...meter,
+      uploadedPhotos: nextPhotos
+    };
+  }
+
+  return {
+    ...meter,
+    periodId: period.id,
+    customerId: period.customerId || meter.customerId,
+    meterCode: period.meterNumber || meter.meterCode,
+    serialNo: period.meterNumber || meter.serialNo,
+    status: (period.status as ManualReadingStatus) || meter.status,
+    registers: mapReadingsToRegisters(detail?.readings, meter.multiplier),
+    reactiveIndex:
+      period.reactiveEnergyIndex === undefined || period.reactiveEnergyIndex === null
+        ? meter.reactiveIndex
+        : String(period.reactiveEnergyIndex),
+    uploadedPhotos: nextPhotos,
+    pendingPhotos: []
+  };
+};
+
+const mapPreviousDetailToNewPeriodMeter = (
+  meter: ManualReadingMeter,
+  detail?: ReadingPeriodDetail
+): ManualReadingMeter => {
+  return {
+    ...meter,
+    periodId: undefined,
+    status: 'NOT_ENTERED',
+    registers: mapPreviousReadingsToRegisters(detail?.readings, meter.multiplier),
+    reactiveIndex: '',
+    uploadedPhotos: [],
+    pendingPhotos: []
+  };
+};
+
+const getPeriodDateRange = (periodCode: string) => {
+  const monthPeriod = dayjs(periodCode, 'MM/YYYY', true);
+  const codePeriodMatch = /^KY-(\d{4})-(\d{2})$/.exec(periodCode);
+  const start = codePeriodMatch
+    ? dayjs(`${codePeriodMatch[1]}-${codePeriodMatch[2]}-01`)
+    : monthPeriod.isValid()
+      ? monthPeriod.startOf('month')
+      : undefined;
+
+  if (!start?.isValid()) {
+    return {
+      label: '',
+      from: '',
+      to: ''
+    };
+  }
+
+  const end = start.endOf('month');
+  return {
+    label: `${periodCode} (${start.format('DD/MM/YYYY')} - ${end.format('DD/MM/YYYY')})`,
+    from: start.format(FORMAT_DATE_API),
+    to: end.format(FORMAT_DATE_API)
+  };
+};
+
+const parseApiDate = (date?: string) => {
+  const parsed = dayjs(date, [FORMAT_DATE_API, 'YYYY-MM-DD', 'DD/MM/YYYY'], true);
+  return parsed.isValid() ? parsed : undefined;
+};
+
+const getPeriodComparableDate = (period?: {
+  periodTo?: string;
+  readingDate?: string;
+  periodFrom?: string;
+}) =>
+  parseApiDate(period?.periodTo)?.valueOf() ||
+  parseApiDate(period?.readingDate)?.valueOf() ||
+  parseApiDate(period?.periodFrom)?.valueOf() ||
+  K_SIZE_0;
+
+const getCustomerIdForRequest = (meter: ManualReadingMeter) => {
+  if (meter.customerId !== undefined && meter.customerId !== null && meter.customerId !== '') {
+    return meter.customerId;
+  }
+
+  return meter.customerCode || undefined;
+};
+
+const buildReadingItems = (meter: ManualReadingMeter): ReadingItem[] =>
+  meter.registers.map((register) => {
+    const newIndex = toNumber(register.newIndex) || K_SIZE_0;
+    const energyRaw = newIndex - register.oldIndex;
+
+    return {
+      tou: register.tou || register.id,
+      oldIndex: register.oldIndex,
+      newIndex,
+      energyRaw,
+      energyAdjusted: energyRaw * register.multiplier
+    };
+  });
+
+const updateMeter = (
+  meters: ManualReadingMeter[],
+  meterId: string,
+  updater: (meter: ManualReadingMeter) => ManualReadingMeter
+) => meters.map((meter) => (meter.id === meterId ? updater(meter) : meter));
+
 export const getMeterReadingMetrics = (meter?: ManualReadingMeter) => {
   if (!meter) {
     return {
@@ -163,6 +381,7 @@ export const getMeterReadingMetrics = (meter?: ManualReadingMeter) => {
       totalRawKwh: K_SIZE_0,
       totalAdjustedKwh: K_SIZE_0,
       effectiveIndex: K_SIZE_0,
+      oldEffectiveIndex: K_SIZE_0,
       hasInvalidReading: false,
       canSave: false
     };
@@ -194,15 +413,19 @@ export const getMeterReadingMetrics = (meter?: ManualReadingMeter) => {
     (sum, metric) => sum + (metric.newIndex || K_SIZE_0),
     K_SIZE_0
   );
+  const oldEffectiveIndex = meter.registers.reduce(
+    (sum, register) => sum + register.oldIndex,
+    K_SIZE_0
+  );
   const hasInvalidReading = registerMetrics.some(
     (metric) => metric.newIndex !== undefined && !metric.valid
   );
-
   return {
     completedRegisters,
     totalRawKwh,
     totalAdjustedKwh,
     effectiveIndex,
+    oldEffectiveIndex,
     hasInvalidReading,
     canSave: completedRegisters === meter.registers.length && !hasInvalidReading
   };
@@ -215,9 +438,19 @@ export const getStatusMeta = (status: ManualReadingStatus) => {
         label: 'Đã nhập',
         type: 'saved' as const
       };
+    case 'CONFIRMED':
+      return {
+        label: 'Đã xác nhận',
+        type: 'confirmed' as const
+      };
+    case 'REJECTED':
+      return {
+        label: 'Bị từ chối',
+        type: 'rejected' as const
+      };
     case 'DRAFT':
       return {
-        label: 'Chưa nhập',
+        label: 'Nháp',
         type: 'draft' as const
       };
     default:
@@ -228,49 +461,47 @@ export const getStatusMeta = (status: ManualReadingStatus) => {
   }
 };
 
-const updateMeter = (
-  meters: ManualReadingMeter[],
-  meterId: string,
-  updater: (meter: ManualReadingMeter) => ManualReadingMeter
-) => meters.map((meter) => (meter.id === meterId ? updater(meter) : meter));
-
 export default function useManualMeterReading() {
+  const objectUrlsRef = useRef<Set<string>>(new Set());
   const [filterDraft, setFilterDraft] = useState<ManualReadingFilter>(DEFAULT_FILTER);
   const [filterApplied, setFilterApplied] = useState<ManualReadingFilter>(DEFAULT_FILTER);
-  const [meters, setMeters] = useState<ManualReadingMeter[]>(MOCK_METERS);
-  const [selectedMeterId, setSelectedMeterId] = useState<string>(MOCK_METERS[0]?.id || '');
+  const [meters, setMeters] = useState<ManualReadingMeter[]>([]);
+  const [selectedMeterId, setSelectedMeterId] = useState<string>('');
+  const [loadingMeters, setLoadingMeters] = useState<boolean>(false);
+  const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
   const [savingDraft, setSavingDraft] = useState<boolean>(false);
   const [savingConfirm, setSavingConfirm] = useState<boolean>(false);
 
-  const filteredMeters = useMemo(() => {
-    const keyword = normalizeKeyword(filterApplied.keyword);
-    const customerCode = normalizeKeyword(filterApplied.customerCode);
+  const filteredMeters = meters;
+  const hasUnsyncedFilter = useMemo(
+    () =>
+      filterDraft.keyword !== filterApplied.keyword ||
+      filterDraft.searchBy !== filterApplied.searchBy ||
+      filterDraft.customerCode !== filterApplied.customerCode ||
+      filterDraft.periodCode !== filterApplied.periodCode ||
+      filterDraft.readingDate !== filterApplied.readingDate,
+    [filterApplied, filterDraft]
+  );
 
-    return meters.filter((meter) => {
-      const matchedCustomer =
-        !customerCode || normalizeKeyword(meter.customerCode) === customerCode;
-      const matchedKeyword =
-        !keyword ||
-        normalizeKeyword(meter.customerCode).includes(keyword) ||
-        normalizeKeyword(meter.customerName).includes(keyword) ||
-        normalizeKeyword(meter.meterCode).includes(keyword) ||
-        normalizeKeyword(meter.serialNo).includes(keyword) ||
-        normalizeKeyword(meter.address).includes(keyword);
+  const createObjectUrl = useCallback((blob: Blob | File) => {
+    const objectUrl = URL.createObjectURL(blob);
+    objectUrlsRef.current.add(objectUrl);
+    return objectUrl;
+  }, []);
 
-      return matchedCustomer && matchedKeyword;
-    });
-  }, [filterApplied.customerCode, filterApplied.keyword, meters]);
+  const revokeObjectUrl = useCallback((objectUrl?: string) => {
+    if (!objectUrl) return;
+    URL.revokeObjectURL(objectUrl);
+    objectUrlsRef.current.delete(objectUrl);
+  }, []);
 
-  useEffect(() => {
-    if (!filteredMeters.length) {
-      setSelectedMeterId('');
-      return;
-    }
-
-    if (!filteredMeters.some((meter) => meter.id === selectedMeterId)) {
-      setSelectedMeterId(filteredMeters[K_SIZE_0].id);
-    }
-  }, [filteredMeters, selectedMeterId]);
+  useEffect(
+    () => () => {
+      objectUrlsRef.current.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
+      objectUrlsRef.current.clear();
+    },
+    []
+  );
 
   const selectedMeter = useMemo(
     () => filteredMeters.find((meter) => meter.id === selectedMeterId) || filteredMeters[K_SIZE_0],
@@ -283,7 +514,9 @@ export default function useManualMeterReading() {
   );
 
   const summary = useMemo<ManualReadingSummary>(() => {
-    const saved = meters.filter((meter) => meter.status === 'SAVED').length;
+    const saved = meters.filter(
+      (meter) => meter.status === 'SAVED' || meter.status === 'CONFIRMED'
+    ).length;
     return {
       totalMeters: meters.length,
       notEntered: meters.length - saved,
@@ -296,36 +529,196 @@ export default function useManualMeterReading() {
   }, [meters]);
 
   const periodInfo = useMemo(() => {
-    const month = filterApplied.periodCode || DEFAULT_FILTER.periodCode;
-    const [monthNumber, yearNumber] = month.split('/').map(Number);
-    const start = dayjs(`${yearNumber}-${String(monthNumber).padStart(2, '0')}-01`);
-    const end = start.endOf('month');
+    const range = getPeriodDateRange(filterApplied.periodCode || DEFAULT_FILTER.periodCode);
     const readingDate = dayjs(filterApplied.readingDate, FORMAT_DATE_API);
 
     return {
-      label: `${month} (${start.format('DD/MM/YYYY')} - ${end.format('DD/MM/YYYY')})`,
+      ...range,
       readingDate: readingDate.isValid() ? readingDate.format('DD/MM/YYYY') : ''
     };
   }, [filterApplied.periodCode, filterApplied.readingDate]);
+
+  const loadPhotoPreviews = useCallback(
+    async (photos: ReadingPhoto[]): Promise<ManualReadingUploadedPhoto[]> => {
+      const previewPhotos = await Promise.all(
+        photos.map(async (photo) => {
+          if (!photo.id) return photo;
+
+          const response = await manualMeterReadingServices.viewReadingPhoto(photo.id);
+          if (!response?.data) return photo;
+
+          return {
+            ...photo,
+            previewUrl: createObjectUrl(response.data)
+          };
+        })
+      );
+
+      return previewPhotos;
+    },
+    [createObjectUrl]
+  );
+
+  const fetchPreviousPeriodDetail = useCallback(
+    async (meter: ManualReadingMeter, periodCode: string) => {
+      const currentPeriodStart = parseApiDate(getPeriodDateRange(periodCode).from);
+      const response = await manualMeterReadingServices.searchReadingPeriods({
+        page: K_SIZE_0,
+        size: DEFAULT_PAGE_SIZE,
+        meterNumber: meter.meterCode,
+        typeInput: MANUAL_READING_TYPE_INPUT
+      });
+
+      if (hasApiError(response) || !response.data?.items?.length) return undefined;
+
+      const previousPeriods = response.data.items
+        .filter((period) => {
+          if (!currentPeriodStart?.isValid()) return period.periodCode !== periodCode;
+          const comparableDate = getPeriodComparableDate(period);
+          return comparableDate > K_SIZE_0 && comparableDate < currentPeriodStart.valueOf();
+        })
+        .sort((a, b) => getPeriodComparableDate(b) - getPeriodComparableDate(a));
+
+      const previousPeriod = previousPeriods[K_SIZE_0];
+      if (!previousPeriod?.id) return undefined;
+
+      const detailResponse = await manualMeterReadingServices.getReadingPeriod({
+        id: previousPeriod.id
+      });
+
+      return !hasApiError(detailResponse) && detailResponse.data ? detailResponse.data : undefined;
+    },
+    []
+  );
+
+  const fetchMeterPeriod = useCallback(
+    async (meter: ManualReadingMeter, appliedFilter: ManualReadingFilter) => {
+      if (!meter.meterCode || !appliedFilter.periodCode) return;
+
+      setLoadingDetail(true);
+      const searchResponse = await manualMeterReadingServices.searchReadingPeriods({
+        page: K_SIZE_0,
+        size: K_SIZE_1,
+        meterNumber: meter.meterCode,
+        periodCode: appliedFilter.periodCode,
+        typeInput: MANUAL_READING_TYPE_INPUT
+      });
+
+      if (hasApiError(searchResponse)) {
+        setLoadingDetail(false);
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getErrorMessage(searchResponse, 'Tải kỳ ghi chỉ số thất bại')
+        });
+        return;
+      }
+
+      const period = searchResponse.data?.items?.[K_SIZE_0];
+      if (!period?.id) {
+        const previousDetail = await fetchPreviousPeriodDetail(meter, appliedFilter.periodCode);
+        setMeters((prev) =>
+          updateMeter(prev, meter.id, (item) =>
+            mapPreviousDetailToNewPeriodMeter(item, previousDetail)
+          )
+        );
+        setLoadingDetail(false);
+        return;
+      }
+
+      const detailResponse = await manualMeterReadingServices.getReadingPeriod({ id: period.id });
+      const photoResponse = await manualMeterReadingServices.listReadingPhotos({
+        periodId: period.id
+      });
+
+      const photos =
+        !hasApiError(photoResponse) && Array.isArray(photoResponse.data)
+          ? await loadPhotoPreviews(photoResponse.data)
+          : undefined;
+      const detail =
+        !hasApiError(detailResponse) && detailResponse.data
+          ? detailResponse.data
+          : { period, readings: [] };
+
+      setMeters((prev) =>
+        updateMeter(prev, meter.id, (item) => mapPeriodDetailToMeter(item, detail, photos))
+      );
+      setLoadingDetail(false);
+    },
+    [fetchPreviousPeriodDetail, loadPhotoPreviews]
+  );
+
+  const fetchMeters = useCallback(
+    async (nextFilter: ManualReadingFilter) => {
+      setLoadingMeters(true);
+      const keyword = optionalValue(nextFilter.keyword);
+      const response = await manualMeterReadingServices.searchMetersForReading({
+        page: K_SIZE_0,
+        size: DEFAULT_PAGE_SIZE,
+        customerCode:
+          optionalValue(nextFilter.customerCode) ||
+          (nextFilter.searchBy === 'CUSTOMER_CODE' ? keyword : undefined),
+        customerName: nextFilter.searchBy === 'CUSTOMER_NAME' ? keyword : undefined,
+        meterCode: nextFilter.searchBy === 'METER_CODE' ? keyword : undefined
+      });
+      setLoadingMeters(false);
+
+      if (hasApiError(response) || !response.data) {
+        setMeters([]);
+        setSelectedMeterId('');
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getErrorMessage(response, 'Tải danh sách công tơ thất bại')
+        });
+        return;
+      }
+
+      const nextMeters = (response.data.items || []).map(mapMeterSearchRowToManualMeter);
+      setMeters(nextMeters);
+
+      const firstMeter = nextMeters[K_SIZE_0];
+      setSelectedMeterId(firstMeter?.id || '');
+      if (firstMeter) {
+        await fetchMeterPeriod(firstMeter, nextFilter);
+      }
+    },
+    [fetchMeterPeriod]
+  );
+
+  useEffect(() => {
+    fetchMeters(DEFAULT_FILTER);
+  }, [fetchMeters]);
 
   const onChangeFilter = useCallback((key: keyof ManualReadingFilter, value: string) => {
     setFilterDraft((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  const onApplyFilter = useCallback(() => {
+  const onApplyFilter = useCallback(async () => {
     setFilterApplied(filterDraft);
-  }, [filterDraft]);
+    await fetchMeters(filterDraft);
+  }, [fetchMeters, filterDraft]);
 
-  const onResetFilter = useCallback(() => {
+  const onResetFilter = useCallback(async () => {
     setFilterDraft(DEFAULT_FILTER);
     setFilterApplied(DEFAULT_FILTER);
-  }, []);
+    await fetchMeters(DEFAULT_FILTER);
+  }, [fetchMeters]);
+
+  const onSelectMeter = useCallback(
+    (meterId: string) => {
+      setSelectedMeterId(meterId);
+      const meter = meters.find((item) => item.id === meterId);
+      if (meter) {
+        fetchMeterPeriod(meter, filterApplied);
+      }
+    },
+    [fetchMeterPeriod, filterApplied, meters]
+  );
 
   const onChangeRegister = useCallback((meterId: string, registerId: string, value: string) => {
     setMeters((prev) =>
       updateMeter(prev, meterId, (meter) => ({
         ...meter,
-        status: meter.status === 'SAVED' ? 'DRAFT' : meter.status,
+        status: meter.status === 'SAVED' || meter.status === 'CONFIRMED' ? 'DRAFT' : meter.status,
         registers: meter.registers.map((register) =>
           register.id === registerId ? { ...register, newIndex: value } : register
         )
@@ -337,7 +730,7 @@ export default function useManualMeterReading() {
     setMeters((prev) =>
       updateMeter(prev, meterId, (meter) => ({
         ...meter,
-        status: meter.status === 'SAVED' ? 'DRAFT' : meter.status,
+        status: meter.status === 'SAVED' || meter.status === 'CONFIRMED' ? 'DRAFT' : meter.status,
         reactiveIndex: value
       }))
     );
@@ -347,7 +740,7 @@ export default function useManualMeterReading() {
     setMeters((prev) =>
       updateMeter(prev, meterId, (meter) => ({
         ...meter,
-        status: meter.status === 'SAVED' ? 'DRAFT' : meter.status,
+        status: meter.status === 'SAVED' || meter.status === 'CONFIRMED' ? 'DRAFT' : meter.status,
         reactiveUnitPrice: value
       }))
     );
@@ -357,46 +750,105 @@ export default function useManualMeterReading() {
     setMeters((prev) =>
       updateMeter(prev, meterId, (meter) => ({
         ...meter,
-        status: meter.status === 'SAVED' ? 'DRAFT' : meter.status,
+        status: meter.status === 'SAVED' || meter.status === 'CONFIRMED' ? 'DRAFT' : meter.status,
         note: value
       }))
     );
   }, []);
 
-  const onSelectPhoto = useCallback((meterId: string, file: File) => {
-    if (!isValidUploadFileSize(file)) {
-      showToast({
-        type: TYPE_TOAST.ERROR,
-        content: getUploadFileSizeError('ảnh chụp công tơ')
-      });
-      return;
-    }
+  const onSelectPhoto = useCallback(
+    (meterId: string, file: File) => {
+      if (!isValidUploadFileSize(file)) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getUploadFileSizeError('ảnh chụp công tơ')
+        });
+        return;
+      }
 
-    const previewUrl = URL.createObjectURL(file);
-    setMeters((prev) =>
-      updateMeter(prev, meterId, (meter) => ({
-        ...meter,
-        status: meter.status === 'SAVED' ? 'DRAFT' : meter.status,
-        photoName: file.name,
-        photoPreviewUrl: previewUrl
-      }))
-    );
-    showToast({ type: TYPE_TOAST.SUCCESS, content: 'Đã chọn ảnh công tơ' });
-  }, []);
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Vui lòng chọn ảnh JPG hoặc PNG'
+        });
+        return;
+      }
 
-  const onRemovePhoto = useCallback((meterId: string) => {
-    setMeters((prev) =>
-      updateMeter(prev, meterId, (meter) => ({
-        ...meter,
-        photoName: undefined,
-        photoPreviewUrl: undefined
-      }))
-    );
-  }, []);
+      const meter = meters.find((item) => item.id === meterId);
+      const photoCount =
+        (meter?.uploadedPhotos.length || K_SIZE_0) + (meter?.pendingPhotos.length || K_SIZE_0);
+      if (photoCount >= MAX_READING_PHOTOS) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: `Chỉ được upload tối đa ${MAX_READING_PHOTOS} ảnh công tơ`
+        });
+        return;
+      }
+
+      const previewUrl = createObjectUrl(file);
+      const pendingPhoto: ManualReadingPendingPhoto = {
+        uid: `${file.name}-${file.lastModified}-${Date.now()}`,
+        name: file.name,
+        file,
+        previewUrl
+      };
+
+      setMeters((prev) =>
+        updateMeter(prev, meterId, (item) => ({
+          ...item,
+          status: item.status === 'SAVED' || item.status === 'CONFIRMED' ? 'DRAFT' : item.status,
+          pendingPhotos: [...item.pendingPhotos, pendingPhoto]
+        }))
+      );
+      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Đã chọn ảnh công tơ' });
+    },
+    [createObjectUrl, meters]
+  );
+
+  const onRemovePendingPhoto = useCallback(
+    (meterId: string, uid: string) => {
+      const meter = meters.find((item) => item.id === meterId);
+      const pendingPhoto = meter?.pendingPhotos.find((photo) => photo.uid === uid);
+      revokeObjectUrl(pendingPhoto?.previewUrl);
+
+      setMeters((prev) =>
+        updateMeter(prev, meterId, (item) => ({
+          ...item,
+          pendingPhotos: item.pendingPhotos.filter((photo) => photo.uid !== uid)
+        }))
+      );
+    },
+    [meters, revokeObjectUrl]
+  );
+
+  const onRemoveUploadedPhoto = useCallback(
+    async (meterId: string, id: number) => {
+      const meter = meters.find((item) => item.id === meterId);
+      const uploadedPhoto = meter?.uploadedPhotos.find((photo) => photo.id === id);
+      const response = await manualMeterReadingServices.deleteReadingPhoto({ id });
+      if (hasApiError(response)) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getErrorMessage(response, 'Xóa ảnh công tơ thất bại')
+        });
+        return;
+      }
+
+      revokeObjectUrl(uploadedPhoto?.previewUrl);
+      setMeters((prev) =>
+        updateMeter(prev, meterId, (item) => ({
+          ...item,
+          uploadedPhotos: item.uploadedPhotos.filter((photo) => photo.id !== id)
+        }))
+      );
+    },
+    [meters, revokeObjectUrl]
+  );
 
   const onClearSelectedMeter = useCallback(() => {
     if (!selectedMeter) return;
 
+    selectedMeter.pendingPhotos.forEach((photo) => revokeObjectUrl(photo.previewUrl));
     setMeters((prev) =>
       updateMeter(prev, selectedMeter.id, (meter) => ({
         ...meter,
@@ -405,64 +857,250 @@ export default function useManualMeterReading() {
         reactiveIndex: '',
         reactiveUnitPrice: '',
         note: '',
-        photoName: undefined,
-        photoPreviewUrl: undefined
+        pendingPhotos: []
       }))
     );
-  }, [selectedMeter]);
+  }, [revokeObjectUrl, selectedMeter]);
 
-  const saveMeter = useCallback((meter: ManualReadingMeter, status: ManualReadingStatus) => {
-    const metrics = getMeterReadingMetrics(meter);
-    if (!metrics.canSave) {
-      showToast({
-        type: TYPE_TOAST.ERROR,
-        content: 'Vui lòng nhập đủ chỉ số mới và đảm bảo chỉ số mới không nhỏ hơn chỉ số cũ'
+  const uploadPendingPhoto = useCallback(async (meter: ManualReadingMeter, periodId: number) => {
+    if (!meter.pendingPhotos.length) return meter;
+
+    const uploadedPhotos = [...meter.uploadedPhotos];
+    const failedPendingPhotos: ManualReadingPendingPhoto[] = [];
+
+    for (const pendingPhoto of meter.pendingPhotos) {
+      const response = await manualMeterReadingServices.uploadReadingPhoto({
+        periodId,
+        file: pendingPhoto.file
       });
-      return false;
+
+      if (hasApiError(response) || !response.data) {
+        failedPendingPhotos.push(pendingPhoto);
+        continue;
+      }
+
+      uploadedPhotos.push({
+        ...response.data,
+        previewUrl: pendingPhoto.previewUrl
+      });
     }
 
-    setMeters((prev) => updateMeter(prev, meter.id, (item) => ({ ...item, status })));
-    return true;
+    if (failedPendingPhotos.length) {
+      showToast({
+        type: TYPE_TOAST.WARNING,
+        content: `Đã upload ${meter.pendingPhotos.length - failedPendingPhotos.length}/${
+          meter.pendingPhotos.length
+        } ảnh công tơ`
+      });
+    }
+
+    return {
+      ...meter,
+      uploadedPhotos,
+      pendingPhotos: failedPendingPhotos
+    };
   }, []);
 
-  const onSaveSelectedMeter = useCallback(() => {
-    if (!selectedMeter) return;
-    if (saveMeter(selectedMeter, 'SAVED')) {
-      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Đã lưu chỉ số cho công tơ' });
+  const confirmSavedPeriod = useCallback(async (periodId: number) => {
+    const response = await manualMeterReadingServices.confirmReadings({ periodIds: [periodId] });
+    if (hasApiError(response) || !response.data?.length) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getErrorMessage(response, 'Xác nhận kỳ ghi chỉ số thất bại')
+      });
+      return undefined;
     }
-  }, [saveMeter, selectedMeter]);
+
+    return response.data.find((item) => item.periodId === periodId) || response.data[K_SIZE_0];
+  }, []);
+
+  const saveMeterToServer = useCallback(
+    async (
+      meter: ManualReadingMeter,
+      saveMode: ReadingPeriodSaveMode,
+      showSuccess = true,
+      confirmAfterSave = false
+    ) => {
+      if (hasUnsyncedFilter) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Bộ lọc đã thay đổi. Vui lòng tìm kiếm lại trước khi lưu'
+        });
+        return false;
+      }
+
+      const metrics = getMeterReadingMetrics(meter);
+      if (!metrics.canSave) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Vui lòng nhập đủ chỉ số mới và đảm bảo chỉ số mới không nhỏ hơn chỉ số cũ'
+        });
+        return false;
+      }
+
+      if (!periodInfo.from || !periodInfo.to || !filterApplied.readingDate) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Vui lòng chọn kỳ ghi chỉ số và ngày ghi chỉ số'
+        });
+        return false;
+      }
+
+      const customerId = getCustomerIdForRequest(meter);
+      if (customerId === undefined) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không xác định được khách hàng của công tơ'
+        });
+        return false;
+      }
+
+      const readings = buildReadingItems(meter);
+      const reactiveEnergyIndex = toNumber(meter.reactiveIndex);
+      let savedMeter: ManualReadingMeter | undefined;
+
+      if (meter.periodId) {
+        const response = await manualMeterReadingServices.updateReadingPeriod({
+          id: meter.periodId,
+          periodCode: filterApplied.periodCode,
+          periodFrom: periodInfo.from,
+          periodTo: periodInfo.to,
+          readingDate: filterApplied.readingDate,
+          readings,
+          reactiveEnergyIndex,
+          note: optionalValue(meter.note)
+        });
+
+        if (hasApiError(response) || !response.data) {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(response, 'Cập nhật chỉ số công tơ thất bại')
+          });
+          return false;
+        }
+
+        savedMeter = mapPeriodDetailToMeter(meter, response.data);
+      } else {
+        const response = await manualMeterReadingServices.createReadingPeriod({
+          meterNumber: meter.meterCode,
+          customerId,
+          periodCode: filterApplied.periodCode,
+          periodFrom: periodInfo.from,
+          periodTo: periodInfo.to,
+          readingDate: filterApplied.readingDate,
+          saveMode,
+          readings,
+          reactiveEnergyIndex,
+          note: optionalValue(meter.note)
+        });
+
+        if (hasApiError(response) || !response.data?.period) {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(response, 'Lưu chỉ số công tơ thất bại')
+          });
+          return false;
+        }
+
+        savedMeter = mapPeriodDetailToMeter(meter, {
+          period: response.data.period,
+          readings: response.data.readings
+        });
+      }
+
+      if (savedMeter.periodId) {
+        savedMeter = await uploadPendingPhoto(savedMeter, savedMeter.periodId);
+      }
+
+      if (confirmAfterSave && savedMeter.periodId) {
+        const confirmResult = await confirmSavedPeriod(savedMeter.periodId);
+        if (!confirmResult) return false;
+
+        savedMeter = {
+          ...savedMeter,
+          status: (confirmResult.status as ManualReadingStatus) || 'CONFIRMED'
+        };
+      }
+
+      setMeters((prev) => updateMeter(prev, meter.id, () => savedMeter as ManualReadingMeter));
+
+      if (showSuccess) {
+        showToast({
+          type: TYPE_TOAST.SUCCESS,
+          content: confirmAfterSave
+            ? 'Đã xác nhận kỳ ghi chỉ số'
+            : saveMode === 'DRAFT'
+              ? 'Đã lưu nháp chỉ số công tơ'
+              : 'Đã lưu chỉ số công tơ'
+        });
+      }
+
+      return true;
+    },
+    [
+      filterApplied.periodCode,
+      filterApplied.readingDate,
+      hasUnsyncedFilter,
+      periodInfo.from,
+      periodInfo.to,
+      uploadPendingPhoto,
+      confirmSavedPeriod
+    ]
+  );
+
+  const onSaveSelectedMeter = useCallback(async () => {
+    if (!selectedMeter) return;
+    setSavingConfirm(true);
+    await saveMeterToServer(selectedMeter, 'SUBMIT');
+    setSavingConfirm(false);
+  }, [saveMeterToServer, selectedMeter]);
 
   const saveAllValidMeters = useCallback(
-    (status: ManualReadingStatus) => {
+    async (saveMode: ReadingPeriodSaveMode, confirmAfterSave = false) => {
+      if (hasUnsyncedFilter) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Bộ lọc đã thay đổi. Vui lòng tìm kiếm lại trước khi lưu'
+        });
+        return;
+      }
+
       const validMeters = meters.filter((meter) => getMeterReadingMetrics(meter).canSave);
       if (!validMeters.length) {
         showToast({ type: TYPE_TOAST.ERROR, content: 'Không có công tơ hợp lệ để lưu' });
         return;
       }
 
-      setMeters((prev) =>
-        prev.map((meter) => (getMeterReadingMetrics(meter).canSave ? { ...meter, status } : meter))
-      );
+      let successCount = K_SIZE_0;
+      for (const meter of validMeters) {
+        const saved = await saveMeterToServer(meter, saveMode, false, confirmAfterSave);
+        if (saved) successCount += K_SIZE_1;
+      }
+
+      const failedCount = validMeters.length - successCount;
       showToast({
-        type: TYPE_TOAST.SUCCESS,
-        content:
-          status === 'DRAFT'
-            ? `Đã lưu nháp ${validMeters.length} công tơ`
-            : `Đã xác nhận và lưu ${validMeters.length} công tơ`
+        type: failedCount ? TYPE_TOAST.WARNING : TYPE_TOAST.SUCCESS,
+        content: failedCount
+          ? `Đã lưu ${successCount}/${validMeters.length} công tơ, ${failedCount} công tơ thất bại`
+          : confirmAfterSave
+            ? `Đã xác nhận ${successCount} công tơ`
+            : saveMode === 'DRAFT'
+              ? `Đã lưu nháp ${successCount} công tơ`
+              : `Đã lưu ${successCount} công tơ`
       });
     },
-    [meters]
+    [hasUnsyncedFilter, meters, saveMeterToServer]
   );
 
-  const onSaveDraft = useCallback(() => {
+  const onSaveDraft = useCallback(async () => {
     setSavingDraft(true);
-    saveAllValidMeters('DRAFT');
+    await saveAllValidMeters('DRAFT');
     setSavingDraft(false);
   }, [saveAllValidMeters]);
 
-  const onConfirmAndSave = useCallback(() => {
+  const onConfirmAndSave = useCallback(async () => {
     setSavingConfirm(true);
-    saveAllValidMeters('SAVED');
+    await saveAllValidMeters('SUBMIT', true);
     setSavingConfirm(false);
   }, [saveAllValidMeters]);
 
@@ -477,18 +1115,23 @@ export default function useManualMeterReading() {
     periodInfo,
     searchByOptions: SEARCH_BY_OPTIONS,
     periodOptions: PERIOD_OPTIONS,
+    maxPhotoCount: MAX_READING_PHOTOS,
+    hasUnsyncedFilter,
+    loadingMeters,
+    loadingDetail,
     savingDraft,
     savingConfirm,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
-    onSelectMeter: setSelectedMeterId,
+    onSelectMeter,
     onChangeRegister,
     onChangeReactiveIndex,
     onChangeReactiveUnitPrice,
     onChangeNote,
     onSelectPhoto,
-    onRemovePhoto,
+    onRemovePendingPhoto,
+    onRemoveUploadedPhoto,
     onClearSelectedMeter,
     onSaveSelectedMeter,
     onSaveDraft,

@@ -170,11 +170,20 @@ const ApiEndPoint = {
   BRANCH_USERS: '/admin/branches/users',
 
   // BILLING 5.1 - NHAP CHI SO
+  BILLING_READING_METER_SEARCH: '/admin/billing/readings/meter-search',
   BILLING_READING_PERIOD_UPDATE: '/admin/billing/reading-periods/update',
   BILLING_READING_PERIOD_SEARCH: '/admin/billing/reading-periods/search',
   BILLING_READING_PERIOD_GET: '/admin/billing/reading-periods/get',
   BILLING_READING_PERIOD_DELETE: '/admin/billing/reading-periods/delete',
   BILLING_READING_PERIOD_CREATE: '/admin/billing/reading-periods/create',
+  BILLING_READING_PERIOD_REVIEW: '/admin/billing/reading-periods/review',
+  BILLING_READING_PERIOD_CONFIRM: '/admin/billing/reading-periods/confirm',
+  BILLING_READING_PERIOD_REJECT: '/admin/billing/reading-periods/reject',
+  BILLING_READING_PERIOD_EXPORT_RECORD: '/admin/billing/reading-periods/export-record',
+  BILLING_READING_PHOTO_UPLOAD: '/admin/billing/reading-periods/photos/upload',
+  BILLING_READING_PHOTO_LIST: '/admin/billing/reading-periods/photos/list',
+  BILLING_READING_PHOTO_VIEW: '/admin/billing/reading-periods/photos/view',
+  BILLING_READING_PHOTO_DELETE: '/admin/billing/reading-periods/photos/delete',
 
   // BILLING 2.1 - DANH MUC GIA DIEN
   BILLING_TARIFF_BASE: '/admin/billing/tariffs',
