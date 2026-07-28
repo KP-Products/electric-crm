@@ -38,7 +38,7 @@ import {
   renderPpeItemHistoryNumber
 } from 'screens/authentication/ppe-item-history/utils';
 import {
-  getPpeItemCreator,
+  getPpeItemInputEmployee,
   getPpeItemErrorMessage,
   getPpeItemStatusLabel,
   getPpeItemStatusType,
@@ -54,11 +54,6 @@ const renderTruncatedText = (value?: string | number | null, className = 'max-w-
     {renderText(value)}
   </div>
 );
-
-const getStockQuantity = (item?: PpeItem) => {
-  if (!item || item.quantity === undefined || item.quantity === null) return undefined;
-  return item.quantity - (item.initQuantity ?? K_SIZE_0);
-};
 
 const getEmployeeDisplay = (name?: string, id?: number) => name || (id ? String(id) : NULL_VALUE);
 
@@ -224,9 +219,9 @@ const PpeItemDetailScreen = () => {
       { label: 'Loại vật tư', value: detail?.category },
       { label: 'Đơn vị tính', value: detail?.unit },
       { label: 'Số lượng ban đầu', value: renderPpeItemNumber(detail?.initQuantity) },
-      { label: 'Số lượng tồn', value: renderPpeItemNumber(getStockQuantity(detail)) },
+      { label: 'Số lượng tồn', value: renderPpeItemNumber(detail?.quantity) },
       { label: 'Ngày nhập kho', value: renderPpeItemDate(detail?.importDate) },
-      { label: 'Người nhập kho', value: getPpeItemCreator(detail || ({} as PpeItem)) },
+      { label: 'Người nhập kho', value: getPpeItemInputEmployee(detail || ({} as PpeItem)) },
       { label: 'Ghi chú', value: detail?.note }
     ],
     [detail]

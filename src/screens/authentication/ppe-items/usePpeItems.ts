@@ -57,7 +57,7 @@ const ppeItemSchema = z.object({
       message: 'Số lượng phải là số nguyên không âm'
     }),
   importDate: optionalString,
-  employeeId: optionalString,
+  inputEmployeeId: optionalString,
   status: optionalString,
   note: optionalString
 });
@@ -133,11 +133,11 @@ export default function usePpeItems() {
       optionMap.set(key, { value: key, label });
     };
 
-    ppeItemList.forEach((item) => addKnownEmployeeOption(item.employeeId));
-    addKnownEmployeeOption(selectedItem?.employeeId);
+    ppeItemList.forEach((item) => addKnownEmployeeOption(item.inputEmployeeId));
+    addKnownEmployeeOption(selectedItem?.inputEmployeeId);
 
     return Array.from(optionMap.values());
-  }, [employeeLabelMap, ppeItemList, searchedEmployeeOptions, selectedItem?.employeeId]);
+  }, [employeeLabelMap, ppeItemList, searchedEmployeeOptions, selectedItem?.inputEmployeeId]);
 
   const pagination = useMemo(
     () => ({

@@ -2,6 +2,7 @@
 
 import { CalculatorOutlined, PlusOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
 import {
+  CURRENCY_VND,
   K_SIZE_0,
   K_SIZE_1,
   K_SIZE_120,
@@ -33,6 +34,7 @@ import { ElectricTariff } from 'model/electric-tariff';
 import moment from 'moment';
 import { useMemo } from 'react';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, displayDateTimeFromServer } from 'utils/date';
+import { formatCurrency as formatCurrencyBase } from 'utils/math';
 import { useResponsive } from 'utils/responsive';
 import { formatUploadFileSize, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useElectricTariff, {
@@ -124,11 +126,7 @@ const displayElectricTariffDate = (date?: string) => {
 
 const formatCurrency = (value?: number) => {
   if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: K_SIZE_0
-  }).format(value);
+  return formatCurrencyBase(Math.round(value), ',', CURRENCY_VND) || NULL_VALUE;
 };
 
 const formatFilterValue = (key: keyof ElectricTariffFilter, value: string) => {
@@ -330,6 +328,7 @@ const ElectricTariffScreen = () => {
             placeholder="Nhập đơn giá"
             size="middle"
             classNameMore="text-right"
+            formatNumberWithCommas
             onChange={(event) => onChangeTouPrice(record.tou, event.target.value)}
           />
         )

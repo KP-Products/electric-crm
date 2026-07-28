@@ -530,6 +530,7 @@ const PpeItemHistoryScreen = () => {
                   placeholder="Nhập số lượng"
                   inputMode="numeric"
                   pattern="[0-9]*"
+                  onlyNumber
                   control={control}
                   onChange={onQuantityChange}
                 />

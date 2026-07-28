@@ -8,6 +8,7 @@ export interface Meter {
   customerId?: string;
   locationId?: string;
   customerName?: string;
+  purchaseDate?: string;
   installationDate?: string;
   inspectionDate?: string;
   inspectionExpiryDate?: string;
@@ -59,9 +60,15 @@ export interface GetListMeterReq extends PaginationReq {
   filter?: string;
   meterCodeContains?: string;
   customerId?: string;
+  parentId?: string;
   voltageType?: string;
+  voltageLevel?: string;
   status?: string;
   meterType?: string;
+  installationDateFrom?: string;
+  installationDateTo?: string;
+  purchaseDateFrom?: string;
+  purchaseDateTo?: string;
 }
 
 export interface GetListMeterRes extends ResultBase<PaginationRes<MeterSearchItem>> {}
@@ -75,6 +82,7 @@ export interface GetMeterDetailRes extends ResultBase<MeterSearchItem> {}
 export interface AddMeterReq {
   meterCode: string;
   customerId?: string;
+  purchaseDate?: string;
   installationDate?: string;
   voltageLevel?: string;
   multiplier?: number;

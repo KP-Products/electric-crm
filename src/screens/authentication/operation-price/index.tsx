@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  CURRENCY_VND,
   DEFAULT_PAGE_SIZE,
   K_SIZE_0,
   K_SIZE_1,
@@ -38,6 +39,7 @@ import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { OperationPrice } from 'model/operation-price';
 import moment from 'moment';
 import { API_DATE_INPUT_FORMATS, displayDateTimeFromServer } from 'utils/date';
+import { formatCurrency as formatCurrencyBase } from 'utils/math';
 import { useResponsive } from 'utils/responsive';
 import useOperationPrice, {
   DATE_API_FORMAT,
@@ -78,11 +80,7 @@ const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') 
 
 const formatCurrency = (value?: number | null) => {
   if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: K_SIZE_0
-  }).format(value);
+  return formatCurrencyBase(Math.round(value), ',', CURRENCY_VND) || NULL_VALUE;
 };
 
 const getStatusMeta = (status?: number | string) => {
@@ -578,6 +576,7 @@ const OperationPriceScreen = () => {
                   labelSuffixClassName="text-error-600"
                   placeholder="Nhập đơn giá"
                   control={control}
+                  formatNumberWithCommas
                 />
                 <AppSelectControl
                   name="discountType"
@@ -591,6 +590,7 @@ const OperationPriceScreen = () => {
                   label="Giá trị chiết khấu"
                   placeholder="Nhập giá trị"
                   control={control}
+                  formatNumberWithCommas
                 />
               </div>
 
