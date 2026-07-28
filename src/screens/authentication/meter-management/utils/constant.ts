@@ -37,17 +37,20 @@ export const METER_STATUS_TYPE_MAP: Record<string, TYPE_STATUS> = {
 
 export const METER_TYPE = {
   FEEDER: 'FEEDER',
-  CUSTOMER: 'CUSTOMER'
+  CUSTOMER: 'CUSTOMER',
+  CONG_TO_TONG: 'CONG_TO_TONG'
 } as const;
 
 export const METER_TYPE_OPTIONS = [
   { value: METER_TYPE.FEEDER, label: 'Lộ tổng' },
+  { value: METER_TYPE.CONG_TO_TONG, label: 'Công tơ tổng' },
   { value: METER_TYPE.CUSTOMER, label: 'Khách hàng' }
 ];
 
 export const METER_TYPE_LABEL_MAP: Record<string, string> = {
   FEEDER: 'Lộ tổng',
   CUSTOMER: 'Khách hàng',
+  CONG_TO_TONG: 'Công tơ tổng',
   LO_TONG: 'Lộ tổng',
   CONG_TO_KHACH_HANG: 'Khách hàng'
 };

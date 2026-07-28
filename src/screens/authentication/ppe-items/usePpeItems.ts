@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import employeeServices from 'services/employee-services';
+import ppeItemHistoryServices from 'services/ppe-item-history-services';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 import {
@@ -67,7 +68,6 @@ export interface PpeItemFilterForm {
   itemCode: string;
   itemName: string;
   status: string;
-  employeeId: string;
 }
 
 const getEmployeeLabel = (employee: Employee) =>
@@ -90,6 +90,7 @@ export default function usePpeItems() {
   const [employeeOptionsLoading, setEmployeeOptionsLoading] = useState<boolean>(false);
   const [openForm, setOpenForm] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<PpeItem>();
+  const [handoverHistoryMap, setHandoverHistoryMap] = useState<Record<string, boolean>>({});
   const submittingRef = useRef<boolean>(false);
   const employeeSearchRequestRef = useRef<number>(K_SIZE_0);
 
@@ -133,17 +134,10 @@ export default function usePpeItems() {
     };
 
     ppeItemList.forEach((item) => addKnownEmployeeOption(item.employeeId));
-    addKnownEmployeeOption(filter.employeeId);
     addKnownEmployeeOption(selectedItem?.employeeId);
 
     return Array.from(optionMap.values());
-  }, [
-    employeeLabelMap,
-    filter.employeeId,
-    ppeItemList,
-    searchedEmployeeOptions,
-    selectedItem?.employeeId
-  ]);
+  }, [employeeLabelMap, ppeItemList, searchedEmployeeOptions, selectedItem?.employeeId]);
 
   const pagination = useMemo(
     () => ({
@@ -206,6 +200,41 @@ export default function usePpeItems() {
     void fetchEmployeeOptions(employeeSearch);
   }, [employeeSearch, fetchEmployeeOptions]);
 
+  const checkHasHandoverHistory = useCallback(async (ppeItemId?: number) => {
+    if (ppeItemId === undefined || ppeItemId === null) return false;
+
+    const response = await ppeItemHistoryServices.searchPpeItemHistory({
+      page: K_SIZE_0,
+      size: K_SIZE_1,
+      ppeItemId
+    });
+
+    if (!response || !response.data) return undefined;
+
+    return Boolean((response.data.total || K_SIZE_0) > K_SIZE_0 || response.data.items?.length);
+  }, []);
+
+  const ensureHandoverHistory = useCallback(
+    async (item: PpeItem, forceCheck = false) => {
+      const key = String(item.id);
+      const cachedValue = handoverHistoryMap[key];
+      if (!forceCheck && cachedValue !== undefined) return cachedValue;
+
+      const hasHistory = await checkHasHandoverHistory(item.id);
+      if (hasHistory !== undefined) {
+        setHandoverHistoryMap((prev) => ({ ...prev, [key]: hasHistory }));
+      }
+
+      return hasHistory;
+    },
+    [checkHasHandoverHistory, handoverHistoryMap]
+  );
+
+  const hasHandoverHistory = useCallback(
+    (item: PpeItem) => Boolean(handoverHistoryMap[String(item.id)]),
+    [handoverHistoryMap]
+  );
+
   const fetchList = useCallback(
     (page: number) => {
       dispatch({
@@ -233,6 +262,44 @@ export default function usePpeItems() {
   useEffect(() => {
     fetchList(currentPage);
   }, [currentPage, fetchList]);
+
+  useEffect(() => {
+    let disposed = false;
+    const missingIds = Array.from(
+      new Set(
+        ppeItemList
+          .map((item) => item.id)
+          .filter((itemId) => itemId !== undefined && itemId !== null)
+      )
+    ).filter((itemId) => handoverHistoryMap[String(itemId)] === undefined);
+
+    if (!missingIds.length) return;
+
+    Promise.all(
+      missingIds.map(async (itemId) => {
+        const hasHistory = await checkHasHandoverHistory(itemId);
+        return { itemId, hasHistory };
+      })
+    ).then((results) => {
+      if (disposed) return;
+      setHandoverHistoryMap((prev) => {
+        const next = { ...prev };
+        let hasChange = false;
+        results.forEach(({ itemId, hasHistory }) => {
+          if (hasHistory === undefined) return;
+          const key = String(itemId);
+          if (next[key] === hasHistory) return;
+          next[key] = hasHistory;
+          hasChange = true;
+        });
+        return hasChange ? next : prev;
+      });
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [checkHasHandoverHistory, handoverHistoryMap, ppeItemList]);
 
   const refreshFirstPage = useCallback(() => {
     if (currentPage === K_SIZE_1) {
@@ -278,7 +345,7 @@ export default function usePpeItems() {
   }, [form, permission.canAdd]);
 
   const onOpenUpdate = useCallback(
-    (item: PpeItem) => {
+    async (item: PpeItem) => {
       if (!permission.canEdit) {
         showToast({
           type: TYPE_TOAST.ERROR,
@@ -287,11 +354,28 @@ export default function usePpeItems() {
         return;
       }
 
+      const hasHistory = await ensureHandoverHistory(item, true);
+      if (hasHistory === undefined) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không kiểm tra được lịch sử bàn giao thiết bị'
+        });
+        return;
+      }
+
+      if (hasHistory) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Thiết bị đã có lịch sử bàn giao, không được phép chỉnh sửa thông tin'
+        });
+        return;
+      }
+
       setSelectedItem(item);
       form.reset(buildPpeItemFormValues(item));
       setOpenForm(true);
     },
-    [form, permission.canEdit]
+    [ensureHandoverHistory, form, permission.canEdit]
   );
 
   const onCloseForm = useCallback(() => {
@@ -312,7 +396,7 @@ export default function usePpeItems() {
   );
 
   const onSubmit = useCallback(
-    (data: PpeItemForm) => {
+    async (data: PpeItemForm) => {
       if (submittingRef.current) return;
 
       if (selectedItem && !permission.canEdit) {
@@ -326,6 +410,25 @@ export default function usePpeItems() {
       if (!selectedItem && !permission.canAdd) {
         showToast({ type: TYPE_TOAST.ERROR, content: 'Bạn không có quyền thêm bảo hộ lao động' });
         return;
+      }
+
+      if (selectedItem) {
+        const hasHistory = await ensureHandoverHistory(selectedItem, true);
+        if (hasHistory === undefined) {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: 'Không kiểm tra được lịch sử bàn giao thiết bị'
+          });
+          return;
+        }
+
+        if (hasHistory) {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: 'Thiết bị đã có lịch sử bàn giao, không được phép chỉnh sửa thông tin'
+          });
+          return;
+        }
       }
 
       submittingRef.current = true;
@@ -363,13 +466,30 @@ export default function usePpeItems() {
         }
       });
     },
-    [onSubmitSuccess, permission.canAdd, permission.canEdit, selectedItem]
+    [ensureHandoverHistory, onSubmitSuccess, permission.canAdd, permission.canEdit, selectedItem]
   );
 
   const onDelete = useCallback(
-    (item: PpeItem) => {
+    async (item: PpeItem) => {
       if (!permission.canDelete) {
         showToast({ type: TYPE_TOAST.ERROR, content: 'Bạn không có quyền xoá bảo hộ lao động' });
+        return;
+      }
+
+      const hasHistory = await ensureHandoverHistory(item, true);
+      if (hasHistory === undefined) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không kiểm tra được lịch sử bàn giao thiết bị'
+        });
+        return;
+      }
+
+      if (hasHistory) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Thiết bị đã có lịch sử bàn giao, không được phép xoá'
+        });
         return;
       }
 
@@ -410,7 +530,7 @@ export default function usePpeItems() {
         ]
       });
     },
-    [permission.canDelete, refreshFirstPage, t]
+    [ensureHandoverHistory, permission.canDelete, refreshFirstPage, t]
   );
 
   const getEmployeeName = useCallback(
@@ -448,6 +568,7 @@ export default function usePpeItems() {
     onCloseForm,
     onSubmit,
     onDelete,
+    hasHandoverHistory,
     getEmployeeName
   };
 }

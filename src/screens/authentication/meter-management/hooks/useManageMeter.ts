@@ -21,7 +21,6 @@ import {
   METER_TYPE,
   getMeterStatusLabel,
   getVoltageLevelLabel,
-  getVoltageTypeLabel,
   normalizeMeterStatus,
   normalizeMeterType
 } from '../utils/constant';
@@ -32,7 +31,6 @@ export interface MeterFilterForm {
   meterType: string;
   status: string;
   voltageLevel: string;
-  voltageType: string;
   installationDateFrom: string;
   installationDateTo: string;
 }
@@ -84,8 +82,6 @@ const getMeterDisplayValue = (meter: Meter, key: string) => {
       return getMeterStatusLabel(meter.status);
     case 'installationDate':
       return formatDate(meter.installationDate);
-    case 'voltageType':
-      return getVoltageTypeLabel(meter.voltageType);
     case 'voltageLevel':
       return getVoltageLevelLabel(meter.voltageLevel);
     case 'meterType':
@@ -117,7 +113,6 @@ export default function useManageMeter() {
       meterType: '',
       status: '',
       voltageLevel: '',
-      voltageType: '',
       installationDateFrom: '',
       installationDateTo: ''
     }),
@@ -156,7 +151,6 @@ export default function useManageMeter() {
         meterCodeContains: normalize(filter.meterCodeContains),
         customerId: normalize(filter.customerId),
         meterType: normalize(filter.meterType),
-        voltageType: normalize(filter.voltageType),
         status: normalize(filter.status)
       };
     },
@@ -301,7 +295,6 @@ export default function useManageMeter() {
       ['meterType', 'Loại công tơ'],
       ['parentId', 'Công tơ cha / Lộ tổng'],
       ['voltageLevel', 'Cấp điện áp'],
-      ['voltageType', 'Kiểu điện áp'],
       ['multiplier', 'Hệ số nhân'],
       ['initialReading', 'Chỉ số đầu'],
       ['installationDate', 'Ngày lắp đặt'],
