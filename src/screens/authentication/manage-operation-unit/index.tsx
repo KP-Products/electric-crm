@@ -33,9 +33,15 @@ import { TextBase } from 'components/text';
 import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import { OperationContract } from 'model/operation-contract';
 import { OperationUnit, OPERATION_UNIT_STATUS } from 'model/operation-unit';
 import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
+import {
+  getOperationContractId,
+  getOperationContractStatusMeta,
+  renderOperationContractDate
+} from '../manage-operation-contract/utils';
 import useManageOperationUnit, { OperationUnitFilter } from './useManageOperationUnit';
 
 const STATUS_OPTIONS: AppSelectOption[] = [
@@ -132,6 +138,9 @@ const ManageOperationUnitScreen = () => {
     openDetail,
     selectedOperationUnit,
     selectedDetail,
+    detailContracts,
+    detailContractsLoading,
+    detailContractsLoadFailed,
     form,
     onChangeFilter,
     onApplyFilter,
@@ -299,6 +308,71 @@ const ManageOperationUnitScreen = () => {
       }
     ],
     [currentPage, onDelete, onOpenDetail, onOpenUpdate, t]
+  );
+
+  const detailContractColumns = useMemo<any[]>(
+    () => [
+      {
+        title: 'STT',
+        key: 'index',
+        width: K_SIZE_100,
+        align: 'center',
+        render: (_: unknown, __: OperationContract, index: number) => index + K_SIZE_1
+      },
+      {
+        title: 'Số hợp đồng',
+        dataIndex: 'contractNumber',
+        key: 'contractNumber',
+        width: K_SIZE_180,
+        render: (text: string) => renderTruncatedText(text, 'max-w-[180px]')
+      },
+      {
+        title: 'Tên hợp đồng',
+        dataIndex: 'contractName',
+        key: 'contractName',
+        width: K_SIZE_240,
+        render: (text: string) => renderTruncatedText(text, 'max-w-[260px]')
+      },
+      {
+        title: 'Loại hợp đồng',
+        dataIndex: 'contractType',
+        key: 'contractType',
+        width: K_SIZE_150,
+        render: (text: string) => renderTruncatedText(text, 'max-w-[160px]')
+      },
+      {
+        title: 'Ngày ký',
+        dataIndex: 'signedDate',
+        key: 'signedDate',
+        width: K_SIZE_130,
+        render: (date: string) => renderOperationContractDate(date)
+      },
+      {
+        title: 'Ngày hiệu lực',
+        dataIndex: 'effectiveDate',
+        key: 'effectiveDate',
+        width: K_SIZE_130,
+        render: (date: string) => renderOperationContractDate(date)
+      },
+      {
+        title: 'Ngày hết hạn',
+        dataIndex: 'expiryDate',
+        key: 'expiryDate',
+        width: K_SIZE_130,
+        render: (date: string) => renderOperationContractDate(date)
+      },
+      {
+        title: 'Trạng thái',
+        dataIndex: 'status',
+        key: 'status',
+        width: K_SIZE_150,
+        render: (status: string) => {
+          const meta = getOperationContractStatusMeta(status);
+          return <Status type={meta.type} kind={KIND_STATUS.PRIMARY} content={meta.label} />;
+        }
+      }
+    ],
+    []
   );
 
   const breadcrumbList = [
@@ -638,6 +712,41 @@ const ManageOperationUnitScreen = () => {
               </div>
             </div>
           </Spin>
+
+          <Divider className="my-16" />
+          <Flex justify="space-between" align="center" className="mb-12">
+            <TextBase
+              classNames="sub-title3 !text-primary-700"
+              text="Danh sách hợp đồng vận hành"
+            />
+            {detailContractsLoading && <Spin size="small" />}
+          </Flex>
+          {detailContractsLoadFailed ? (
+            <div className="text-14 font-medium text-color-700">
+              Không tải được danh sách hợp đồng vận hành
+            </div>
+          ) : detailContractsLoading ? (
+            <div className="rounded-radius-m border border-color-300 p-16 text-center">
+              <Spin size="small" />
+            </div>
+          ) : detailContracts.length > K_SIZE_0 ? (
+            <div className="overflow-hidden rounded-radius-l border border-color-400">
+              <AppTable
+                loading={detailContractsLoading}
+                rootClassName="w-full"
+                className="[&_.ant-pagination]:hidden"
+                scroll={{ x: 'max-content' }}
+                dataSource={detailContracts}
+                columns={detailContractColumns}
+                rowKey={(record: any, index?: number) =>
+                  String(getOperationContractId(record) || record.contractNumber || index)
+                }
+                pagination={false}
+              />
+            </div>
+          ) : (
+            <div className="text-14 font-medium text-color-700">Chưa có hợp đồng vận hành</div>
+          )}
         </Drawer>
       </section>
     </PageWithBreadcrumb>

@@ -475,7 +475,7 @@ const ManageContractScreen = () => {
                 leftIcon="IC_SEARCH_OUTLINE2"
                 customContent="Tìm kiếm"
                 onClick={onApplyFilter}
-                classNames="min-w-[104px] mobile:w-full mobile:justify-center"
+                classNames="min-w-[140px] mobile:w-full mobile:justify-center"
               />
             </div>
           </div>

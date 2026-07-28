@@ -28,8 +28,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import { selectToken, selectUserInfo } from '@redux-selector/auth';
 import companyLegalDocumentServices from 'services/company-legal-document-services';
 import employeeServices from 'services/employee-services';
+import { getAuthUserId } from 'utils/auth';
 import { normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
 import {
@@ -107,8 +109,11 @@ export default function useCompanyLegalDocumentForm({
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
   const detailLoading = useSelector(selectCompanyLegalDocumentLoadingDetail);
+  const userInfo = useSelector(selectUserInfo);
+  const token = useSelector(selectToken);
   const [selectedDocument, setSelectedDocument] = useState<CompanyLegalDocument>();
   const [selectedFile, setSelectedFile] = useState<File>();
+  const [submitLocked, setSubmitLocked] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState<string>('');
   const [employeeOptionsLoading, setEmployeeOptionsLoading] = useState<boolean>(false);
   const [employeeLabelMap, setEmployeeLabelMap] = useState<Record<string, string>>({});
@@ -140,6 +145,7 @@ export default function useCompanyLegalDocumentForm({
 
   const draftedByValue = form.watch('draftedBy');
   const approvedByValue = form.watch('approvedBy');
+  const creatorId = useMemo(() => getAuthUserId(userInfo, token), [token, userInfo]);
 
   const onBack = useCallback(() => {
     router.push(ROUTES.COMPANY_LEGAL_DOCUMENTS);
@@ -411,13 +417,27 @@ export default function useCompanyLegalDocumentForm({
         return;
       }
 
+      const createBody: CreateCompanyLegalDocumentReq = {
+        ...body,
+        ...(creatorId ? { createdBy: creatorId } : {})
+      };
+
       dispatch({
         type: CREATE_COMPANY_LEGAL_DOCUMENT,
         payload: {
-          body,
+          body: createBody,
           onSuccess: (response: CompanyLegalDocumentRes) => {
             const savedId = response.data?.id;
             if (!savedId) {
+              if (selectedFile) {
+                setSubmitLocked(true);
+                showToast({
+                  type: TYPE_TOAST.ERROR,
+                  content:
+                    'Tạo văn bản thành công nhưng không tìm thấy ID để tải file. Vui lòng quay lại danh sách kiểm tra văn bản vừa tạo.'
+                });
+                return;
+              }
               onSubmitSuccess('Tạo văn bản thành công');
               return;
             }
@@ -436,7 +456,15 @@ export default function useCompanyLegalDocumentForm({
         }
       });
     },
-    [buildSubmitBody, isEditMode, onSubmitSuccess, selectedDocument, uploadAttachmentAfterSave]
+    [
+      buildSubmitBody,
+      creatorId,
+      isEditMode,
+      onSubmitSuccess,
+      selectedDocument,
+      selectedFile,
+      uploadAttachmentAfterSave
+    ]
   );
 
   const deleteAttachment = useCallback(() => {
@@ -563,6 +591,7 @@ export default function useCompanyLegalDocumentForm({
     detailLoading,
     selectedDocument,
     selectedFile,
+    submitLocked,
     employeeOptions,
     employeeSearch,
     employeeOptionsLoading,

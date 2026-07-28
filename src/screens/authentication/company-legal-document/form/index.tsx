@@ -40,6 +40,7 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
     detailLoading,
     selectedDocument,
     selectedFile,
+    submitLocked,
     employeeOptions,
     employeeSearch,
     employeeOptionsLoading,
@@ -352,7 +353,12 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
                   )}
                 </div>
               }
-              disabled={!isValid || detailLoading || (isEditMode && !isDirty && !selectedFile)}
+              disabled={
+                submitLocked ||
+                !isValid ||
+                detailLoading ||
+                (isEditMode && !isDirty && !selectedFile)
+              }
               onClick={handleSubmit(onSubmit)}
             />
           </div>

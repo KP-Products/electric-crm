@@ -6,7 +6,6 @@ import {
   K_SIZE_1,
   K_SIZE_100,
   K_SIZE_120,
-  K_SIZE_130,
   K_SIZE_150,
   K_SIZE_160,
   K_SIZE_16,
@@ -21,6 +20,7 @@ import {
 } from '@constant';
 import { Divider, Drawer, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
+import { AppDatePickerControl } from 'components/date-picker';
 import IconHover from 'components/icon-vec-local/icon-hover';
 import { AppSelectControl } from 'components/select';
 import AppTable from 'components/table';
@@ -31,9 +31,8 @@ import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { Customer } from 'model/customer';
-import type { ReactNode } from 'react';
 import { useCallback, useMemo } from 'react';
-import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
+import { FORMAT_DATE_API, displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
 import useManageCustomer, { CustomerFilter } from './useManageCustomer';
 
@@ -58,17 +57,8 @@ const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') 
   </div>
 );
 
-const renderDate = (date?: string | null) => (date ? displayDateFromServer(date) : NULL_VALUE);
-
 const renderDateTime = (date?: string | null) =>
   date ? displayDateTimeFromServer(date) : NULL_VALUE;
-
-const DetailItem = ({ label, value }: { label: string; value: ReactNode }) => (
-  <div className="min-w-0">
-    <div className="mb-4 text-12 font-semibold text-color-700">{label}</div>
-    <div className="break-words text-14 font-medium text-color-900">{value || NULL_VALUE}</div>
-  </div>
-);
 
 const ManageCustomerScreen = () => {
   const { isMobile, isTablet } = useResponsive();
@@ -78,18 +68,11 @@ const ManageCustomerScreen = () => {
     total,
     listLoading,
     detailLoading,
-    detailLoadFailed,
-    detailContracts,
-    detailContractsLoading,
-    detailContractsLoadFailed,
     currentPage,
     pagination,
     filter,
     filterApplied,
     openForm,
-    openDetail,
-    selectedCustomer,
-    selectedDetail,
     operationUnitLoading,
     operationUnitOptions,
     form,
@@ -101,18 +84,14 @@ const ManageCustomerScreen = () => {
     onCloseForm,
     handleSubmit,
     onOpenDetail,
-    onCloseDetail,
     onDelete
   } = useManageCustomer();
 
   const {
     control,
     handleSubmit: handleFormSubmit,
-    formState: { isValid, isDirty }
+    formState: { isValid }
   } = form;
-
-  const detailCustomer = selectedDetail?.customer;
-  const detailOperationUnit = selectedDetail?.operationUnit;
 
   const activeFilters = useMemo(
     () =>
@@ -256,47 +235,6 @@ const ManageCustomerScreen = () => {
       }
     ],
     [currentPage, getOperationUnitLabel, onDelete, onOpenDetail, onOpenUpdate, t]
-  );
-
-  const contractColumns = useMemo<any[]>(
-    () => [
-      {
-        title: 'Số hợp đồng',
-        dataIndex: 'contractNumber',
-        key: 'contractNumber',
-        width: K_SIZE_180,
-        render: (text: string) => displayText(text)
-      },
-      {
-        title: 'Ngày ký',
-        dataIndex: 'signedDate',
-        key: 'signedDate',
-        width: K_SIZE_130,
-        render: (date: string) => renderDate(date)
-      },
-      {
-        title: 'Ngày hiệu lực',
-        dataIndex: 'effectiveDate',
-        key: 'effectiveDate',
-        width: K_SIZE_130,
-        render: (date: string) => renderDate(date)
-      },
-      {
-        title: 'Ngày hết hạn',
-        dataIndex: 'expiryDate',
-        key: 'expiryDate',
-        width: K_SIZE_130,
-        render: (date: string) => renderDate(date)
-      },
-      {
-        title: 'Trạng thái',
-        dataIndex: 'status',
-        key: 'status',
-        width: K_SIZE_130,
-        render: (text: string) => displayText(text)
-      }
-    ],
-    []
   );
 
   const breadcrumbList = [
@@ -444,7 +382,7 @@ const ManageCustomerScreen = () => {
             open={openForm}
             title={
               <Flex justify="space-between" align="center">
-                <div>{selectedCustomer ? 'Cập nhật khách hàng' : 'Thêm mới khách hàng'}</div>
+                <div>Thêm mới khách hàng</div>
                 <IconHover
                   title={t('common:close')}
                   icon="IC_CLOSE_OUTLINE"
@@ -472,7 +410,7 @@ const ManageCustomerScreen = () => {
                   type="primary"
                   form="customer-form"
                   htmlType="submit"
-                  disabled={!isValid || Boolean(selectedCustomer && !isDirty) || detailLoading}
+                  disabled={!isValid || detailLoading}
                   customContent={
                     <div className="flex flex-row items-center justify-center">
                       <div>Lưu</div>
@@ -496,7 +434,6 @@ const ManageCustomerScreen = () => {
                   labelSuffix={REQUIRED_MARK}
                   labelSuffixClassName="text-error-600"
                   placeholder="Nhập mã khách hàng"
-                  disabled={Boolean(selectedCustomer)}
                 />
                 <AppTextFieldControl
                   name="fullName"
@@ -534,11 +471,13 @@ const ManageCustomerScreen = () => {
                   placeholder="Nhập CMND/CCCD"
                   control={control}
                 />
-                <AppTextFieldControl
+                <AppDatePickerControl
                   name="contactIssueDate"
-                  label="Ngày cấp CMND/CCCD"
-                  placeholder="dd-mm-yyyy"
                   control={control}
+                  backendFormat={FORMAT_DATE_API}
+                  label="Ngày cấp CMND/CCCD"
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
                 />
               </div>
 
@@ -560,119 +499,6 @@ const ManageCustomerScreen = () => {
             </div>
           </Drawer>
         </form>
-
-        <Drawer
-          open={openDetail}
-          title={
-            <Flex justify="space-between" align="center">
-              <div className={'flex flex-1 items-center '}>
-                <TextBase>Chi tiết khách hàng</TextBase>
-                {detailCustomer ? (
-                  <IconHover
-                    rootClassName="text-color-800 ml-4"
-                    title={t('common:edit')}
-                    icon="ICON_EDIT"
-                    iconHeight={K_SIZE_18}
-                    onClick={() => {
-                      onCloseDetail();
-                      onOpenUpdate(detailCustomer);
-                    }}
-                  />
-                ) : undefined}
-              </div>
-              <IconHover
-                title={t('common:close')}
-                icon="IC_CLOSE_OUTLINE"
-                onClick={onCloseDetail}
-              />
-            </Flex>
-          }
-          destroyOnClose
-          placement="right"
-          closable={false}
-          onClose={onCloseDetail}
-          width={isTablet || isMobile ? '92vw' : '34vw'}
-        >
-          <Spin spinning={detailLoading}>
-            <div className="grid gap-20">
-              {detailLoadFailed && (
-                <div className="rounded-radius-m border border-error-200 bg-error-50 p-12 text-14 font-medium text-error-600">
-                  Không tải được chi tiết khách hàng. Thông tin đang hiển thị chỉ lấy từ danh sách.
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-16 mobile:grid-cols-1">
-                <DetailItem
-                  label="Mã khách hàng"
-                  value={displayText(detailCustomer?.customerCode)}
-                />
-                <DetailItem label="Tên khách hàng" value={displayText(detailCustomer?.fullName)} />
-                <DetailItem label="Mã số thuế" value={displayText(detailCustomer?.taxNo)} />
-                <DetailItem label="Số điện thoại" value={displayText(detailCustomer?.phone)} />
-                <DetailItem label="Email" value={displayText(detailCustomer?.email)} />
-                <DetailItem
-                  label="Người liên hệ"
-                  value={displayText(detailCustomer?.contactName)}
-                />
-                <DetailItem
-                  label="CMND/CCCD người liên hệ"
-                  value={displayText(detailCustomer?.contactIdNo)}
-                />
-                <DetailItem
-                  label="Ngày cấp CMND/CCCD"
-                  value={renderDate(detailCustomer?.contactIssueDate)}
-                />
-                <DetailItem label="Địa chỉ" value={displayText(detailCustomer?.address)} />
-                <DetailItem
-                  label="Đơn vị vận hành"
-                  value={
-                    detailOperationUnit
-                      ? [detailOperationUnit.unitCode, detailOperationUnit.unitName]
-                          .filter(Boolean)
-                          .join(' - ')
-                      : getOperationUnitLabel(detailCustomer?.operationUnitId)
-                  }
-                />
-                <DetailItem label="Ngày tạo" value={renderDateTime(detailCustomer?.createdAt)} />
-                <DetailItem
-                  label="Ngày cập nhật"
-                  value={renderDateTime(detailCustomer?.updatedAt)}
-                />
-              </div>
-
-              <div>
-                <TextBase classNames="sub-title3 mb-8" text="Hợp đồng đã ký" />
-                {detailContractsLoadFailed ? (
-                  <div className="text-14 font-medium text-color-700">
-                    Không tải được danh sách hợp đồng đã ký
-                  </div>
-                ) : detailContractsLoading ? (
-                  <div className="rounded-radius-m border border-color-300 p-16 text-center">
-                    <Spin size="small" />
-                  </div>
-                ) : detailContracts.length > K_SIZE_0 ? (
-                  <Spin spinning={detailContractsLoading}>
-                    <div className="overflow-hidden rounded-radius-l border border-color-300">
-                      <AppTable
-                        rootClassName="w-full"
-                        className="[&_.ant-pagination]:hidden"
-                        scroll={{ x: 'max-content' }}
-                        dataSource={detailContracts}
-                        columns={contractColumns}
-                        rowKey={(record: any, index?: number) =>
-                          String(record.id || record.contractNumber || index)
-                        }
-                        pagination={false}
-                      />
-                    </div>
-                  </Spin>
-                ) : (
-                  <div className="text-14 font-medium text-color-700">Chưa có hợp đồng đã ký</div>
-                )}
-              </div>
-            </div>
-          </Spin>
-        </Drawer>
       </section>
     </PageWithBreadcrumb>
   );

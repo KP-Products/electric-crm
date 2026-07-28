@@ -41,6 +41,7 @@ export interface CreateCompanyLegalDocumentReq {
   approvedBy?: number;
   status?: string;
   note?: string;
+  createdBy?: string | number;
 }
 
 export interface UpdateCompanyLegalDocumentReq extends Partial<CreateCompanyLegalDocumentReq> {

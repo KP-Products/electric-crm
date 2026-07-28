@@ -31,6 +31,8 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
     meterOptions,
     selectedMeterId,
     selectedMeterMultiplier,
+    selectedMeterVoltageLevel,
+    selectedMeterInitialReading,
     onOpenCustomerDropdown,
     customerDropdownRender,
     onOpenMeterDropdown,
@@ -143,13 +145,29 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
                   disabled={isCopiedFieldDisabled}
                 />
                 {selectedMeterId && (
-                  <AppTextField
-                    name="meterMultiplier"
-                    label="Hệ số nhân"
-                    placeholder="-"
-                    value={selectedMeterMultiplier}
-                    disabled
-                  />
+                  <>
+                    <AppTextField
+                      name="meterVoltageLevel"
+                      label="Cấp điện áp"
+                      placeholder="-"
+                      value={selectedMeterVoltageLevel}
+                      disabled
+                    />
+                    <AppTextField
+                      name="meterInitialReading"
+                      label="Chỉ số đầu"
+                      placeholder="-"
+                      value={selectedMeterInitialReading}
+                      disabled
+                    />
+                    <AppTextField
+                      name="meterMultiplier"
+                      label="Hệ số nhân"
+                      placeholder="-"
+                      value={selectedMeterMultiplier}
+                      disabled
+                    />
+                  </>
                 )}
                 <AppSelectControl
                   name="status"

@@ -51,12 +51,8 @@ export default function useManageOperationContracts() {
   const [exportLoading, setExportLoading] = useState<boolean>(false);
 
   const pinnedOperationUnitIds = useMemo(
-    () => [
-      filter.operationUnitId,
-      filterApplied.operationUnitId,
-      ...operationContractList.map((contract) => contract.operationUnitId)
-    ],
-    [filter.operationUnitId, filterApplied.operationUnitId, operationContractList]
+    () => [filter.operationUnitId, filterApplied.operationUnitId],
+    [filter.operationUnitId, filterApplied.operationUnitId]
   );
 
   const {

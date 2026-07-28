@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import { getVoltageLevelLabel } from 'screens/authentication/meter-management/utils/constant';
 import { z } from 'zod';
 import {
   buildContractFormValues,
@@ -111,6 +112,17 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
     () =>
       selectedMeter?.multiplier !== undefined && selectedMeter.multiplier !== null
         ? String(selectedMeter.multiplier)
+        : '',
+    [selectedMeter]
+  );
+  const selectedMeterVoltageLevel = useMemo(
+    () => (selectedMeter?.voltageLevel ? getVoltageLevelLabel(selectedMeter.voltageLevel) : ''),
+    [selectedMeter?.voltageLevel]
+  );
+  const selectedMeterInitialReading = useMemo(
+    () =>
+      selectedMeter?.initialReading !== undefined && selectedMeter.initialReading !== null
+        ? String(selectedMeter.initialReading)
         : '',
     [selectedMeter]
   );
@@ -244,6 +256,8 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
     detailLoading,
     selectedMeterId,
     selectedMeterMultiplier,
+    selectedMeterVoltageLevel,
+    selectedMeterInitialReading,
     customerOptions,
     meterOptions,
     onOpenCustomerDropdown,

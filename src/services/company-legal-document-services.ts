@@ -77,6 +77,7 @@ async function uploadCompanyLegalDocumentAttachment(
 ): Promise<ApiResponse<CompanyLegalDocumentRes>> {
   try {
     const formData = new FormData();
+    formData.append('id', String(params.id));
     formData.append('file', params.file);
     const rs = await appServices.post(
       `${ApiConstants.COMPANY_LEGAL_DOCUMENT_ATTACHMENT}/${params.id}/attachment/upload`,

@@ -17,16 +17,20 @@ import { TYPE_TOAST } from 'components/toast/type';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import employeeServices from 'services/employee-services';
+import { canViewBlobInline, getBlobResponseError, isBlobFileResponse } from 'utils/blob-response';
 import { getUploadFileSizeError, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useManageEmployeeForm from '../hooks/useManageEmployeeForm';
 import {
   EMPLOYEE_GENDER_OPTIONS,
   EMPLOYMENT_STATUS_OPTIONS,
   EMPLOYMENT_TYPE_OPTIONS,
+  INLINE_AVATAR_MIME_TYPES,
   MAX_AVATAR_FILE_SIZE,
   MAX_CONTRACT_FILE_SIZE,
   getContractFileName,
-  getEmployeeInitials
+  getEmployeeInitials,
+  isAcceptedAvatarFile
 } from '../utils';
 
 const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
@@ -63,15 +67,48 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
   } = form;
 
   useEffect(() => {
-    if (!selectedAvatar) {
-      setAvatarPreviewUrl(selectedEmployee?.avatarUrl || '');
+    let objectUrl = '';
+    let disposed = false;
+
+    if (selectedAvatar) {
+      objectUrl = URL.createObjectURL(selectedAvatar);
+      setAvatarPreviewUrl(objectUrl);
+      return () => {
+        disposed = true;
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      };
+    }
+
+    setAvatarPreviewUrl('');
+
+    if (!selectedEmployee?.id || !selectedEmployee.avatarUrl) {
       return;
     }
 
-    const previewUrl = URL.createObjectURL(selectedAvatar);
-    setAvatarPreviewUrl(previewUrl);
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [selectedAvatar, selectedEmployee?.avatarUrl]);
+    employeeServices.viewEmployeeAvatar(selectedEmployee.id).then(async (response) => {
+      const fileError = await getBlobResponseError(response);
+      if (
+        fileError ||
+        !isBlobFileResponse(response) ||
+        !canViewBlobInline(response, INLINE_AVATAR_MIME_TYPES)
+      ) {
+        return;
+      }
+
+      objectUrl = URL.createObjectURL(response.blob);
+      if (disposed) {
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
+
+      setAvatarPreviewUrl(objectUrl);
+    });
+
+    return () => {
+      disposed = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedAvatar, selectedEmployee?.avatarUrl, selectedEmployee?.id]);
 
   const contractFileList = useMemo<UploadFile[]>(() => {
     if (!selectedContractFile) return [];
@@ -160,7 +197,7 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                 <AppSelectControl
                   name="gender"
                   label="Giới tính"
-                  placeholder="-- Chọn giới tính --"
+                  placeholder="Chọn giới tính"
                   options={genderOptions}
                   control={control}
                 />
@@ -306,14 +343,14 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                     name="employmentStatus"
                     label="Trạng thái"
                     options={statusOptions}
-                    placeholder="-- Chọn trạng thái --"
+                    placeholder="Chọn trạng thái"
                     control={control}
                   />
                   <AppSelectControl
                     name="employmentType"
                     label="Loại nhân sự"
                     options={typeOptions}
-                    placeholder="-- Chọn loại nhân sự --"
+                    placeholder="Chọn loại nhân sự"
                     control={control}
                   />
                   <AppTextFieldControl
@@ -351,6 +388,14 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                       <Upload
                         showUploadList={false}
                         beforeUpload={(file) => {
+                          if (!isAcceptedAvatarFile(file)) {
+                            showToast({
+                              type: TYPE_TOAST.ERROR,
+                              content: 'Ảnh đại diện chỉ hỗ trợ JPG, PNG'
+                            });
+                            return Upload.LIST_IGNORE;
+                          }
+
                           if (file.size > MAX_AVATAR_FILE_SIZE) {
                             showToast({
                               type: TYPE_TOAST.ERROR,
