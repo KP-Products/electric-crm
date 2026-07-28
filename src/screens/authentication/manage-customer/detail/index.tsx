@@ -14,6 +14,7 @@ import {
 import { Divider, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
 import { IconSvgLocal } from 'components/icon-vec-local';
+import Status, { KIND_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import { TextBase } from 'components/text';
 import { showToast } from 'components/toast';
@@ -28,6 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import contractServices from 'services/contract-services';
 import customerServices from 'services/customer-services';
 import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
+import { getContractStatusMeta } from '../../manage-contract/utils';
 
 const SUCCESS_MESSAGES = ['success', 'ok'];
 const SUCCESS_CODE_STATUSES = [
@@ -252,7 +254,10 @@ const ManageCustomerDetailScreen = () => {
         dataIndex: 'status',
         key: 'status',
         width: K_SIZE_130,
-        render: (text: string) => displayText(text)
+        render: (status: string) => {
+          const meta = getContractStatusMeta(status);
+          return <Status type={meta.type} kind={KIND_STATUS.PRIMARY} content={meta.label} />;
+        }
       }
     ],
     []

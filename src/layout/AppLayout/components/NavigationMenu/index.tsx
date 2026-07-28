@@ -260,6 +260,13 @@ const NavigationMenu = () => {
             icon: <CloudSyncOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.ELECTRICITY_NOTICE_CSPK,
+            label: 'Quản lý giấy báo tiền điện CSPK',
+            icon: <FileTextOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
         ]
       }
