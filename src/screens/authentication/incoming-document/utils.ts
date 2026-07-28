@@ -3,9 +3,23 @@ import { type AppSelectOption } from 'components/select';
 import { ErrorBase } from 'model/common';
 import { IncomingDocumentAttachmentFile } from 'services/incoming-document-services';
 import { FORMAT_DATE_API } from 'utils/date';
+import {
+  DOCUMENT_TYPE as INCOMING_DOCUMENT_TYPE,
+  DOCUMENT_TYPE_FILTER_OPTIONS as INCOMING_DOCUMENT_TYPE_FILTER_OPTIONS,
+  DOCUMENT_TYPE_OPTIONS as INCOMING_DOCUMENT_TYPE_OPTIONS,
+  getDocumentTypeLabel as getIncomingDocumentTypeLabel,
+  normalizeDocumentType as normalizeIncomingDocumentType
+} from 'utils/document-type';
 import { MAX_UPLOAD_FILE_SIZE } from 'utils/upload';
 
 export const DATE_API_FORMAT = FORMAT_DATE_API;
+export {
+  INCOMING_DOCUMENT_TYPE,
+  INCOMING_DOCUMENT_TYPE_FILTER_OPTIONS,
+  INCOMING_DOCUMENT_TYPE_OPTIONS,
+  getIncomingDocumentTypeLabel,
+  normalizeIncomingDocumentType
+};
 export const ACCEPTED_ATTACHMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'png'];
 export const MAX_ATTACHMENT_FILE_SIZE = MAX_UPLOAD_FILE_SIZE;
 export const ACCEPTED_ATTACHMENT_TEXT = ACCEPTED_ATTACHMENT_EXTENSIONS.map((extension) =>

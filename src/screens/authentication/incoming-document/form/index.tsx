@@ -20,6 +20,7 @@ import { getUploadFileSizeError, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload'
 import useIncomingDocumentForm from '../hooks/useIncomingDocumentForm';
 import {
   CONFIDENTIALITY_LEVEL_OPTIONS,
+  INCOMING_DOCUMENT_TYPE_OPTIONS,
   MAX_ATTACHMENT_FILE_SIZE,
   URGENCY_LEVEL_OPTIONS
 } from '../utils';
@@ -47,6 +48,9 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
     setSelectedFile,
     submitLocked,
     createdByDisplay,
+    approverOptions,
+    onOpenApproverDropdown,
+    renderApproverDropdown,
     onBack,
     onSubmit,
     onDeleteAttachment,
@@ -157,10 +161,11 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
                   placeholder="Nhập cơ quan ban hành"
                   control={control}
                 />
-                <AppTextFieldControl
+                <AppSelectControl
                   name="documentType"
                   label="Loại văn bản"
-                  placeholder="Nhập loại văn bản"
+                  placeholder="Chọn loại văn bản"
+                  options={INCOMING_DOCUMENT_TYPE_OPTIONS}
                   control={control}
                 />
                 <div className="col-span-2 mobile:col-span-1">
@@ -177,14 +182,14 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
                   name="urgencyLevel"
                   label="Độ khẩn"
                   options={urgencyLevelOptions}
-                  placeholder="-- Chọn độ khẩn --"
+                  placeholder="Chọn độ khẩn"
                   control={control}
                 />
                 <AppSelectControl
                   name="confidentialityLevel"
                   label="Độ mật"
                   options={confidentialityLevelOptions}
-                  placeholder="-- Chọn độ mật --"
+                  placeholder="Chọn độ mật"
                   control={control}
                 />
                 <AppTextFieldControl
@@ -335,12 +340,18 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
                     value={createdAtDisplay}
                     disabled
                   />
-                  <AppTextFieldControl
+                  <AppSelectControl
                     name="approvedBy"
-                    label="Người duyệt (ID)"
-                    placeholder="Nhập ID người duyệt"
+                    label="Người duyệt"
+                    placeholder="Chọn người duyệt"
+                    options={approverOptions}
+                    dropdownRender={renderApproverDropdown}
+                    onOpenChange={(open) => {
+                      if (open) onOpenApproverDropdown();
+                    }}
+                    suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
+                    unSeleted
                     control={control}
-                    inputMode="numeric"
                   />
                   <AppDatePickerControl
                     name="approvalDate"

@@ -1,4 +1,4 @@
-import { K_SIZE_1 } from '@constant';
+import { CONSTANTS, DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CREATE_INCOMING_DOCUMENT,
@@ -8,14 +8,18 @@ import {
   UPLOAD_INCOMING_DOCUMENT_ATTACHMENT
 } from '@redux-action-type/incoming-document';
 import { dispatch } from '@redux-common';
-import { selectUserInfo } from '@redux-selector/auth';
+import { selectToken, selectUserInfo } from '@redux-selector/auth';
 import { selectIncomingDocumentLoadingDetail } from '@redux-selector/incoming-document';
+import CustomDropSearchMore from 'components/select/CustomDropSearchMore';
+import { AppSelectOption } from 'components/select';
 import { showDialog } from 'components/dialog';
 import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
+import { debounce } from 'lodash';
 import { ErrorBase } from 'model/common';
+import { Employee } from 'model/employee';
 import {
   CreateIncomingDocumentReq,
   IncomingDocument,
@@ -23,19 +27,26 @@ import {
   UpdateIncomingDocumentReq
 } from 'model/incoming-document';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import employeeServices from 'services/employee-services';
 import incomingDocumentServices from 'services/incoming-document-services';
+import { getAuthUserId } from 'utils/auth';
 import { normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
+import {
+  buildEmployeeSelectOptions,
+  getEmployeeSelectLabel
+} from 'screens/authentication/manage-employee/utils';
 import {
   canViewAttachmentInline,
   DATE_API_FORMAT,
   getAttachmentFileName,
   getAttachmentResponseError,
   getErrorContent,
-  isAttachmentFileResponse
+  isAttachmentFileResponse,
+  normalizeIncomingDocumentType
 } from '../utils';
 
 const optionalDateSchema = z
@@ -101,9 +112,15 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
   const id = searchParams.get('id');
   const detailLoading = useSelector(selectIncomingDocumentLoadingDetail);
   const userInfo = useSelector(selectUserInfo);
+  const token = useSelector(selectToken);
   const [selectedDocument, setSelectedDocument] = useState<IncomingDocument>();
   const [selectedFile, setSelectedFile] = useState<File>();
   const [submitLocked, setSubmitLocked] = useState(false);
+  const [searchedApproverOptions, setSearchedApproverOptions] = useState<AppSelectOption[]>([]);
+  const [approverLabelMap, setApproverLabelMap] = useState<Record<string, string>>({});
+  const [approverOptionsLoading, setApproverOptionsLoading] = useState<boolean>(false);
+  const [approverSearch, setApproverSearch] = useState<string>('');
+  const approverSearchRequestRef = useRef<number>(0);
 
   const defaultFormValues: IncomingDocumentForm = useMemo(
     () => ({
@@ -114,8 +131,8 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
       issuingAgency: '',
       documentType: '',
       summary: '',
-      urgencyLevel: 'NORMAL',
-      confidentialityLevel: 'NORMAL',
+      urgencyLevel: '',
+      confidentialityLevel: '',
       pageCount: '',
       dueDate: '',
       approvedBy: '',
@@ -132,9 +149,148 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
     resolver: zodResolver(incomingDocumentSchema)
   });
 
+  const creatorId = useMemo(() => getAuthUserId(userInfo, token), [token, userInfo]);
+
+  const approvedByValue = form.watch('approvedBy');
+
   const onBack = useCallback(() => {
     router.push(ROUTES.INCOMING_DOCUMENTS);
   }, [router]);
+
+  const upsertApproverLabels = useCallback((employees: Employee[]) => {
+    setApproverLabelMap((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      employees.forEach((employee) => {
+        if (employee.id === undefined || employee.id === null) return;
+
+        const key = String(employee.id);
+        const label = getEmployeeSelectLabel(employee);
+        if (next[key] === label) return;
+
+        next[key] = label;
+        changed = true;
+      });
+
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const approverOptions = useMemo<AppSelectOption[]>(() => {
+    const optionMap = new Map<string, AppSelectOption>();
+
+    searchedApproverOptions.forEach((option) => {
+      optionMap.set(String(option.value), option);
+    });
+
+    if (approvedByValue) {
+      const key = String(approvedByValue);
+      optionMap.set(key, { value: key, label: approverLabelMap[key] || key });
+    }
+
+    return Array.from(optionMap.values());
+  }, [approvedByValue, approverLabelMap, searchedApproverOptions]);
+
+  const fetchApproverLabel = useCallback(
+    async (employeeId: number) => {
+      const response = await employeeServices.getEmployeeDetail({ id: employeeId });
+      const employee = response?.data?.employee;
+      if (employee) upsertApproverLabels([employee]);
+    },
+    [upsertApproverLabels]
+  );
+
+  const fetchApproverOptions = useCallback(
+    async (keyword = '') => {
+      const requestNo = approverSearchRequestRef.current + K_SIZE_1;
+      approverSearchRequestRef.current = requestNo;
+      setApproverOptionsLoading(true);
+
+      const normalizedKeyword = keyword.trim();
+      const response = await employeeServices.searchEmployees({
+        page: K_SIZE_0,
+        size: DEFAULT_PAGE_SIZE,
+        ...(normalizedKeyword ? { fullName: normalizedKeyword } : {})
+      });
+
+      if (approverSearchRequestRef.current !== requestNo) return;
+      setApproverOptionsLoading(false);
+
+      if (!response || !response.data) {
+        setSearchedApproverOptions([]);
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getErrorContent(response, 'Tải danh sách người duyệt thất bại')
+        });
+        return;
+      }
+
+      const employees = Array.isArray(response.data.items) ? response.data.items : [];
+      upsertApproverLabels(employees);
+      setSearchedApproverOptions(buildEmployeeSelectOptions(employees));
+    },
+    [upsertApproverLabels]
+  );
+
+  const debouncedFetchApproverOptions = useMemo(
+    () => debounce(fetchApproverOptions, CONSTANTS.TIME_DEBOUNCE),
+    [fetchApproverOptions]
+  );
+
+  useEffect(
+    () => () => {
+      debouncedFetchApproverOptions.cancel();
+    },
+    [debouncedFetchApproverOptions]
+  );
+
+  useEffect(() => {
+    fetchApproverOptions();
+  }, [fetchApproverOptions]);
+
+  useEffect(() => {
+    const employeeId = Number(approvedByValue);
+    if (!approvedByValue || Number.isNaN(employeeId) || approverLabelMap[String(approvedByValue)]) {
+      return;
+    }
+
+    void fetchApproverLabel(employeeId);
+  }, [approvedByValue, approverLabelMap, fetchApproverLabel]);
+
+  const onSearchApproverOptions = useCallback(
+    (keyword: string) => {
+      setApproverSearch(keyword);
+      debouncedFetchApproverOptions(keyword);
+    },
+    [debouncedFetchApproverOptions]
+  );
+
+  const onOpenApproverDropdown = useCallback(() => {
+    if (!searchedApproverOptions.length && !approverOptionsLoading) {
+      fetchApproverOptions(approverSearch);
+    }
+  }, [
+    approverOptionsLoading,
+    approverSearch,
+    fetchApproverOptions,
+    searchedApproverOptions.length
+  ]);
+
+  const renderApproverDropdown = useCallback(
+    (menuInstance: ReactNode) => (
+      <CustomDropSearchMore
+        menuInstance={menuInstance}
+        searchValue={approverSearch}
+        onChangeSearch={onSearchApproverOptions}
+        onMore={() => {}}
+        totalList={approverOptions.length}
+        total={approverOptions.length}
+        loading={approverOptionsLoading}
+      />
+    ),
+    [approverOptions.length, approverOptionsLoading, approverSearch, onSearchApproverOptions]
+  );
 
   const fillForm = useCallback(
     (document: IncomingDocument) => {
@@ -144,7 +300,7 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
         documentNumber: document.documentNumber || '',
         documentDate: toDatePickerValue(document.documentDate),
         issuingAgency: document.issuingAgency || '',
-        documentType: document.documentType || '',
+        documentType: normalizeIncomingDocumentType(document.documentType),
         summary: document.summary || '',
         urgencyLevel: document.urgencyLevel || '',
         confidentialityLevel: document.confidentialityLevel || '',
@@ -202,7 +358,7 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
       documentNumber: optionalString(data.documentNumber),
       documentDate: normalizeDateToApi(data.documentDate),
       issuingAgency: data.issuingAgency.trim(),
-      documentType: optionalString(data.documentType),
+      documentType: optionalString(normalizeIncomingDocumentType(data.documentType)),
       summary: data.summary.trim(),
       urgencyLevel: optionalString(data.urgencyLevel),
       confidentialityLevel: optionalString(data.confidentialityLevel),
@@ -295,10 +451,15 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
         return;
       }
 
+      const createBody: CreateIncomingDocumentReq = {
+        ...body,
+        ...(creatorId ? { createdBy: creatorId } : {})
+      };
+
       dispatch({
         type: CREATE_INCOMING_DOCUMENT,
         payload: {
-          body,
+          body: createBody,
           onSuccess: (response: IncomingDocumentRes) => {
             const savedId = response.data?.id;
             if (!savedId) {
@@ -331,6 +492,7 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
     },
     [
       buildSubmitBody,
+      creatorId,
       isEditMode,
       onSubmitSuccess,
       selectedDocument,
@@ -475,6 +637,10 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
     setSelectedFile,
     submitLocked,
     createdByDisplay,
+    approverOptions,
+    approverOptionsLoading,
+    onOpenApproverDropdown,
+    renderApproverDropdown,
     onBack,
     onSubmit,
     onDeleteAttachment,

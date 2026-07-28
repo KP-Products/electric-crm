@@ -77,6 +77,7 @@ async function uploadIncomingDocumentAttachment(
 ): Promise<ApiResponse<IncomingDocumentRes>> {
   try {
     const formData = new FormData();
+    formData.append('id', String(params.id));
     formData.append('file', params.file);
     const rs = await appServices.post(
       `${ApiConstants.INCOMING_DOCUMENT_ATTACHMENT}/${params.id}/attachment/upload`,

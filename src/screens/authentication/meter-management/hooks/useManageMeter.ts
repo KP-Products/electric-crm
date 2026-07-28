@@ -12,23 +12,70 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import meterServices from 'services/meter-services';
 import { DebugUtils } from 'utils/debug-utils';
-import { FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
+import { FORMAT_DATE_API, FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import useCustomerLookup from '../../manage-contract/hooks/useCustomerLookup';
 import { escapeHtml as escapeExcelHtml } from '../../manage-contract/utils';
-import { getMeterStatusLabel, getVoltageLevelLabel, getVoltageTypeLabel } from '../utils/constant';
+import {
+  METER_STATUS,
+  METER_TYPE,
+  getMeterStatusLabel,
+  getVoltageLevelLabel,
+  getVoltageTypeLabel,
+  normalizeMeterStatus,
+  normalizeMeterType
+} from '../utils/constant';
 
 export interface MeterFilterForm {
   meterCodeContains: string;
   customerId: string;
+  meterType: string;
   status: string;
+  voltageLevel: string;
   voltageType: string;
+  installationDateFrom: string;
+  installationDateTo: string;
+}
+
+export interface MeterStats {
+  total: number;
+  feeder: number;
+  installed: number;
+  notInstalled: number;
+  active: number;
+  activeRate: number;
 }
 
 const formatDate = (value?: string) => {
   if (!value) return '-';
   const date = moment(value);
   return date.isValid() ? date.format('DD/MM/YYYY') : '-';
+};
+
+const hasClientOnlyFilters = (filter: MeterFilterForm) =>
+  Boolean(filter.voltageLevel || filter.installationDateFrom || filter.installationDateTo);
+
+const parseMeterDate = (value?: string) => {
+  if (!value) return undefined;
+  const parsedDate = moment(value, [FORMAT_DATE_API, 'YYYY-MM-DD', 'DD/MM/YYYY'], true);
+  if (parsedDate.isValid()) return parsedDate;
+  const fallbackDate = moment(value);
+  return fallbackDate.isValid() ? fallbackDate : undefined;
+};
+
+const applyClientOnlyFilters = (meters: Meter[], filter: MeterFilterForm) => {
+  const fromDate = parseMeterDate(filter.installationDateFrom)?.startOf('day');
+  const toDate = parseMeterDate(filter.installationDateTo)?.endOf('day');
+
+  return meters.filter((meter) => {
+    if (filter.voltageLevel && meter.voltageLevel !== filter.voltageLevel) return false;
+
+    const installationDate = parseMeterDate(meter.installationDate);
+    if (fromDate && (!installationDate || installationDate.isBefore(fromDate))) return false;
+    if (toDate && (!installationDate || installationDate.isAfter(toDate))) return false;
+
+    return true;
+  });
 };
 
 const getMeterDisplayValue = (meter: Meter, key: string) => {
@@ -41,6 +88,8 @@ const getMeterDisplayValue = (meter: Meter, key: string) => {
       return getVoltageTypeLabel(meter.voltageType);
     case 'voltageLevel':
       return getVoltageLevelLabel(meter.voltageLevel);
+    case 'meterType':
+      return normalizeMeterType(meter.meterType) === METER_TYPE.FEEDER ? 'Lộ tổng' : 'Khách hàng';
     case 'customerId':
       return meter.customerName || meter.customerId || '-';
     case 'multiplier':
@@ -57,6 +106,7 @@ export default function useManageMeter() {
   const router = useRouter();
   const loadingMeterList = useSelector(selectMeterLoadingList);
   const [meterList, setMeterList] = useState<Meter[]>([]);
+  const [summaryMeterList, setSummaryMeterList] = useState<Meter[]>([]);
   const [total, setTotal] = useState<number>(K_SIZE_0);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
 
@@ -64,8 +114,12 @@ export default function useManageMeter() {
     () => ({
       meterCodeContains: '',
       customerId: '',
+      meterType: '',
       status: '',
-      voltageType: ''
+      voltageLevel: '',
+      voltageType: '',
+      installationDateFrom: '',
+      installationDateTo: ''
     }),
     []
   );
@@ -101,6 +155,7 @@ export default function useManageMeter() {
         size,
         meterCodeContains: normalize(filter.meterCodeContains),
         customerId: normalize(filter.customerId),
+        meterType: normalize(filter.meterType),
         voltageType: normalize(filter.voltageType),
         status: normalize(filter.status)
       };
@@ -110,15 +165,29 @@ export default function useManageMeter() {
 
   const fetchMeterList = useCallback(
     (page: number) => {
+      const shouldClientFilter = hasClientOnlyFilters(filterApplied);
       dispatch({
         type: GET_METER_SEARCH_LIST,
         payload: {
-          body: buildSearchBody(filterApplied, page),
+          body: buildSearchBody(
+            filterApplied,
+            shouldClientFilter ? K_SIZE_1 : page,
+            shouldClientFilter ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE
+          ),
           onSuccess: (res: GetListMeterRes) => {
+            const responseRows = (res?.data?.items || [])
+              .map(normalizeMeterSearchItem)
+              .filter(Boolean) as Meter[];
+            const filteredRows = shouldClientFilter
+              ? applyClientOnlyFilters(responseRows, filterApplied)
+              : responseRows;
+            const pageStart = (page - K_SIZE_1) * DEFAULT_PAGE_SIZE;
+            const pageEnd = pageStart + DEFAULT_PAGE_SIZE;
+
             setMeterList(
-              (res?.data?.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[]
+              shouldClientFilter ? filteredRows.slice(pageStart, pageEnd) : filteredRows
             );
-            setTotal(res?.data?.total || K_SIZE_0);
+            setTotal(shouldClientFilter ? filteredRows.length : res?.data?.total || K_SIZE_0);
             DebugUtils.logS(['METER LIST data', res]);
           },
           onFailed: (error?: ErrorBase) => {
@@ -142,6 +211,51 @@ export default function useManageMeter() {
   useEffect(() => {
     fetchMeterList(currentPage);
   }, [currentPage, fetchMeterList]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    meterServices
+      .getMeterSearchList({
+        ...buildSearchBody(filterApplied, K_SIZE_1, MAX_PAGE_SIZE)
+      })
+      .then((response) => {
+        if (disposed) return;
+
+        setSummaryMeterList(
+          applyClientOnlyFilters(
+            (response?.data?.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[],
+            filterApplied
+          )
+        );
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [buildSearchBody, filterApplied]);
+
+  const meterStats = useMemo<MeterStats>(() => {
+    const summaryRows = summaryMeterList.length ? summaryMeterList : meterList;
+    const totalCount = total || summaryRows.length;
+    const activeCount = summaryRows.filter(
+      (meter) => normalizeMeterStatus(meter.status) === METER_STATUS.ACTIVE
+    ).length;
+    const feederCount = summaryRows.filter(
+      (meter) => normalizeMeterType(meter.meterType) === METER_TYPE.FEEDER
+    ).length;
+    const installedCount = activeCount;
+    const notInstalledCount = Math.max(totalCount - installedCount, K_SIZE_0);
+
+    return {
+      total: totalCount,
+      feeder: feederCount,
+      installed: installedCount,
+      notInstalled: notInstalledCount,
+      active: activeCount,
+      activeRate: totalCount ? (activeCount / totalCount) * 100 : K_SIZE_0
+    };
+  }, [meterList, summaryMeterList, total]);
 
   const pagination = useMemo(
     () => ({
@@ -184,6 +298,8 @@ export default function useManageMeter() {
     const columns = [
       ['meterCode', 'Mã công tơ'],
       ['customerId', 'Mã khách hàng'],
+      ['meterType', 'Loại công tơ'],
+      ['parentId', 'Công tơ cha / Lộ tổng'],
       ['voltageLevel', 'Cấp điện áp'],
       ['voltageType', 'Kiểu điện áp'],
       ['multiplier', 'Hệ số nhân'],
@@ -230,7 +346,10 @@ export default function useManageMeter() {
     }
 
     exportRowsToExcel(
-      (response.data.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[]
+      applyClientOnlyFilters(
+        (response.data.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[],
+        filterApplied
+      )
     );
     showToast({ type: TYPE_TOAST.SUCCESS, content: 'Xuất Excel danh sách công tơ thành công' });
   }, [buildSearchBody, exportRowsToExcel, filterApplied]);
@@ -260,6 +379,7 @@ export default function useManageMeter() {
     pagination,
     onResetFilter,
     meterList,
+    meterStats,
     total,
     onExport,
     onImport

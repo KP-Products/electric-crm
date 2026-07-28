@@ -33,9 +33,11 @@ import { displayDateFromServer } from 'utils/date';
 import useIncomingDocuments, { IncomingDocumentFilterForm } from './useIncomingDocuments';
 import {
   CONFIDENTIALITY_LEVEL_OPTIONS,
+  INCOMING_DOCUMENT_TYPE_FILTER_OPTIONS,
   URGENCY_LEVEL_OPTIONS,
   getConfidentialityLevelLabel,
   getConfidentialityLevelStatusType,
+  getIncomingDocumentTypeLabel,
   getUrgencyLevelLabel,
   getUrgencyLevelStatusType
 } from './utils';
@@ -54,6 +56,7 @@ const displayText = (value?: string | number | null) => {
 };
 
 const getFilterDisplayValue = (key: keyof IncomingDocumentFilterForm, value: string) => {
+  if (key === 'documentType') return getIncomingDocumentTypeLabel(value);
   if (key === 'urgencyLevel') return getUrgencyLevelLabel(value);
   if (key === 'confidentialityLevel') return getConfidentialityLevelLabel(value);
   return value;
@@ -137,7 +140,7 @@ const IncomingDocumentScreen = () => {
         dataIndex: 'documentType',
         key: 'documentType',
         width: K_SIZE_140,
-        render: (text: string) => displayText(text)
+        render: (text: string) => displayText(getIncomingDocumentTypeLabel(text))
       },
       {
         title: 'Trích yếu nội dung',
@@ -283,13 +286,13 @@ const IncomingDocumentScreen = () => {
             onChange={(event) => onChangeFilter('issuingAgency', event.target.value)}
             onPressEnter={onApplyFilter}
           />
-          <AppTextField
+          <AppSelect
             name="documentType"
             label="Loại văn bản"
-            placeholder="Nhập loại văn bản"
+            placeholder="-- Tất cả --"
             value={filter.documentType}
-            onChange={(event) => onChangeFilter('documentType', event.target.value)}
-            onPressEnter={onApplyFilter}
+            options={INCOMING_DOCUMENT_TYPE_FILTER_OPTIONS}
+            onSelectOption={({ key }) => onChangeFilter('documentType', String(key))}
           />
           <AppSelect
             name="urgencyLevel"

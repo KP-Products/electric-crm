@@ -14,7 +14,7 @@ export interface IncomingDocument {
   confidentialityLevel?: string;
   pageCount?: number;
   dueDate?: string;
-  createdBy?: number;
+  createdBy?: string | number;
   approvedBy?: number;
   approvalDate?: string;
   approvalNote?: string;
@@ -43,6 +43,7 @@ export interface CreateIncomingDocumentReq {
   confidentialityLevel?: string;
   pageCount?: number;
   dueDate?: string;
+  createdBy?: string | number;
   approvedBy?: number;
   approvalDate?: string;
   approvalNote?: string;

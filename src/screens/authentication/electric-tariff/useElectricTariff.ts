@@ -57,7 +57,7 @@ export const TARIFF_PRICE_TYPE = {
   BUY: '1'
 };
 
-const DEFAULT_CUSTOMER_TYPE = 'SINH_HOAT';
+const DEFAULT_PRICE_TYPE = TARIFF_PRICE_TYPE.SELL;
 const DEFAULT_VOLTAGE_LEVEL = 'HA_AP';
 const TOU_PRICE_ROWS = [
   { tou: 'BT', touName: 'Bình thường' },
@@ -68,7 +68,7 @@ const TOU_PRICE_ROWS = [
 export const DEFAULT_TARIFF_FILTER: ElectricTariffFilter = {
   tariffCode: '',
   tariffName: '',
-  customerType: '',
+  priceType: '',
   voltageLevel: '',
   status: ''
 };
@@ -81,7 +81,7 @@ const INLINE_TARIFF_DOCUMENT_MIME_TYPES = ['application/pdf', 'image/png', 'imag
 const tariffSchema = z.object({
   tariffCode: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập mã giá' }),
   tariffName: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập tên giá' }),
-  customerType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn mục đích sử dụng' }),
+  priceType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn loại đơn giá' }),
   voltageLevel: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn cấp điện áp' }),
   effectiveFrom: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày hiệu lực' }),
   effectiveTo: optionalTextSchema
@@ -111,7 +111,7 @@ const hasTariffDocument = (tariff?: ElectricTariff) =>
 export interface ElectricTariffFilter {
   tariffCode: string;
   tariffName: string;
-  customerType: string;
+  priceType: string;
   voltageLevel: string;
   status: string;
 }
@@ -216,7 +216,7 @@ export default function useElectricTariff() {
     defaultValues: {
       tariffCode: '',
       tariffName: '',
-      customerType: DEFAULT_CUSTOMER_TYPE,
+      priceType: DEFAULT_PRICE_TYPE,
       voltageLevel: DEFAULT_VOLTAGE_LEVEL,
       effectiveFrom: moment().format(DATE_API_FORMAT),
       effectiveTo: ''
@@ -293,7 +293,7 @@ export default function useElectricTariff() {
     tariffForm.reset({
       tariffCode: '',
       tariffName: '',
-      customerType: DEFAULT_CUSTOMER_TYPE,
+      priceType: DEFAULT_PRICE_TYPE,
       voltageLevel: DEFAULT_VOLTAGE_LEVEL,
       effectiveFrom: moment().format(DATE_API_FORMAT),
       effectiveTo: ''
@@ -328,11 +328,10 @@ export default function useElectricTariff() {
       const body: CreateTariffReq = {
         tariffCode: data.tariffCode.trim(),
         tariffName: data.tariffName.trim(),
-        customerType: data.customerType,
         voltageLevel: data.voltageLevel,
         effectiveFrom: normalizeDateToApi(data.effectiveFrom),
         effectiveTo: normalizeDateToApi(data.effectiveTo) || undefined,
-        priceType: TARIFF_PRICE_TYPE.SELL
+        priceType: data.priceType
       };
 
       dispatch({

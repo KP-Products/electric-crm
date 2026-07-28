@@ -32,6 +32,7 @@ export interface SearchTariffsReq extends PaginationReq {
   tariffCode?: string;
   tariffName?: string;
   customerType?: string;
+  priceType?: string;
   voltageLevel?: string;
   status?: string;
 }
@@ -67,7 +68,7 @@ export interface TariffPriceInput {
 export interface CreateTariffReq {
   tariffCode: string;
   tariffName: string;
-  customerType: string;
+  customerType?: string;
   voltageLevel: string;
   effectiveFrom: string;
   effectiveTo?: string;

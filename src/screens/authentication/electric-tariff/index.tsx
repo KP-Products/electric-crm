@@ -39,17 +39,16 @@ import useElectricTariff, {
   ElectricTariffFilter,
   getPriceWithVat,
   TariffTouPriceRow,
+  TARIFF_PRICE_TYPE,
   TARIFF_STATUS
 } from './useElectricTariff';
 
 const DATE_API_FORMAT = FORMAT_DATE_API;
 const DATE_DISPLAY_FORMAT = 'DD/MM/YYYY';
 
-const CUSTOMER_TYPE_OPTIONS = [
-  { value: 'SINH_HOAT', label: 'Sinh hoạt' },
-  { value: 'SAN_XUAT', label: 'Sản xuất' },
-  { value: 'KINH_DOANH', label: 'Kinh doanh' },
-  { value: 'HANH_CHINH_SU_NGHIEP', label: 'Hành chính sự nghiệp' }
+const PRICE_TYPE_OPTIONS = [
+  { value: TARIFF_PRICE_TYPE.SELL, label: 'Bán ra' },
+  { value: TARIFF_PRICE_TYPE.BUY, label: 'Mua vào' }
 ];
 
 const VOLTAGE_LEVEL_OPTIONS = [
@@ -63,18 +62,13 @@ const STATUS_OPTIONS = [
   { value: TARIFF_STATUS.INACTIVE, label: 'Ngưng áp dụng' }
 ];
 
-const CUSTOMER_TYPE_LABEL_MAP: Record<string, string> = {
-  SINH_HOAT: 'Sinh hoạt',
-  SAN_XUAT: 'Sản xuất',
-  KINH_DOANH: 'Kinh doanh',
-  HANH_CHINH_SU_NGHIEP: 'Hành chính sự nghiệp',
-  HANH_CHINH: 'Hành chính',
-  HC: 'Hành chính',
-  'Sinh hoạt': 'Sinh hoạt',
-  'Sản xuất': 'Sản xuất',
-  'Kinh doanh': 'Kinh doanh',
-  'Hành chính': 'Hành chính',
-  'Hành chính sự nghiệp': 'Hành chính sự nghiệp'
+const PRICE_TYPE_LABEL_MAP: Record<string, string> = {
+  [TARIFF_PRICE_TYPE.SELL]: 'Bán ra',
+  [TARIFF_PRICE_TYPE.BUY]: 'Mua vào',
+  SELL: 'Bán ra',
+  BUY: 'Mua vào',
+  'Bán ra': 'Bán ra',
+  'Mua vào': 'Mua vào'
 };
 
 const VOLTAGE_LEVEL_LABEL_MAP: Record<string, string> = {
@@ -105,7 +99,7 @@ const TOU_LABEL_MAP: Record<string, string> = {
 const FILTER_LABEL_MAP: Record<keyof ElectricTariffFilter, string> = {
   tariffCode: 'Mã giá',
   tariffName: 'Tên giá',
-  customerType: 'Mục đích',
+  priceType: 'Loại đơn giá',
   voltageLevel: 'Cấp điện áp',
   status: 'Trạng thái'
 };
@@ -138,7 +132,7 @@ const formatCurrency = (value?: number) => {
 };
 
 const formatFilterValue = (key: keyof ElectricTariffFilter, value: string) => {
-  if (key === 'customerType') return CUSTOMER_TYPE_LABEL_MAP[value] || value;
+  if (key === 'priceType') return PRICE_TYPE_LABEL_MAP[value] || value;
   if (key === 'voltageLevel') return VOLTAGE_LEVEL_LABEL_MAP[value] || value;
   if (key === 'status') return getStatusMeta(value).label;
   return value;
@@ -241,11 +235,11 @@ const ElectricTariffScreen = () => {
         )
       },
       {
-        title: 'Mục đích sử dụng',
-        dataIndex: 'customerType',
-        key: 'customerType',
+        title: 'Loại đơn giá',
+        dataIndex: 'priceType',
+        key: 'priceType',
         width: K_SIZE_160,
-        render: (text: string) => CUSTOMER_TYPE_LABEL_MAP[text] || text || NULL_VALUE
+        render: (text: string) => PRICE_TYPE_LABEL_MAP[text] || text || NULL_VALUE
       },
       {
         title: 'Cấp điện áp',
@@ -386,7 +380,7 @@ const ElectricTariffScreen = () => {
             <TextBase classNames="title4" text="Danh Mục Giá Điện" />
             <TextBase
               classNames="body3 !text-color-700"
-              text="Quản lý biểu giá theo mục đích sử dụng, cấp điện áp và thời kỳ hiệu lực"
+              text="Quản lý biểu giá theo loại đơn giá, cấp điện áp và thời kỳ hiệu lực"
             />
           </div>
           <ButtonBase
@@ -420,12 +414,12 @@ const ElectricTariffScreen = () => {
             size="middle"
           />
           <AppSelect
-            name="customerType"
-            value={filterDraft.customerType}
-            options={CUSTOMER_TYPE_OPTIONS}
-            placeholder="Mục đích"
+            name="priceType"
+            value={filterDraft.priceType}
+            options={PRICE_TYPE_OPTIONS}
+            placeholder="Loại đơn giá"
             size="middle"
-            onSelectOption={({ key }) => onChangeFilter('customerType', String(key))}
+            onSelectOption={({ key }) => onChangeFilter('priceType', String(key))}
           />
           <AppSelect
             name="voltageLevel"
@@ -523,7 +517,7 @@ const ElectricTariffScreen = () => {
                 label="Mã giá"
                 labelSuffix={REQUIRED_MARK}
                 labelSuffixClassName="text-error-600"
-                placeholder="VD: SH-BT-2026"
+                placeholder="VD: BR-BT-2026"
               />
               <AppTextFieldControl
                 name="tariffName"
@@ -531,14 +525,14 @@ const ElectricTariffScreen = () => {
                 label="Tên giá"
                 labelSuffix={REQUIRED_MARK}
                 labelSuffixClassName="text-error-600"
-                placeholder="VD: Giá sinh hoạt bậc thang"
+                placeholder="VD: Giá bán ra bậc thang"
               />
               <AppSelectControl
-                name="customerType"
+                name="priceType"
                 control={tariffControl}
-                label="Mục đích sử dụng"
+                label="Loại đơn giá"
                 labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                options={CUSTOMER_TYPE_OPTIONS}
+                options={PRICE_TYPE_OPTIONS}
               />
               <AppSelectControl
                 name="voltageLevel"
@@ -605,11 +599,11 @@ const ElectricTariffScreen = () => {
                 isView
               />
               <AppTextField
-                name="detailCustomerType"
-                label="Mục đích sử dụng"
+                name="detailPriceType"
+                label="Loại đơn giá"
                 value={
-                  CUSTOMER_TYPE_LABEL_MAP[selectedDetail?.tariff?.customerType || ''] ||
-                  selectedDetail?.tariff?.customerType ||
+                  PRICE_TYPE_LABEL_MAP[selectedDetail?.tariff?.priceType || ''] ||
+                  selectedDetail?.tariff?.priceType ||
                   ''
                 }
                 isView

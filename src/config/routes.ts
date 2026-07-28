@@ -25,6 +25,8 @@ export const ROUTES = {
   MANAGE_PERMISSION_GROUP_DETAIL: '/manage-permission-group/detail',
   MANAGE_PERMISSION_GROUP_EDIT: '/manage-permission-group/edit',
   MANAGE_CUSTOMER: '/manage-customer',
+  MANAGE_CUSTOMER_DETAIL: '/manage-customer/detail',
+  MANAGE_CUSTOMER_EDIT: '/manage-customer/edit',
 
   // SAMPLE_PAGE
   SAMPLE_PAGE: '/sample-page',

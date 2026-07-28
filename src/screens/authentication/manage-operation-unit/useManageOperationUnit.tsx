@@ -27,14 +27,17 @@ import {
   SearchOperationUnitsReq,
   UpdateOperationUnitReq
 } from 'model/operation-unit';
+import { OperationContract } from 'model/operation-contract';
 import moment from 'moment';
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import operationContractServices from 'services/operation-contract-services';
 import operationUnitServices from 'services/operation-unit-services';
 import { FORMAT_DATE_TIME_DOWNLOAD, normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
+import { getOperationContractErrorMessage } from '../manage-operation-contract/utils';
 
 export interface OperationUnitFilter {
   unitCode: string;
@@ -155,7 +158,11 @@ export default function useManageOperationUnit() {
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const [selectedOperationUnit, setSelectedOperationUnit] = useState<OperationUnit>();
   const [selectedDetail, setSelectedDetail] = useState<OperationUnit>();
+  const [detailContracts, setDetailContracts] = useState<OperationContract[]>([]);
+  const [detailContractsLoading, setDetailContractsLoading] = useState<boolean>(false);
+  const [detailContractsLoadFailed, setDetailContractsLoadFailed] = useState<boolean>(false);
   const submittingRef = useRef<boolean>(false);
+  const detailContractsRequestIdRef = useRef<number>(0);
 
   const form = useForm<OperationUnitForm>({
     mode: 'onTouched',
@@ -374,35 +381,79 @@ export default function useManageOperationUnit() {
     [form]
   );
 
-  const onOpenDetail = useCallback((operationUnit: OperationUnit) => {
-    setSelectedDetail(undefined);
-    setOpenDetail(true);
+  const fetchDetailContracts = useCallback(async (operationUnitId: string) => {
+    const requestId = detailContractsRequestIdRef.current + K_SIZE_1;
+    detailContractsRequestIdRef.current = requestId;
+    setDetailContracts([]);
+    setDetailContractsLoading(true);
+    setDetailContractsLoadFailed(false);
 
-    if (!operationUnit.operationUnitId) {
-      setSelectedDetail(operationUnit);
+    const response = await operationContractServices.searchOperationContracts({
+      page: 0,
+      size: MAX_PAGE_SIZE,
+      operationUnitId
+    });
+
+    if (requestId !== detailContractsRequestIdRef.current) return;
+
+    setDetailContractsLoading(false);
+
+    if (!response || !response.data) {
+      setDetailContractsLoadFailed(true);
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getOperationContractErrorMessage(
+          response,
+          'Tải danh sách hợp đồng vận hành thất bại'
+        )
+      });
       return;
     }
 
-    dispatch({
-      type: GET_OPERATION_UNIT_DETAIL,
-      payload: {
-        body: { id: operationUnit.operationUnitId },
-        onSuccess: (response: OperationUnitRes) => {
-          setSelectedDetail(response.data);
-        },
-        onFailed: (error?: ErrorBase) => {
-          showToast({
-            type: TYPE_TOAST.ERROR,
-            content: getOperationUnitErrorMessage(error, 'Tải chi tiết đơn vị vận hành thất bại')
-          });
-        }
-      }
-    });
+    setDetailContracts(Array.isArray(response.data.items) ? response.data.items : []);
   }, []);
 
+  const onOpenDetail = useCallback(
+    (operationUnit: OperationUnit) => {
+      setSelectedDetail(undefined);
+      setDetailContracts([]);
+      setDetailContractsLoading(false);
+      setDetailContractsLoadFailed(false);
+      setOpenDetail(true);
+
+      if (!operationUnit.operationUnitId) {
+        setSelectedDetail(operationUnit);
+        return;
+      }
+
+      fetchDetailContracts(operationUnit.operationUnitId);
+
+      dispatch({
+        type: GET_OPERATION_UNIT_DETAIL,
+        payload: {
+          body: { id: operationUnit.operationUnitId },
+          onSuccess: (response: OperationUnitRes) => {
+            setSelectedDetail(response.data);
+          },
+          onFailed: (error?: ErrorBase) => {
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content: getOperationUnitErrorMessage(error, 'Tải chi tiết đơn vị vận hành thất bại')
+            });
+          }
+        }
+      });
+    },
+    [fetchDetailContracts]
+  );
+
   const onCloseDetail = useCallback(() => {
+    detailContractsRequestIdRef.current += K_SIZE_1;
     setOpenDetail(false);
     setSelectedDetail(undefined);
+    setDetailContracts([]);
+    setDetailContractsLoading(false);
+    setDetailContractsLoadFailed(false);
   }, []);
 
   const onDeleteSuccess = useCallback(() => {
@@ -538,6 +589,9 @@ export default function useManageOperationUnit() {
     openDetail,
     selectedOperationUnit,
     selectedDetail,
+    detailContracts,
+    detailContractsLoading,
+    detailContractsLoadFailed,
     form,
     onChangeFilter,
     onApplyFilter,

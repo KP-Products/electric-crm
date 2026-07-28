@@ -3,9 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CUSTOMER_CREATE,
   CUSTOMER_DELETE,
-  CUSTOMER_DETAIL,
-  CUSTOMER_SEARCH,
-  CUSTOMER_UPDATE
+  CUSTOMER_SEARCH
 } from '@redux-action-type/customer-type';
 import { dispatch } from '@redux-common';
 import {
@@ -19,21 +17,14 @@ import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ErrorBase } from 'model/common';
-import { Contract } from 'model/contract';
-import {
-  CreateCustomerReq,
-  Customer,
-  CustomerDetail,
-  CustomerDetailRes,
-  CustomerSearchReq,
-  UpdateCustomerReq
-} from 'model/customer';
+import { CreateCustomerReq, Customer, CustomerSearchReq, UpdateCustomerReq } from 'model/customer';
 import { OperationUnit } from 'model/operation-unit';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
-import contractServices from 'services/contract-services';
 import operationUnitServices from 'services/operation-unit-services';
+import { ROUTES } from 'config/routes';
 import { normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
@@ -82,7 +73,7 @@ const isSuccessMessage = (message?: unknown) =>
 
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 
-const customerSchema = z.object({
+export const customerSchema = z.object({
   customerCode: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập mã khách hàng' }),
   fullName: optionalTextSchema,
   taxNo: optionalTextSchema.refine((value) => !value || /^[A-Za-z0-9-]*$/.test(value), {
@@ -117,7 +108,7 @@ export const getCustomerErrorMessage = (
   return message && !SUCCESS_MESSAGES.includes(normalizedMessage) ? message : fallback;
 };
 
-const hasApiError = (
+export const hasApiError = (
   response?: ErrorBase & {
     codeStatus?: string;
     error?: unknown;
@@ -153,7 +144,7 @@ const optionalValue = (value?: string) => {
 
 const updateTextValue = (value?: string) => value?.trim() || '';
 
-const buildFormValues = (customer?: Customer): CustomerForm => ({
+export const buildFormValues = (customer?: Customer): CustomerForm => ({
   customerCode: customer?.customerCode || '',
   fullName: customer?.fullName || '',
   taxNo: customer?.taxNo || '',
@@ -166,8 +157,23 @@ const buildFormValues = (customer?: Customer): CustomerForm => ({
   operationUnitId: customer?.operationUnitId || ''
 });
 
+export const buildUpdateBody = (id: string, data: CustomerForm): UpdateCustomerReq => ({
+  id,
+  customerCode: data.customerCode.trim(),
+  fullName: updateTextValue(data.fullName),
+  taxNo: updateTextValue(data.taxNo),
+  phone: updateTextValue(data.phone),
+  email: updateTextValue(data.email),
+  contactName: updateTextValue(data.contactName),
+  contactIdNo: updateTextValue(data.contactIdNo),
+  contactIssueDate: updateTextValue(normalizeDateToApi(data.contactIssueDate)),
+  address: updateTextValue(data.address),
+  operationUnitId: optionalValue(data.operationUnitId)
+});
+
 export default function useManageCustomer() {
   const { t } = useAppTranslation();
+  const router = useRouter();
   const customerList = useSelector(selectCustomers);
   const total = useSelector(selectCustomerTotal);
   const listLoading = useSelector(selectCustomerLoading);
@@ -177,13 +183,6 @@ export default function useManageCustomer() {
   const [filter, setFilter] = useState<CustomerFilter>(DEFAULT_CUSTOMER_FILTER);
   const [filterApplied, setFilterApplied] = useState<CustomerFilter>(DEFAULT_CUSTOMER_FILTER);
   const [openForm, setOpenForm] = useState<boolean>(false);
-  const [openDetail, setOpenDetail] = useState<boolean>(false);
-  const [detailLoadFailed, setDetailLoadFailed] = useState<boolean>(false);
-  const [detailContracts, setDetailContracts] = useState<Contract[]>([]);
-  const [detailContractsLoading, setDetailContractsLoading] = useState<boolean>(false);
-  const [detailContractsLoadFailed, setDetailContractsLoadFailed] = useState<boolean>(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer>();
-  const [selectedDetail, setSelectedDetail] = useState<CustomerDetail>();
   const [operationUnitLoading, setOperationUnitLoading] = useState<boolean>(false);
   const [operationUnitOptions, setOperationUnitOptions] = useState<
     { value: string; label: string }[]
@@ -328,23 +327,24 @@ export default function useManageCustomer() {
   }, []);
 
   const onOpenCreate = useCallback(() => {
-    setSelectedCustomer(undefined);
     form.reset(buildFormValues());
     setOpenForm(true);
   }, [form]);
 
   const onOpenUpdate = useCallback(
     (customer: Customer) => {
-      setSelectedCustomer(customer);
-      form.reset(buildFormValues(customer));
-      setOpenForm(true);
+      if (!customer.id) {
+        showToast({ type: TYPE_TOAST.ERROR, content: 'Không tìm thấy ID khách hàng để cập nhật' });
+        return;
+      }
+
+      router.push(`${ROUTES.MANAGE_CUSTOMER_EDIT}?id=${encodeURIComponent(customer.id)}`);
     },
-    [form]
+    [router]
   );
 
   const onCloseForm = useCallback(() => {
     setOpenForm(false);
-    setSelectedCustomer(undefined);
     submittingRef.current = false;
     form.reset(buildFormValues());
   }, [form]);
@@ -375,54 +375,10 @@ export default function useManageCustomer() {
     []
   );
 
-  const buildUpdateBody = useCallback(
-    (id: string, data: CustomerForm): UpdateCustomerReq => ({
-      id,
-      customerCode: data.customerCode.trim(),
-      fullName: updateTextValue(data.fullName),
-      taxNo: updateTextValue(data.taxNo),
-      phone: updateTextValue(data.phone),
-      email: updateTextValue(data.email),
-      contactName: updateTextValue(data.contactName),
-      contactIdNo: updateTextValue(data.contactIdNo),
-      contactIssueDate: updateTextValue(normalizeDateToApi(data.contactIssueDate)),
-      address: updateTextValue(data.address),
-      operationUnitId: optionalValue(data.operationUnitId)
-    }),
-    []
-  );
-
   const handleSubmit = useCallback(
     (data: CustomerForm) => {
       if (submittingRef.current) return;
       submittingRef.current = true;
-
-      if (selectedCustomer) {
-        if (!selectedCustomer.id) {
-          submittingRef.current = false;
-          showToast({
-            type: TYPE_TOAST.ERROR,
-            content: 'Không tìm thấy ID khách hàng để cập nhật'
-          });
-          return;
-        }
-
-        dispatch({
-          type: CUSTOMER_UPDATE,
-          payload: {
-            body: buildUpdateBody(selectedCustomer.id, data),
-            onSuccess: () => onSubmitSuccess('Cập nhật khách hàng thành công'),
-            onFailed: (error?: ErrorBase) => {
-              submittingRef.current = false;
-              showToast({
-                type: TYPE_TOAST.ERROR,
-                content: getCustomerErrorMessage(error, 'Cập nhật khách hàng thất bại')
-              });
-            }
-          }
-        });
-        return;
-      }
 
       dispatch({
         type: CUSTOMER_CREATE,
@@ -439,81 +395,20 @@ export default function useManageCustomer() {
         }
       });
     },
-    [buildCreateBody, buildUpdateBody, onSubmitSuccess, selectedCustomer]
+    [buildCreateBody, onSubmitSuccess]
   );
-
-  const fetchDetailContracts = useCallback(async (customerId: string) => {
-    setDetailContractsLoading(true);
-    setDetailContractsLoadFailed(false);
-
-    const response = await contractServices.searchContract({
-      page: 0,
-      size: K_SIZE_200,
-      customerId
-    });
-
-    setDetailContractsLoading(false);
-
-    if (hasApiError(response) || !response.data) {
-      setDetailContracts([]);
-      setDetailContractsLoadFailed(true);
-      showToast({
-        type: TYPE_TOAST.ERROR,
-        content: getCustomerErrorMessage(response, 'Tải danh sách hợp đồng đã ký thất bại')
-      });
-      return;
-    }
-
-    setDetailContracts(Array.isArray(response.data.items) ? response.data.items : []);
-  }, []);
 
   const onOpenDetail = useCallback(
     (customer: Customer) => {
-      setSelectedDetail(undefined);
-      setDetailContracts([]);
-      setDetailLoadFailed(false);
-      setDetailContractsLoadFailed(false);
-      setOpenDetail(true);
-
       if (!customer.id) {
-        setSelectedDetail({ customer });
-        setDetailLoadFailed(true);
-        setDetailContractsLoadFailed(true);
+        showToast({ type: TYPE_TOAST.ERROR, content: 'Không tìm thấy ID khách hàng' });
         return;
       }
 
-      fetchDetailContracts(customer.id);
-
-      dispatch({
-        type: CUSTOMER_DETAIL,
-        payload: {
-          body: { id: customer.id },
-          onSuccess: (response: CustomerDetailRes) => {
-            setDetailLoadFailed(false);
-            setSelectedDetail(response.data || { customer });
-          },
-          onFailed: (error?: ErrorBase) => {
-            setDetailLoadFailed(true);
-            setSelectedDetail({ customer });
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content: getCustomerErrorMessage(error, 'Tải chi tiết khách hàng thất bại')
-            });
-          }
-        }
-      });
+      router.push(`${ROUTES.MANAGE_CUSTOMER_DETAIL}?id=${encodeURIComponent(customer.id)}`);
     },
-    [fetchDetailContracts]
+    [router]
   );
-
-  const onCloseDetail = useCallback(() => {
-    setOpenDetail(false);
-    setSelectedDetail(undefined);
-    setDetailContracts([]);
-    setDetailLoadFailed(false);
-    setDetailContractsLoadFailed(false);
-    setDetailContractsLoading(false);
-  }, []);
 
   const onDeleteSuccess = useCallback(() => {
     refreshAfterDelete();
@@ -572,18 +467,11 @@ export default function useManageCustomer() {
     total,
     listLoading,
     detailLoading,
-    detailLoadFailed,
-    detailContracts,
-    detailContractsLoading,
-    detailContractsLoadFailed,
     currentPage,
     pagination,
     filter,
     filterApplied,
     openForm,
-    openDetail,
-    selectedCustomer,
-    selectedDetail,
     operationUnitLoading,
     operationUnitOptions,
     form,
@@ -595,7 +483,6 @@ export default function useManageCustomer() {
     onCloseForm,
     handleSubmit,
     onOpenDetail,
-    onCloseDetail,
     onDelete
   };
 }

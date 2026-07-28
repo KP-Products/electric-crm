@@ -4,6 +4,13 @@ import { ErrorBase } from 'model/common';
 import { Employee } from 'model/employee';
 import { CompanyLegalDocumentAttachmentFile } from 'services/company-legal-document-services';
 import { FORMAT_DATE_API } from 'utils/date';
+import {
+  DOCUMENT_TYPE as COMPANY_LEGAL_DOCUMENT_TYPE,
+  DOCUMENT_TYPE_FILTER_OPTIONS as COMPANY_LEGAL_DOCUMENT_TYPE_FILTER_OPTIONS,
+  DOCUMENT_TYPE_OPTIONS as COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS,
+  getDocumentTypeLabel as getCompanyLegalDocumentTypeLabel,
+  normalizeDocumentType as normalizeCompanyLegalDocumentType
+} from 'utils/document-type';
 import { MAX_UPLOAD_FILE_SIZE } from 'utils/upload';
 
 export const DATE_API_FORMAT = FORMAT_DATE_API;
@@ -22,54 +29,28 @@ export const ACCEPTED_ATTACHMENT_TEXT = ACCEPTED_ATTACHMENT_EXTENSIONS.map((exte
   extension.toUpperCase()
 ).join(', ');
 
-export const COMPANY_LEGAL_DOCUMENT_TYPE = {
-  QUYET_DINH: 'QUYET_DINH',
-  QUY_CHE: 'QUY_CHE',
-  QUY_DINH: 'QUY_DINH',
-  NGHI_QUYET: 'NGHI_QUYET',
-  THONG_BAO: 'THONG_BAO',
-  HUONG_DAN: 'HUONG_DAN',
-  CONG_VAN: 'CONG_VAN',
-  KHAC: 'KHAC'
-} as const;
+export {
+  COMPANY_LEGAL_DOCUMENT_TYPE,
+  COMPANY_LEGAL_DOCUMENT_TYPE_FILTER_OPTIONS,
+  COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS,
+  getCompanyLegalDocumentTypeLabel,
+  normalizeCompanyLegalDocumentType
+};
 
 export const COMPANY_LEGAL_DOCUMENT_STATUS = {
   ACTIVE: 'ACTIVE',
   ARCHIVED: 'ARCHIVED'
 } as const;
 
-export const COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS: AppSelectOption[] = [
-  { value: COMPANY_LEGAL_DOCUMENT_TYPE.QUYET_DINH, label: 'Quyết định' },
-  { value: COMPANY_LEGAL_DOCUMENT_TYPE.QUY_CHE, label: 'Quy chế' },
-  { value: COMPANY_LEGAL_DOCUMENT_TYPE.QUY_DINH, label: 'Quy định' },
-  { value: COMPANY_LEGAL_DOCUMENT_TYPE.NGHI_QUYET, label: 'Nghị quyết' },
-  { value: COMPANY_LEGAL_DOCUMENT_TYPE.THONG_BAO, label: 'Thông báo' },
-  { value: COMPANY_LEGAL_DOCUMENT_TYPE.HUONG_DAN, label: 'Hướng dẫn' },
-  { value: COMPANY_LEGAL_DOCUMENT_TYPE.CONG_VAN, label: 'Công văn' },
-  { value: COMPANY_LEGAL_DOCUMENT_TYPE.KHAC, label: 'Khác' }
-];
-
 export const COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS: AppSelectOption[] = [
   { value: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE, label: 'Đang hiệu lực' },
   { value: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED, label: 'Đã lưu trữ' }
-];
-
-export const COMPANY_LEGAL_DOCUMENT_TYPE_FILTER_OPTIONS: AppSelectOption[] = [
-  { value: '', label: '-- Tất cả --' },
-  ...COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS
 ];
 
 export const COMPANY_LEGAL_DOCUMENT_STATUS_FILTER_OPTIONS: AppSelectOption[] = [
   { value: '', label: '-- Tất cả --' },
   ...COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS
 ];
-
-export const getCompanyLegalDocumentTypeLabel = (value?: string) =>
-  String(
-    COMPANY_LEGAL_DOCUMENT_TYPE_OPTIONS.find((option) => option.value === value)?.label ||
-      value ||
-      ''
-  );
 
 export const getCompanyLegalDocumentStatusLabel = (value?: string) =>
   String(
@@ -89,17 +70,6 @@ const normalizeLookupKey = (value?: string) =>
     .replace(/[^A-Z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '') || '';
 
-const COMPANY_LEGAL_DOCUMENT_TYPE_ALIAS_MAP: Record<string, string> = {
-  QUYET_DINH: COMPANY_LEGAL_DOCUMENT_TYPE.QUYET_DINH,
-  QUY_CHE: COMPANY_LEGAL_DOCUMENT_TYPE.QUY_CHE,
-  QUY_DINH: COMPANY_LEGAL_DOCUMENT_TYPE.QUY_DINH,
-  NGHI_QUYET: COMPANY_LEGAL_DOCUMENT_TYPE.NGHI_QUYET,
-  THONG_BAO: COMPANY_LEGAL_DOCUMENT_TYPE.THONG_BAO,
-  HUONG_DAN: COMPANY_LEGAL_DOCUMENT_TYPE.HUONG_DAN,
-  CONG_VAN: COMPANY_LEGAL_DOCUMENT_TYPE.CONG_VAN,
-  KHAC: COMPANY_LEGAL_DOCUMENT_TYPE.KHAC
-};
-
 const COMPANY_LEGAL_DOCUMENT_STATUS_ALIAS_MAP: Record<string, string> = {
   ACTIVE: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE,
   DANG_HIEU_LUC: COMPANY_LEGAL_DOCUMENT_STATUS.ACTIVE,
@@ -111,9 +81,6 @@ const COMPANY_LEGAL_DOCUMENT_STATUS_ALIAS_MAP: Record<string, string> = {
   HET_HIEU_LUC: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED,
   INACTIVE: COMPANY_LEGAL_DOCUMENT_STATUS.ARCHIVED
 };
-
-export const normalizeCompanyLegalDocumentType = (value?: string) =>
-  COMPANY_LEGAL_DOCUMENT_TYPE_ALIAS_MAP[normalizeLookupKey(value)] || '';
 
 export const normalizeCompanyLegalDocumentStatus = (value?: string) =>
   COMPANY_LEGAL_DOCUMENT_STATUS_ALIAS_MAP[normalizeLookupKey(value)] || '';

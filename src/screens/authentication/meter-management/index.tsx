@@ -14,6 +14,7 @@ import {
 } from '@constant';
 import { Divider, Flex } from 'antd';
 import ButtonBase from 'components/button';
+import { AppDatePicker } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import IconHover from 'components/icon-vec-local/icon-hover';
 import { AppSelect, AppSelectOption } from 'components/select';
@@ -26,21 +27,27 @@ import { AppTextField } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { Meter } from 'model/meter';
+import dayjs from 'dayjs';
 import { useCallback, useMemo } from 'react';
-import { displayDateFromServer } from 'utils/date';
+import { FORMAT_DATE_API, displayDateFromServer } from 'utils/date';
 import useManageMeter, { MeterFilterForm } from './hooks/useManageMeter';
 import {
+  METER_TYPE_OPTIONS,
   getMeterRecordId,
   getMeterStatusLabel,
   getMeterStatusType,
+  getMeterTypeLabel,
   getVoltageLevelLabel,
+  getVoltageTypeLabel,
   METER_STATUS_OPTIONS,
   METER_STATUS_LABEL_MAP,
+  VOLTAGE_LEVEL_OPTIONS,
   VOLTAGE_TYPE_OPTIONS,
-  VOLTAGE_TYPE_LABEL_MAP
+  VOLTAGE_TYPE_LABEL_MAP,
+  VOLTAGE_LEVEL_LABEL_MAP
 } from './utils/constant';
 
-const ALL_OPTION: AppSelectOption = { value: '', label: 'Tất cả' };
+const ALL_OPTION: AppSelectOption = { value: '', label: '-- Tất cả --' };
 
 const renderDate = (date?: string) => (date ? displayDateFromServer(date) : NULL_VALUE);
 
@@ -50,6 +57,48 @@ const renderNumber = (value?: string | number) => {
   if (!Number.isFinite(numericValue)) return String(value);
   return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(numericValue);
 };
+//
+// const formatCompactNumber = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
+//
+// const formatPercent = (value: number) =>
+//   new Intl.NumberFormat('vi-VN', {
+//     maximumFractionDigits: 2,
+//     minimumFractionDigits: 0
+//   }).format(value);
+
+// interface StatCardProps {
+//   label: string;
+//   value: string;
+//   suffix?: string;
+//   icon: React.ReactNode;
+//   colorClassName: string;
+//   extra?: string;
+// }
+
+// const StatCard = ({
+//   label,
+//   value,
+//   suffix = 'công tơ',
+//   icon,
+//   colorClassName,
+//   extra
+// }: StatCardProps) => (
+//   <div className="flex min-h-[76px] items-center gap-16 rounded-radius-l border border-color-300 bg-color-50 px-16 py-12">
+//     <div
+//       className={`flex size-44 shrink-0 items-center justify-center rounded-radius-m ${colorClassName}`}
+//     >
+//       {icon}
+//     </div>
+//     <div className="min-w-0">
+//       <div className="mb-4 text-12 font-semibold leading-16 text-color-700">{label}</div>
+//       <div className="flex flex-wrap items-baseline gap-8">
+//         <span className="text-24 font-bold leading-28 text-color-900">{value}</span>
+//         <span className="text-12 font-semibold text-color-700">{suffix}</span>
+//         {extra && <span className="text-12 font-semibold text-color-700">{extra}</span>}
+//       </div>
+//     </div>
+//   </div>
+// );
 
 const MeterManagementScreen = () => {
   const {
@@ -69,10 +118,21 @@ const MeterManagementScreen = () => {
     onApplyFilter,
     onResetFilter,
     meterList,
+    // meterStats,
     total,
     onExport,
     onImport
   } = useManageMeter();
+
+  const meterCodeMap = useMemo(() => {
+    const optionMap = new Map<string, string>();
+    meterList.forEach((meter) => {
+      const recordId = getMeterRecordId(meter);
+      if (!recordId || !meter.meterCode) return;
+      optionMap.set(recordId, meter.meterCode);
+    });
+    return optionMap;
+  }, [meterList]);
 
   const columns = useMemo<any[]>(
     () => [
@@ -104,12 +164,49 @@ const MeterManagementScreen = () => {
         }
       },
       {
+        title: 'Mã khách hàng',
+        dataIndex: 'customerId',
+        key: 'customerId',
+        align: 'left',
+        width: K_SIZE_150,
+        render: (customerId: string, record: Meter) => (
+          <span title={customerId || record.customerName || ''}>
+            {customerId || record.customerName || NULL_VALUE}
+          </span>
+        )
+      },
+      {
+        title: 'Loại công tơ',
+        dataIndex: 'meterType',
+        key: 'meterType',
+        align: 'left',
+        width: K_SIZE_150,
+        render: (meterType: string) => getMeterTypeLabel(meterType)
+      },
+      {
+        title: 'Công tơ cha / Lộ tổng',
+        dataIndex: 'parentId',
+        key: 'parentId',
+        align: 'left',
+        width: K_SIZE_150,
+        render: (parentId: string) =>
+          parentId ? meterCodeMap.get(parentId) || parentId : NULL_VALUE
+      },
+      {
         title: 'Cấp điện áp',
         dataIndex: 'voltageLevel',
         key: 'voltageLevel',
         align: 'left',
         width: K_SIZE_130,
         render: (voltageLevel: string) => getVoltageLevelLabel(voltageLevel)
+      },
+      {
+        title: 'Kiểu điện áp',
+        dataIndex: 'voltageType',
+        key: 'voltageType',
+        align: 'left',
+        width: K_SIZE_120,
+        render: (voltageType: string) => getVoltageTypeLabel(voltageType)
       },
       {
         title: 'Hệ số nhân',
@@ -126,6 +223,15 @@ const MeterManagementScreen = () => {
         align: 'right',
         width: K_SIZE_120,
         render: renderNumber
+      },
+      {
+        title: 'Ngày mua',
+        dataIndex: 'purchaseDate',
+        key: 'purchaseDate',
+        align: 'left',
+        width: K_SIZE_130,
+        render: (_: string, record: Meter) =>
+          renderDate((record as Meter & { purchaseDate?: string }).purchaseDate)
       },
       {
         title: 'Ngày lắp đặt',
@@ -145,7 +251,7 @@ const MeterManagementScreen = () => {
           <Status
             type={getMeterStatusType(status)}
             kind={KIND_STATUS.SECONDARY}
-            content={getMeterStatusLabel(status)}
+            content={status || getMeterStatusLabel(status)}
           />
         )
       },
@@ -181,7 +287,7 @@ const MeterManagementScreen = () => {
         }
       }
     ],
-    [currentPage, router, t]
+    [currentPage, meterCodeMap, router, t]
   );
 
   const TagFilterGroup = useCallback(() => {
@@ -191,6 +297,10 @@ const MeterManagementScreen = () => {
       switch (key) {
         case 'status':
           return METER_STATUS_LABEL_MAP[value] || value;
+        case 'meterType':
+          return getMeterTypeLabel(value);
+        case 'voltageLevel':
+          return VOLTAGE_LEVEL_LABEL_MAP[value] || value;
         case 'voltageType':
           return VOLTAGE_TYPE_LABEL_MAP[value] || value;
         case 'customerId':
@@ -202,8 +312,12 @@ const MeterManagementScreen = () => {
     const labelMap: Record<keyof MeterFilterForm, string> = {
       meterCodeContains: 'Mã công tơ',
       customerId: 'Mã khách hàng',
+      meterType: 'Loại công tơ',
       status: 'Trạng thái',
-      voltageType: 'Kiểu điện áp'
+      voltageLevel: 'Cấp điện áp',
+      voltageType: 'Kiểu điện áp',
+      installationDateFrom: 'Ngày lắp đặt từ',
+      installationDateTo: 'Ngày lắp đặt đến'
     };
     return (
       <div
@@ -302,12 +416,28 @@ const MeterManagementScreen = () => {
               suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
             />
             <AppSelect
+              name="meterType"
+              label="Loại công tơ"
+              placeholder="Chọn loại công tơ"
+              value={filterDraft.meterType}
+              options={[ALL_OPTION, ...METER_TYPE_OPTIONS]}
+              onSelectOption={({ key }) => onChangeFilter('meterType', String(key))}
+            />
+            <AppSelect
               name="status"
               label="Trạng thái"
               placeholder="Chọn trạng thái"
               value={filterDraft.status}
               options={[ALL_OPTION, ...METER_STATUS_OPTIONS]}
               onSelectOption={({ key }) => onChangeFilter('status', String(key))}
+            />
+            <AppSelect
+              name="voltageLevel"
+              label="Cấp điện áp"
+              placeholder="Chọn cấp điện áp"
+              value={filterDraft.voltageLevel}
+              options={[ALL_OPTION, ...VOLTAGE_LEVEL_OPTIONS]}
+              onSelectOption={({ key }) => onChangeFilter('voltageLevel', String(key))}
             />
             <AppSelect
               name="voltageType"
@@ -317,7 +447,44 @@ const MeterManagementScreen = () => {
               options={[ALL_OPTION, ...VOLTAGE_TYPE_OPTIONS]}
               onSelectOption={({ key }) => onChangeFilter('voltageType', String(key))}
             />
-            <div className="flex items-end justify-end gap-8 tablet:col-span-2 mobile:col-span-1 mobile:flex-col">
+            <AppDatePicker
+              name="installationDateFrom"
+              label="Ngày lắp đặt từ"
+              placeholder="dd/mm/yyyy"
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+              allowClear
+              value={
+                filterDraft.installationDateFrom
+                  ? dayjs(filterDraft.installationDateFrom, FORMAT_DATE_API)
+                  : null
+              }
+              onChange={(date) =>
+                onChangeFilter('installationDateFrom', date ? date.format(FORMAT_DATE_API) : '')
+              }
+            />
+            <div className="grid grid-cols-[24px_minmax(0,1fr)] items-end gap-8 tablet:grid-cols-1">
+              <div className="pb-12 text-center text-13 font-semibold text-color-800 tablet:hidden">
+                đến
+              </div>
+              <AppDatePicker
+                name="installationDateTo"
+                label=" "
+                placeholder="dd/mm/yyyy"
+                wrapperClassName="w-full"
+                datePickerClassName="w-full"
+                allowClear
+                value={
+                  filterDraft.installationDateTo
+                    ? dayjs(filterDraft.installationDateTo, FORMAT_DATE_API)
+                    : null
+                }
+                onChange={(date) =>
+                  onChangeFilter('installationDateTo', date ? date.format(FORMAT_DATE_API) : '')
+                }
+              />
+            </div>
+            <div className="col-span-2 flex items-end justify-end gap-16 tablet:col-span-2 mobile:col-span-1 mobile:flex-col">
               <ButtonBase
                 type="ghost"
                 leftIcon="IC_HISTORY_OUTLINE"
@@ -336,13 +503,51 @@ const MeterManagementScreen = () => {
           </div>
         </div>
 
+        {/*<div className="mb-12 grid grid-cols-5 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">*/}
+        {/*  <StatCard*/}
+        {/*    label="Tổng công tơ"*/}
+        {/*    value={formatCompactNumber(meterStats.total)}*/}
+        {/*    colorClassName="bg-[#0B63F6]"*/}
+        {/*    icon={<IconSvgLocal name="IC_DOWNLOAD_OUTLINE" height={22} width={22} fill="#fff" />}*/}
+        {/*  />*/}
+        {/*  <StatCard*/}
+        {/*    label="Công tơ tổng (lộ)"*/}
+        {/*    value={formatCompactNumber(meterStats.feeder)}*/}
+        {/*    colorClassName="bg-[#F97316]"*/}
+        {/*    icon={<IconSvgLocal name="ICON_MORE" height={22} width={22} fill="#fff" />}*/}
+        {/*  />*/}
+        {/*  <StatCard*/}
+        {/*    label="Công tơ đã lắp"*/}
+        {/*    value={formatCompactNumber(meterStats.installed)}*/}
+        {/*    colorClassName="bg-[#4F46E5]"*/}
+        {/*    icon={<IconSvgLocal name="ICON_EYE_OPEN" height={22} width={22} fill="#fff" />}*/}
+        {/*  />*/}
+        {/*  <StatCard*/}
+        {/*    label="Công tơ chưa lắp"*/}
+        {/*    value={formatCompactNumber(meterStats.notInstalled)}*/}
+        {/*    colorClassName="bg-[#22C55E]"*/}
+        {/*    icon={<IconSvgLocal name="IC_UPLOAD_OUTLINE" height={22} width={22} fill="#fff" />}*/}
+        {/*  />*/}
+        {/*  <StatCard*/}
+        {/*    label="Đang hoạt động"*/}
+        {/*    value={formatCompactNumber(meterStats.active)}*/}
+        {/*    extra={`(${formatPercent(meterStats.activeRate)}%)`}*/}
+        {/*    colorClassName="bg-[#06B6D4]"*/}
+        {/*    icon={<IconSvgLocal name="ICON_SEARCH" height={22} width={22} fill="#fff" />}*/}
+        {/*  />*/}
+        {/*</div>*/}
+
         <TagFilterGroup />
 
         <div
           className={'overflow-hidden rounded-radius-l border border-color-400 bg-color-50 pb-4'}
         >
-          <Flex justify="space-between" align="center" className="px-16 py-12">
-            <TextBase classNames="sub-title3 !text-primary-700" text="Danh sách công tơ" />
+          <Flex
+            justify="space-between"
+            align="center"
+            className="border-b border-color-300 px-16 py-12"
+          >
+            <TextBase classNames="sub-title3 !text-color-900" text="Danh sách công tơ" />
             <div className="text-14 font-medium text-color-700">
               Hiển thị {meterList.length} bản ghi
             </div>
