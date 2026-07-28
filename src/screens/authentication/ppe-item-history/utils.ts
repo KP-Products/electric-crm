@@ -12,6 +12,7 @@ import {
 } from 'model/ppe-item-history';
 import moment from 'moment';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
+import { formatNumberValueWithCommas, parseFormattedNumber } from 'utils/number-input';
 import type { PpeItemHistoryFilterForm, PpeItemHistoryForm } from './usePpeItemHistory';
 
 export const PPE_ITEM_HISTORY_DATE_FORMAT = FORMAT_DATE_API;
@@ -82,7 +83,7 @@ export const renderPpeItemHistoryDate = (date?: string) =>
 
 export const renderPpeItemHistoryNumber = (value?: number) =>
   value !== undefined && value !== null
-    ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 }).format(value)
+    ? formatNumberValueWithCommas(value) || NULL_VALUE
     : NULL_VALUE;
 
 export const displayText = (value?: string | number | null) =>
@@ -95,11 +96,10 @@ const normalizeText = (value?: string) => {
 
 export const toOptionalNumber = (value?: string) => {
   if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return parseFormattedNumber(value);
 };
 
-const toRequiredNumber = (value?: string) => Number(value || 0);
+const toRequiredNumber = (value?: string) => parseFormattedNumber(value) || 0;
 
 export const getEmployeeLabel = (employee: Employee) =>
   employee.fullName || employee.employeeCode || employee.email || String(employee.id);

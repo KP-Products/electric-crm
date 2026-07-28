@@ -4,6 +4,7 @@ import { ErrorBase } from 'model/common';
 import { CreatePpeItemReq, PpeItem, SearchPpeItemsReq, UpdatePpeItemReq } from 'model/ppe-item';
 import moment from 'moment';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
+import { formatNumberValueWithCommas, parseFormattedNumber } from 'utils/number-input';
 import type { PpeItemFilterForm, PpeItemForm } from './usePpeItems';
 
 export const PPE_DATE_FORMAT = FORMAT_DATE_API;
@@ -82,7 +83,7 @@ export const renderPpeItemDate = (date?: string) =>
 
 export const renderPpeItemNumber = (value?: number) =>
   value !== undefined && value !== null
-    ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 }).format(value)
+    ? formatNumberValueWithCommas(value) || NULL_VALUE
     : NULL_VALUE;
 
 export const getPpeItemCreator = (item: PpeItem) => item.createBy || item.createdBy || NULL_VALUE;
@@ -102,8 +103,7 @@ const normalizeText = (value?: string) => {
 
 const toOptionalNumber = (value?: string) => {
   if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return parseFormattedNumber(value);
 };
 
 export const buildPpeItemSearchBody = (

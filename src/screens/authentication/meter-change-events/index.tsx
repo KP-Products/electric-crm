@@ -41,6 +41,7 @@ import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { MeterChangeEventWithDetails } from 'model/meter-change-event';
+import { formatNumberValueWithCommas } from 'utils/number-input';
 import { useResponsive } from 'utils/responsive';
 import useMeterChangeEvents, { MeterChangeEventFilter } from './useMeterChangeEvents';
 import {
@@ -66,7 +67,7 @@ const FILTER_LABEL_MAP: Record<keyof MeterChangeEventFilter, string> = {
 
 const formatNumber = (value?: number) => {
   if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
-  return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 }).format(value);
+  return formatNumberValueWithCommas(value);
 };
 
 const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') => (
@@ -104,7 +105,10 @@ const MetricCard = ({
       </div>
       <div>
         <TextBase classNames="caption !text-color-700" text={label} />
-        <TextBase classNames="title5 !text-color-900" text={String(value)} />
+        <TextBase
+          classNames="title5 !text-color-900"
+          text={formatNumberValueWithCommas(value, { maximumFractionDigits: 0 })}
+        />
       </div>
     </Flex>
   </div>
@@ -134,8 +138,11 @@ const MeterChangeEventsScreen = () => {
     openDetail,
     selectedEvent,
     selectedDetail,
+    customerOptions,
     form,
     detailFieldArray,
+    onOpenCustomerDropdown,
+    customerDropdownRender,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -495,10 +502,14 @@ const MeterChangeEventsScreen = () => {
                       control={control}
                       disabled={Boolean(selectedFormEventId)}
                     />
-                    <AppTextFieldControl
+                    <AppSelectControl
                       name="customerId"
                       label="Khách hàng"
-                      placeholder="Nhập mã khách hàng"
+                      placeholder="Chọn khách hàng"
+                      options={customerOptions}
+                      dropdownRender={customerDropdownRender}
+                      onOpenChange={onOpenCustomerDropdown}
+                      unSeleted
                       control={control}
                     />
                     <AppDatePickerControl
@@ -582,16 +593,25 @@ const MeterChangeEventsScreen = () => {
                             <AppTextFieldControl
                               name={`details.${index}.removeReading` as const}
                               placeholder="Nhập chỉ số"
+                              inputMode="decimal"
+                              formatNumberWithCommas
+                              allowDecimal
                               control={control}
                             />
                             <AppTextFieldControl
                               name={`details.${index}.installReading` as const}
                               placeholder="Nhập chỉ số"
+                              inputMode="decimal"
+                              formatNumberWithCommas
+                              allowDecimal
                               control={control}
                             />
                             <AppTextFieldControl
                               name={`details.${index}.multiplier` as const}
                               placeholder="1"
+                              inputMode="decimal"
+                              formatNumberWithCommas
+                              allowDecimal
                               control={control}
                             />
                             <AppTakeNoteControl

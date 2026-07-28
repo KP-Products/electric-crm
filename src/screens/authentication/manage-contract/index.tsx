@@ -264,11 +264,11 @@ const ManageContractScreen = () => {
       },
       {
         title: 'Người tạo',
-        dataIndex: 'createdBy',
-        key: 'createdBy',
+        dataIndex: 'createdByUsername',
+        key: 'createdByUsername',
         width: K_SIZE_150,
-        render: (createdBy: string) =>
-          renderTruncatedText(getUserDisplay(createdBy), 'max-w-[180px]')
+        render: (createdByUsername: string) =>
+          renderTruncatedText(createdByUsername, 'max-w-[180px]')
       },
       {
         title: 'Ngày tạo',
@@ -323,7 +323,6 @@ const ManageContractScreen = () => {
       currentPage,
       getCustomerDisplay,
       getMeterDisplay,
-      getUserDisplay,
       onDelete,
       onCopyContract,
       onOpenDetail,

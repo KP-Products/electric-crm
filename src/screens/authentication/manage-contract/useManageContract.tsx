@@ -103,15 +103,6 @@ export default function useManageContract() {
     [contractList, filter.meterId, filterApplied.meterId]
   );
 
-  const pinnedCreatedByIds = useMemo(
-    () => [
-      filter.createdBy,
-      filterApplied.createdBy,
-      ...contractList.map((contract) => contract.createdBy)
-    ],
-    [contractList, filter.createdBy, filterApplied.createdBy]
-  );
-
   const { customerOptions, getCustomerDisplay, onOpenCustomerDropdown, customerDropdownRender } =
     useCustomerLookup({
       autoLoad: false,
@@ -128,7 +119,6 @@ export default function useManageContract() {
 
   const { userOptions, getUserDisplay, onOpenUserDropdown, userDropdownRender } = useUserLookup({
     autoLoad: false,
-    pinnedIds: pinnedCreatedByIds,
     showErrorToast: true
   });
 

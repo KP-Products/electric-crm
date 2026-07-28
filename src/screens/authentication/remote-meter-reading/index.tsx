@@ -1,22 +1,19 @@
 'use client';
 
 import {
-  CalendarOutlined,
   CheckCircleOutlined,
   CloseOutlined,
   DownloadOutlined,
   EyeOutlined,
   FileExcelOutlined,
-  FilterOutlined,
   InfoCircleOutlined,
   SearchOutlined,
   UploadOutlined,
   WarningOutlined
 } from '@ant-design/icons';
-import { K_SIZE_0, K_SIZE_1, K_SIZE_8, NULL_VALUE, REQUIRED_MARK } from '@constant';
+import { K_SIZE_0, K_SIZE_1, K_SIZE_8, NULL_VALUE } from '@constant';
 import { Divider, Flex, Input, Modal, Spin, Upload } from 'antd';
 import ButtonBase from 'components/button';
-import { AppDatePicker } from 'components/date-picker';
 import { AppSelect } from 'components/select';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import AppTable from 'components/table';
@@ -24,26 +21,15 @@ import AppPagination from 'components/table/pagination';
 import { TextBase } from 'components/text';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
-import dayjs from 'dayjs';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
-import { FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
+import { formatNumberValueWithCommas } from 'utils/number-input';
 import {
   RemoteImportValidationStatus,
   RemoteReadingPreviewRow,
   RemoteReadingTouDetail
 } from './useRemoteMeterReading';
 import useRemoteMeterReading from './useRemoteMeterReading';
-
-dayjs.extend(customParseFormat);
-
-const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
-
-const SAVE_MODE_OPTIONS = [
-  { value: 'OFFICIAL', label: 'Lưu chính thức' },
-  { value: 'DRAFT', label: 'Lưu nháp' }
-];
 
 const PAGE_SIZE_OPTIONS = [
   { value: 5, label: '5 / trang' },
@@ -74,7 +60,7 @@ const STATUS_META: Record<
 
 const formatNumber = (value?: number) => {
   if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
-  return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 }).format(value);
+  return formatNumberValueWithCommas(value);
 };
 
 const WorkflowCard = ({
@@ -100,34 +86,6 @@ const StepDivider = () => (
     &gt;
   </div>
 );
-
-const StatPill = ({
-  label,
-  value,
-  tone
-}: {
-  label: string;
-  value: number;
-  tone?: 'success' | 'warning' | 'error';
-}) => {
-  const toneClassName =
-    tone === 'success'
-      ? 'border-success-200 bg-success-50 text-success-700'
-      : tone === 'warning'
-        ? 'border-pending-200 bg-pending-50 text-pending-700'
-        : tone === 'error'
-          ? 'border-error-200 bg-error-50 text-error-600'
-          : 'border-link-200 bg-link-50 text-link-700';
-
-  return (
-    <div
-      className={`flex min-h-36 items-center justify-between gap-8 rounded-radius-m border px-12 py-8 text-13 font-semibold ${toneClassName}`}
-    >
-      <span>{label}</span>
-      <span>{value}</span>
-    </div>
-  );
-};
 
 const MessageList = ({ messages }: { messages: string[] }) => {
   if (!messages.length) return null;
@@ -166,7 +124,8 @@ const TouDetailModal = ({
             <th className="w-[120px] px-12 py-[10px]">TOU</th>
             <th className="w-[140px] px-12 py-[10px] text-right">old_index</th>
             <th className="w-[140px] px-12 py-[10px] text-right">new_index</th>
-            <th className="w-[140px] px-12 py-[10px] text-right">Sản lượng</th>
+            <th className="w-[140px] px-12 py-[10px] text-right">Sản lượng thô</th>
+            <th className="w-[170px] px-12 py-[10px] text-right">Sản lượng hiệu chỉnh</th>
           </tr>
         </thead>
         <tbody>
@@ -177,12 +136,15 @@ const TouDetailModal = ({
                 <td className="px-12 py-8 font-semibold text-color-900">{detail.tou}</td>
                 <td className="px-12 py-8 text-right">{formatNumber(detail.oldIndex)}</td>
                 <td className="px-12 py-8 text-right">{formatNumber(detail.newIndex)}</td>
-                <td className="px-12 py-8 text-right">{formatNumber(detail.usage)}</td>
+                <td className="px-12 py-8 text-right">
+                  {formatNumber(detail.energyRaw ?? detail.usage)}
+                </td>
+                <td className="px-12 py-8 text-right">{formatNumber(detail.energyAdjusted)}</td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={5} className="px-12 py-16 text-center text-color-700">
+              <td colSpan={6} className="px-12 py-16 text-center text-color-700">
                 Không có chi tiết TOU.
               </td>
             </tr>
@@ -212,12 +174,6 @@ const RemoteMeterReadingScreen = () => {
     filteredRows,
     stats,
     workbookMessages,
-    periodStart,
-    periodEnd,
-    periodInfo,
-    readingDate,
-    saveMode,
-    note,
     checkingData,
     importing,
     downloadingTemplate,
@@ -226,6 +182,7 @@ const RemoteMeterReadingScreen = () => {
     pagination,
     currentPage,
     pageSize,
+    canImportData,
     onSelectFile,
     onRemoveFile,
     onCheckData,
@@ -233,12 +190,7 @@ const RemoteMeterReadingScreen = () => {
     onDownloadTemplate,
     onChangeTab,
     onChangeKeyword,
-    onChangePageSize,
-    onChangePeriodStart,
-    onChangePeriodEnd,
-    onChangeReadingDate,
-    onChangeSaveMode,
-    onChangeNote
+    onChangePageSize
   } = useRemoteMeterReading();
   const [touRow, setTouRow] = useState<RemoteReadingPreviewRow>();
 
@@ -278,6 +230,20 @@ const RemoteMeterReadingScreen = () => {
         render: (text: string) => text || NULL_VALUE
       },
       {
+        title: 'Mã kỳ',
+        dataIndex: 'periodCode',
+        key: 'periodCode',
+        width: 130,
+        render: (text: string) => text || NULL_VALUE
+      },
+      {
+        title: 'Ngày ghi',
+        dataIndex: 'readingDate',
+        key: 'readingDate',
+        width: 130,
+        render: (text: string) => text || NULL_VALUE
+      },
+      {
         title: 'Tên khách hàng',
         dataIndex: 'customerName',
         key: 'customerName',
@@ -295,7 +261,7 @@ const RemoteMeterReadingScreen = () => {
         render: (value: number) => formatNumber(value)
       },
       {
-        title: 'Chỉ số hữu công (kWh)',
+        title: 'Tổng chỉ số cuối',
         dataIndex: 'activeEnergyIndex',
         key: 'activeEnergyIndex',
         align: 'right',
@@ -303,7 +269,7 @@ const RemoteMeterReadingScreen = () => {
         render: (value: number) => formatNumber(value)
       },
       {
-        title: 'Sản lượng hữu công (kWh)',
+        title: 'Sản lượng thô',
         dataIndex: 'activeEnergyUsage',
         key: 'activeEnergyUsage',
         align: 'right',
@@ -311,17 +277,9 @@ const RemoteMeterReadingScreen = () => {
         render: (value: number) => formatNumber(value)
       },
       {
-        title: 'Chỉ số vô công (kVArh)',
-        dataIndex: 'reactiveEnergyIndex',
-        key: 'reactiveEnergyIndex',
-        align: 'right',
-        width: 170,
-        render: (value: number) => formatNumber(value)
-      },
-      {
-        title: 'Sản lượng vô công (kVArh)',
-        dataIndex: 'reactiveEnergyUsage',
-        key: 'reactiveEnergyUsage',
+        title: 'Sản lượng hiệu chỉnh',
+        dataIndex: 'energyAdjustedUsage',
+        key: 'energyAdjustedUsage',
         align: 'right',
         width: 180,
         render: (value: number) => formatNumber(value)
@@ -347,7 +305,7 @@ const RemoteMeterReadingScreen = () => {
         title: 'Thao tác',
         key: 'action',
         fixed: 'right',
-        width: 132,
+        width: 180,
         render: (_: unknown, record: RemoteReadingPreviewRow) => (
           <ButtonBase
             type="ghost"
@@ -357,7 +315,7 @@ const RemoteMeterReadingScreen = () => {
             customContent={
               <div className="flex items-center justify-center gap-8">
                 <EyeOutlined />
-                <span>Xem TOU</span>
+                <TextBase>Xem TOU</TextBase>
               </div>
             }
           />
@@ -410,77 +368,54 @@ const RemoteMeterReadingScreen = () => {
 
           <WorkflowCard
             step="2"
-            title="Chọn file & Kỳ ghi chỉ số"
-            description="Chọn file Excel và kỳ ghi chỉ số cần nhập"
+            title="Chọn file Excel"
+            description="Chọn file theo mẫu của hệ thống để kiểm tra và nhập dữ liệu"
           >
-            <div className="grid grid-cols-[minmax(220px,1fr)_minmax(120px,0.36fr)_minmax(120px,0.36fr)] items-end gap-12 mobile:grid-cols-1">
-              <div>
-                <TextBase classNames="caption1 mb-4 !text-color-700" text="File Excel" />
-                <Upload
-                  maxCount={K_SIZE_1}
-                  showUploadList={false}
-                  accept=".xlsx,.xls"
+            <div>
+              <TextBase classNames="caption1 mb-4 !text-color-700" text="File Excel" />
+              <Upload
+                maxCount={K_SIZE_1}
+                showUploadList={false}
+                accept=".xlsx"
+                disabled={importing}
+                beforeUpload={(file) => {
+                  onSelectFile(file);
+                  return Upload.LIST_IGNORE;
+                }}
+              >
+                <button
+                  type="button"
+                  className="flex h-44 w-full items-center gap-8 rounded-radius-m border border-color-300 bg-color-50 px-12 text-left hover:border-primary-500 disabled:cursor-not-allowed disabled:bg-color-200"
                   disabled={importing}
-                  beforeUpload={(file) => {
-                    onSelectFile(file);
-                    return Upload.LIST_IGNORE;
-                  }}
                 >
-                  <button
-                    type="button"
-                    className="flex h-44 w-full items-center gap-8 rounded-radius-m border border-color-300 bg-color-50 px-12 text-left hover:border-primary-500 disabled:cursor-not-allowed disabled:bg-color-200"
-                    disabled={importing}
-                  >
-                    <FileExcelOutlined className="text-success-700" />
-                    <span className="min-w-0 flex-1 truncate text-14 font-semibold text-color-900">
-                      {displayFileName}
-                    </span>
-                    {selectedFile ? (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="text-color-600 hover:text-error-600"
-                        onClick={(event) => {
+                  <FileExcelOutlined className="text-success-700" />
+                  <span className="min-w-0 flex-1 truncate text-14 font-semibold text-color-900">
+                    {displayFileName}
+                  </span>
+                  {selectedFile ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="text-color-600 hover:text-error-600"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onRemoveFile();
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
                           event.stopPropagation();
                           onRemoveFile();
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.stopPropagation();
-                            onRemoveFile();
-                          }
-                        }}
-                      >
-                        <CloseOutlined />
-                      </span>
-                    ) : null}
-                  </button>
-                </Upload>
-                {selectedFileSize ? (
-                  <TextBase classNames="caption1 mt-4 !text-color-700" text={selectedFileSize} />
-                ) : null}
-              </div>
-              <AppDatePicker
-                name="periodStart"
-                label="Kỳ ghi chỉ số"
-                labelSuffix={requiredMark}
-                picker="month"
-                format="MM/YYYY"
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-                value={dayjs(periodStart, 'MM/YYYY')}
-                onChange={(date) => onChangePeriodStart(date ? date.format('MM/YYYY') : '')}
-              />
-              <AppDatePicker
-                name="periodEnd"
-                label=" "
-                picker="month"
-                format="MM/YYYY"
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-                value={dayjs(periodEnd, 'MM/YYYY')}
-                onChange={(date) => onChangePeriodEnd(date ? date.format('MM/YYYY') : '')}
-              />
+                        }
+                      }}
+                    >
+                      <CloseOutlined />
+                    </span>
+                  ) : null}
+                </button>
+              </Upload>
+              {selectedFileSize ? (
+                <TextBase classNames="caption1 mt-4 !text-color-700" text={selectedFileSize} />
+              ) : null}
             </div>
           </WorkflowCard>
 
@@ -505,222 +440,121 @@ const RemoteMeterReadingScreen = () => {
           </WorkflowCard>
         </div>
 
-        <div className="mt-12 grid grid-cols-[minmax(0,1fr)_280px] gap-12 desktop:grid-cols-1">
-          <div className="rounded-radius-l border border-color-300 bg-color-50 p-12">
-            <Flex
-              justify="space-between"
-              align="start"
-              gap={K_SIZE_8}
-              className="mobile:flex-col mobile:items-start"
-            >
-              <div>
-                <TextBase
-                  classNames="sub-title3 !text-primary-700"
-                  text={`Dữ liệu chi tiết từ file (${stats.total} dòng)`}
-                />
-                <TextBase
-                  classNames="caption1 mt-4 !text-color-700"
-                  text={
-                    checkedAt
-                      ? `Kiểm tra lúc ${checkedAt}`
-                      : 'Dữ liệu mẫu đang hiển thị theo file Excel tham chiếu'
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-4 gap-8 mobile:w-full mobile:grid-cols-2">
-                <StatPill label="Tổng" value={stats.total} />
-                <StatPill label="Hợp lệ" value={stats.valid} tone="success" />
-                <StatPill label="Cảnh báo" value={stats.warning} tone="warning" />
-                <StatPill label="Lỗi" value={stats.error} tone="error" />
-              </div>
-            </Flex>
-
-            <div className="mt-12 flex items-center justify-between gap-12 mobile:flex-col mobile:items-stretch">
-              <Input
-                value={keyword}
-                placeholder="Tìm kiếm theo số công tơ, mã khách hàng, tên khách hàng..."
-                prefix={<SearchOutlined className="text-color-600" />}
-                onChange={(event) => onChangeKeyword(event.target.value)}
-                className="h-40 max-w-[520px] rounded-radius-m border-color-300 mobile:max-w-full"
+        <div className="mt-12 rounded-radius-l border border-color-300 bg-color-50 p-12">
+          <Flex
+            justify="space-between"
+            align="start"
+            gap={K_SIZE_8}
+            className="mobile:flex-col mobile:items-start"
+          >
+            <div>
+              <TextBase
+                classNames="sub-title3 !text-primary-700"
+                text={`Dữ liệu chi tiết từ file (${stats.total} dòng)`}
               />
-              <ButtonBase
-                type="ghost"
-                size={40}
-                classNames="min-w-[96px] justify-center"
-                customContent={
-                  <div className="flex items-center gap-8">
-                    <FilterOutlined />
-                    <span>Bộ lọc</span>
-                  </div>
-                }
+              <TextBase
+                classNames="caption1 mt-4 !text-color-700"
+                text={checkedAt ? `Kiểm tra lúc ${checkedAt}` : 'Chưa kiểm tra dữ liệu file'}
               />
             </div>
-
-            <div className="mt-12 flex flex-wrap gap-20 border-b border-color-300">
-              {tabItems.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => onChangeTab(tab.key)}
-                  className={`border-b px-4 pb-8 text-14 font-semibold ${
-                    activeTab === tab.key
-                      ? 'border-primary-600 text-primary-700'
-                      : 'border-color-50 text-color-700 hover:text-primary-700'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <MessageList messages={workbookMessages} />
-
-            <Spin spinning={checkingData}>
-              <div className="mt-16 overflow-hidden rounded-radius-m border border-color-300">
-                <AppTable
-                  rootClassName="w-full"
-                  className="[&_.ant-pagination]:hidden"
-                  scroll={{ x: 'max-content', y: '52vh' }}
-                  dataSource={paginatedRows}
-                  columns={columns}
-                  rowKey="id"
-                  pagination={false}
-                  rowSelection={{ preserveSelectedRowKeys: true }}
-                />
-              </div>
-              <div className="grid grid-cols-[minmax(0,1fr)_150px] items-start gap-12 mobile:grid-cols-1">
-                <AppPagination
-                  currentPage={currentPage}
-                  total={filteredRows.length}
-                  pagination={pagination}
-                  className="mt-12"
-                />
-                <AppSelect
-                  name="pageSize"
-                  options={PAGE_SIZE_OPTIONS}
-                  value={pageSize}
-                  onSelectOption={({ key }) => onChangePageSize(Number(key))}
-                  wrapperClassName="mt-12"
-                />
-              </div>
-            </Spin>
-          </div>
-
-          <aside className="rounded-radius-l border border-color-300 bg-color-50 p-16">
-            <TextBase classNames="sub-title3 !text-primary-700" text="Cấu hình nhập dữ liệu" />
-            <div className="mt-16 flex flex-col gap-12">
-              <div>
-                <TextBase classNames="caption1 !text-color-700" text="Kỳ ghi chỉ số" />
-                <TextBase classNames="sub-title4 mt-4 !text-color-900" text={periodInfo.label} />
-              </div>
-              <AppDatePicker
-                name="readingDate"
-                label="Ngày ghi chỉ số"
-                labelSuffix={requiredMark}
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-                value={dayjs(readingDate, FORMAT_DATE_API)}
-                format={FORMAT_DATE_PARAMS}
-                onChange={(date) => onChangeReadingDate(date ? date.format(FORMAT_DATE_API) : '')}
-              />
-              <AppSelect
-                name="saveMode"
-                label="Chế độ lưu"
-                options={SAVE_MODE_OPTIONS}
-                value={saveMode}
-                onSelectOption={({ key }) =>
-                  onChangeSaveMode(key === 'DRAFT' ? 'DRAFT' : 'OFFICIAL')
-                }
-              />
-              <div>
-                <TextBase classNames="caption1 mb-4 !text-color-700" text="Ghi chú" />
-                <Input.TextArea
-                  value={note}
-                  rows={4}
-                  maxLength={500}
-                  placeholder="Nhập ghi chú (nếu có)..."
-                  onChange={(event) => onChangeNote(event.target.value)}
-                  className="rounded-radius-m border-color-300"
-                />
-              </div>
-              <ButtonBase
-                type="primary"
-                disabled={!selectedFile || importing || checkingData || stats.error > K_SIZE_0}
-                onClick={onImportData}
-                classNames="w-full justify-center"
-                customContent={
-                  <div className="flex items-center justify-center gap-8">
-                    <UploadOutlined />
-                    <span>{importing ? 'Đang nhập...' : 'Nhập dữ liệu vào hệ thống'}</span>
-                  </div>
-                }
-              />
-              {importResult ? (
-                <div
-                  className={`rounded-radius-m border px-12 py-8 text-13 ${
-                    importResult.success
-                      ? 'border-success-200 bg-success-50 text-success-700'
-                      : 'border-error-200 bg-error-50 text-error-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-8 font-semibold">
-                    {importResult.success ? <CheckCircleOutlined /> : <WarningOutlined />}
-                    <span>
-                      {importResult.success
-                        ? `Đã nhập ${importResult.rowCount || stats.total} dòng chỉ số`
-                        : `Import lỗi ${importResult.errors?.length || K_SIZE_0} dòng`}
-                    </span>
-                  </div>
-                  {importResult.errors?.length ? (
-                    <ul className="mt-[6px] list-disc pl-[18px]">
-                      {importResult.errors.slice(K_SIZE_0, 5).map((error) => (
-                        <li key={error}>{error}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </aside>
-        </div>
-
-        <div className="mt-12 grid grid-cols-[minmax(0,1.7fr)_minmax(240px,0.75fr)_minmax(220px,0.6fr)] gap-12 tablet:grid-cols-1">
-          <div className="rounded-radius-l border border-pending-200 bg-pending-50 px-16 py-12 text-13 text-color-900">
-            <TextBase classNames="sub-title4 mb-8 !text-pending-700" text="Lưu ý" />
-            <div>Chỉ số hữu công được tính từ tổng new_index theo TOU CD, BT, TD.</div>
-            <div>Chỉ số vô công không bắt buộc; nếu để trống hệ thống sẽ lưu giá trị null.</div>
-            <div>Đảm bảo kỳ ghi chỉ số và ngày ghi chỉ số chính xác trước khi xác nhận.</div>
-          </div>
-          <div className="rounded-radius-l border border-link-100 bg-link-50 px-16 py-12">
-            <TextBase classNames="sub-title4 !text-primary-700" text="Tải file Excel mẫu" />
-            <TextBase
-              classNames="caption1 mt-4 !text-color-700"
-              text="Tải file mẫu để nhập dữ liệu theo đúng định dạng."
-            />
             <ButtonBase
-              type="ghost"
-              size={36}
-              onClick={onDownloadTemplate}
-              classNames="mt-12 justify-center"
+              type="primary"
+              disabled={!canImportData}
+              onClick={onImportData}
+              classNames="min-w-[246px] justify-center mobile:w-full"
               customContent={
-                <div className="flex items-center gap-8">
-                  <DownloadOutlined />
-                  <span>Tải file mẫu Excel</span>
+                <div className="flex items-center justify-center gap-8">
+                  <UploadOutlined />
+                  <span>{importing ? 'Đang nhập...' : 'Nhập dữ liệu vào hệ thống'}</span>
                 </div>
               }
             />
-          </div>
-          <div className="rounded-radius-l border border-color-300 bg-color-50 px-16 py-12">
-            <TextBase classNames="sub-title4 !text-primary-700" text="Hướng dẫn" />
-            <div className="mt-12 flex items-center gap-8 text-13 font-semibold text-color-700">
-              <FileExcelOutlined />
-              <span>Du_lieu_cong_to</span>
+          </Flex>
+
+          {importResult ? (
+            <div
+              className={`mt-12 rounded-radius-m border px-12 py-8 text-13 ${
+                importResult.success
+                  ? 'border-success-200 bg-success-50 text-success-700'
+                  : 'border-error-200 bg-error-50 text-error-600'
+              }`}
+            >
+              <div className="flex items-center gap-8 font-semibold">
+                {importResult.success ? <CheckCircleOutlined /> : <WarningOutlined />}
+                <span>
+                  {importResult.success
+                    ? `Đã nhập ${importResult.rowCount || stats.total} dòng chỉ số`
+                    : `Import lỗi ${importResult.errors?.length || K_SIZE_0} dòng`}
+                </span>
+              </div>
+              {importResult.errors?.length ? (
+                <ul className="mt-[6px] list-disc pl-[18px]">
+                  {importResult.errors.slice(K_SIZE_0, 5).map((error) => (
+                    <li key={error}>{error}</li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
-            <div className="mt-8 flex items-center gap-8 text-13 font-semibold text-color-700">
-              <CalendarOutlined />
-              <span>Chi_tiet_TOU</span>
-            </div>
+          ) : null}
+
+          <div className="mt-12 flex items-center justify-between gap-12 mobile:flex-col mobile:items-stretch">
+            <Input
+              value={keyword}
+              placeholder="Tìm kiếm theo số công tơ, mã khách hàng, tên khách hàng, mã kỳ..."
+              prefix={<SearchOutlined className="text-color-600" />}
+              onChange={(event) => onChangeKeyword(event.target.value)}
+              className="h-40 max-w-[520px] rounded-radius-m border-color-300 mobile:max-w-full"
+            />
           </div>
+
+          <div className="mt-12 flex flex-wrap gap-20 border-b border-color-300">
+            {tabItems.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => onChangeTab(tab.key)}
+                className={`border-b px-4 pb-8 text-14 font-semibold ${
+                  activeTab === tab.key
+                    ? 'border-primary-600 text-primary-700'
+                    : 'border-color-50 text-color-700 hover:text-primary-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <MessageList messages={workbookMessages} />
+
+          <Spin spinning={checkingData}>
+            <div className="mt-16 overflow-hidden rounded-radius-m border border-color-300">
+              <AppTable
+                rootClassName="w-full"
+                className="[&_.ant-pagination]:hidden"
+                scroll={{ x: 'max-content', y: '52vh' }}
+                dataSource={paginatedRows}
+                columns={columns}
+                rowKey="id"
+                pagination={false}
+                rowSelection={{ preserveSelectedRowKeys: true }}
+              />
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_150px] items-start gap-12 mobile:grid-cols-1">
+              <AppPagination
+                currentPage={currentPage}
+                total={filteredRows.length}
+                pagination={pagination}
+                className="mt-12"
+              />
+              <AppSelect
+                name="pageSize"
+                options={PAGE_SIZE_OPTIONS}
+                value={pageSize}
+                onSelectOption={({ key }) => onChangePageSize(Number(key))}
+                wrapperClassName="mt-12"
+              />
+            </div>
+          </Spin>
         </div>
       </section>
 

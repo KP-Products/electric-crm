@@ -41,6 +41,7 @@ import {
   getUrgencyLevelLabel,
   getUrgencyLevelStatusType
 } from './utils';
+import { CompanyLegalDocument } from '../../../model/company-legal-document';
 
 const FILTER_LABEL_MAP: Record<keyof IncomingDocumentFilterForm, string> = {
   incomingNumber: 'Số đến',
@@ -191,7 +192,8 @@ const IncomingDocumentScreen = () => {
         dataIndex: 'createdBy',
         key: 'createdBy',
         width: K_SIZE_120,
-        render: (createdBy: number) => displayText(createdBy)
+        render: (_: number, record: CompanyLegalDocument) =>
+          displayText(record.createdByName || record.createdByUsername || record.createdBy)
       },
       {
         title: 'File văn bản',

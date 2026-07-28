@@ -21,6 +21,7 @@ import customerServices from 'services/customer-services';
 import manualMeterReadingServices from 'services/manual-meter-reading-services';
 import meterServices from 'services/meter-services';
 import { FORMAT_DATE_API } from 'utils/date';
+import { parseFormattedNumber } from 'utils/number-input';
 import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 
 dayjs.extend(customParseFormat);
@@ -210,15 +211,7 @@ const buildMeterLookupOptions = (meters: Meter[]): AppSelectOption[] =>
   buildUniqueLookupOptions(meters, (meter) => meter.meterCode);
 
 const toNumber = (value?: string | number) => {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
-  const normalized = String(value ?? '')
-    .trim()
-    .replace(/\s/g, '')
-    .replace(/\./g, '')
-    .replace(',', '.');
-  if (!normalized) return undefined;
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return parseFormattedNumber(value);
 };
 
 const getRegisterRawKwh = (register: ManualReadingRegister) => {

@@ -21,6 +21,7 @@ import { useSelector } from 'react-redux';
 import { DebugUtils } from 'utils/debug-utils';
 import { normalizeDateToApi } from 'utils/date';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
+import { parseFormattedNumber } from 'utils/number-input';
 import { z } from 'zod';
 import {
   METER_TYPE,
@@ -36,15 +37,7 @@ const optionalString = z.preprocess(
   z.string().trim()
 );
 
-const normalizeNumberInput = (value: string) => {
-  const normalizedValue = value.trim().replace(/\s/g, '');
-  if (normalizedValue.includes(',')) {
-    return normalizedValue.replace(/\./g, '').replace(',', '.');
-  }
-  return normalizedValue;
-};
-
-const parseNumberInput = (value: string) => Number(normalizeNumberInput(value));
+const parseNumberInput = (value: string) => parseFormattedNumber(value) ?? Number.NaN;
 
 const shouldSelectParentMeter = (meterType?: string) =>
   meterType === METER_TYPE.CUSTOMER || meterType === METER_TYPE.CONG_TO_TONG;

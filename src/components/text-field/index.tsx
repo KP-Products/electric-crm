@@ -9,7 +9,12 @@ import type { Ref } from 'react';
 import React, { forwardRef } from 'react';
 import type { Control, FieldError, FieldValues, Path } from 'react-hook-form';
 import { useController } from 'react-hook-form';
-import { formatIntegerWithCommas, sanitizeIntegerInput } from 'utils/number-input';
+import {
+  formatDecimalWithCommas,
+  formatIntegerWithCommas,
+  sanitizeDecimalInput,
+  sanitizeIntegerInput
+} from 'utils/number-input';
 
 export interface AppTextFieldProps extends InputProps {
   label?: React.ReactNode;
@@ -25,6 +30,7 @@ export interface AppTextFieldProps extends InputProps {
   classNameIsView?: string;
   onlyNumber?: boolean;
   formatNumberWithCommas?: boolean;
+  allowDecimal?: boolean;
 }
 
 export interface AppTextFieldControlProps<T extends FieldValues>
@@ -50,7 +56,8 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
     isView,
     classNameIsView,
     onlyNumber,
-    formatNumberWithCommas,
+    formatNumberWithCommas: shouldFormatNumberWithCommas,
+    allowDecimal,
     value,
     onChange,
     onKeyDown,
@@ -60,10 +67,21 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
   } = props;
 
   const isPasswordType = type === 'password';
-  const isNumericInput = type === 'number' || onlyNumber || formatNumberWithCommas;
+  const isNumericInput = type === 'number' || onlyNumber || shouldFormatNumberWithCommas;
   const inputType = isNumericInput && !isPasswordType ? 'text' : type;
 
   const TextField = isPasswordType ? Input.Password : Input;
+  const formatNumericValue = (nextValue?: InputProps['value'] | null) => {
+    if (nextValue === undefined || nextValue === null) return '';
+    const normalizedValue = typeof nextValue === 'bigint' ? String(nextValue) : nextValue;
+
+    if (Array.isArray(normalizedValue)) return normalizedValue.join(', ');
+    if (!shouldFormatNumberWithCommas) return nextValue;
+    return allowDecimal
+      ? formatDecimalWithCommas(normalizedValue as string | number)
+      : formatIntegerWithCommas(normalizedValue as string | number);
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     const allowedControlKeys = [
       'Backspace',
@@ -77,6 +95,8 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
       'Home',
       'End'
     ];
+    const allowedNumberCharacter =
+      /^\d$/.test(event.key) || (allowDecimal && ['.', ','].includes(event.key));
 
     if (
       isNumericInput &&
@@ -84,7 +104,7 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
       !event.metaKey &&
       !allowedControlKeys.includes(event.key) &&
       event.key.length === 1 &&
-      !/^\d$/.test(event.key)
+      !allowedNumberCharacter
     ) {
       event.preventDefault();
     }
@@ -95,9 +115,11 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (isNumericInput) {
-      event.target.value = formatNumberWithCommas
-        ? formatIntegerWithCommas(event.target.value)
-        : sanitizeIntegerInput(event.target.value);
+      event.target.value = shouldFormatNumberWithCommas
+        ? String(formatNumericValue(event.target.value))
+        : allowDecimal
+          ? sanitizeDecimalInput(event.target.value)
+          : sanitizeIntegerInput(event.target.value);
     }
     onChange?.(event);
   };
@@ -111,7 +133,22 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
     </div>
   );
 
-  const displayValue = Array.isArray(value)
+  const formattedValue = formatNumericValue(value);
+  const inputValue = shouldFormatNumberWithCommas ? formattedValue : value ?? undefined;
+
+  const displayValue = Array.isArray(formattedValue)
+    ? formattedValue.join(', ')
+    : formattedValue !== undefined && formattedValue !== null && formattedValue !== ''
+      ? String(formattedValue)
+      : NULL_VALUE;
+
+  const numericPattern = allowDecimal
+    ? '[0-9,.]*'
+    : shouldFormatNumberWithCommas
+      ? '[0-9,]*'
+      : '[0-9]*';
+
+  const legacyDisplayValue = Array.isArray(value)
     ? value.join(', ')
     : value !== undefined && value !== null && value !== ''
       ? String(value)
@@ -131,7 +168,9 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
         </label>
       )}
       {isView ? (
-        <TextBase classNames={classNameIsView}>{displayValue}</TextBase>
+        <TextBase classNames={classNameIsView}>
+          {shouldFormatNumberWithCommas ? displayValue : legacyDisplayValue}
+        </TextBase>
       ) : (
         <TextField
           type={inputType}
@@ -140,11 +179,11 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
           size={size}
           onKeyDown={handleKeyDown}
           onChange={handleChange}
-          inputMode={isNumericInput ? inputMode || 'numeric' : inputMode}
-          pattern={
-            isNumericInput ? pattern || (formatNumberWithCommas ? '[0-9,]*' : '[0-9]*') : pattern
+          inputMode={
+            isNumericInput ? inputMode || (allowDecimal ? 'decimal' : 'numeric') : inputMode
           }
-          value={value}
+          pattern={isNumericInput ? pattern || numericPattern : pattern}
+          value={inputValue}
           {...restProps}
           ref={ref}
           {...(isPasswordType

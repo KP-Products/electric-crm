@@ -19,9 +19,10 @@ import {
 } from '@constant';
 import { Divider, Drawer, Flex, Spin } from 'antd';
 import type { ReactNode } from 'react';
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import ButtonBase from 'components/button';
+import { AppDatePickerControl } from 'components/date-picker';
 import IconHover from 'components/icon-vec-local/icon-hover';
 import { AppSelect, AppSelectControl, AppSelectOption } from 'components/select';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
@@ -109,11 +110,6 @@ const getFilterDisplayValue = (key: keyof OperationUnitFilter, value: string) =>
   return value;
 };
 
-const getRecordValue = (operationUnit: OperationUnit, key: string) => {
-  const value = operationUnit[key as keyof OperationUnit];
-  return typeof value === 'string' || typeof value === 'number' ? value : undefined;
-};
-
 const DetailItem = ({ label, value }: { label: string; value: ReactNode }) => (
   <div className="min-w-0">
     <div className="mb-4 text-12 font-semibold text-color-700">{label}</div>
@@ -129,7 +125,6 @@ const ManageOperationUnitScreen = () => {
     total,
     listLoading,
     detailLoading,
-    exportLoading,
     currentPage,
     pagination,
     filter,
@@ -152,8 +147,7 @@ const ManageOperationUnitScreen = () => {
     onChangeUnitCode,
     onOpenDetail,
     onCloseDetail,
-    onDelete,
-    onExport
+    onDelete
   } = useManageOperationUnit();
 
   const {
@@ -169,22 +163,6 @@ const ManageOperationUnitScreen = () => {
       ),
     [filterApplied]
   );
-
-  const getExportDisplayValue = useCallback((operationUnit: OperationUnit, key: string) => {
-    switch (key) {
-      case 'signedDate':
-      case 'effectiveDate':
-      case 'expiryDate':
-        return renderDate(getRecordValue(operationUnit, key) as string);
-      case 'createdAt':
-      case 'updatedAt':
-        return renderDateTime(getRecordValue(operationUnit, key) as string);
-      case 'status':
-        return getStatusMeta(operationUnit.status).label;
-      default:
-        return displayText(getRecordValue(operationUnit, key));
-    }
-  }, []);
 
   const columns = useMemo<any[]>(
     () => [
@@ -249,15 +227,15 @@ const ManageOperationUnitScreen = () => {
       },
       {
         title: 'Người tạo',
-        dataIndex: 'createdBy',
-        key: 'createdBy',
+        dataIndex: 'createdByUsername',
+        key: 'createdByUsername',
         width: K_SIZE_180,
         render: (text: string) => renderTruncatedText(text, 'max-w-[180px]')
       },
       {
         title: 'Người cập nhật',
-        dataIndex: 'updateBy',
-        key: 'updateBy',
+        dataIndex: 'updatedByUsername',
+        key: 'updatedByUsername',
         width: K_SIZE_180,
         render: (text: string) => renderTruncatedText(text, 'max-w-[180px]')
       },
@@ -404,23 +382,6 @@ const ManageOperationUnitScreen = () => {
             gap={K_SIZE_16}
             className="mobile:mt-8 mobile:w-full mobile:flex-col"
           >
-            <ButtonBase
-              type="ghost"
-              leftIcon="IC_DOWNLOAD_OUTLINE"
-              customContent={
-                <div className="flex items-center justify-center">
-                  <div>Xuất Excel</div>
-                  {exportLoading && (
-                    <div className="ml-8">
-                      <Spin size="small" />
-                    </div>
-                  )}
-                </div>
-              }
-              onClick={() => onExport(getExportDisplayValue)}
-              classNames="mobile:flex-1 mobile:justify-center"
-              disabled={exportLoading}
-            />
             <ButtonBase
               type="primary"
               leftIcon="IC_ADD_OUTLINE2"
@@ -626,11 +587,13 @@ const ManageOperationUnitScreen = () => {
                   placeholder="Nhập CMND/CCCD"
                   control={control}
                 />
-                <AppTextFieldControl
+                <AppDatePickerControl
                   name="contactIsueDate"
                   label="Ngày cấp CMND/CCCD"
-                  placeholder="dd-mm-yyyy"
                   control={control}
+                  allowClear
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
                 />
               </div>
 
@@ -703,9 +666,15 @@ const ManageOperationUnitScreen = () => {
                   />
                 }
               />
-              <DetailItem label="Người tạo" value={displayText(selectedDetail?.createdBy)} />
+              <DetailItem
+                label="Người tạo"
+                value={displayText(selectedDetail?.createdByUsername)}
+              />
               <DetailItem label="Ngày tạo" value={renderDateTime(selectedDetail?.createdAt)} />
-              <DetailItem label="Người cập nhật" value={displayText(selectedDetail?.updateBy)} />
+              <DetailItem
+                label="Người cập nhật"
+                value={displayText(selectedDetail?.updatedByUsername)}
+              />
               <DetailItem label="Ngày cập nhật" value={renderDateTime(selectedDetail?.updatedAt)} />
               <div className="col-span-2 mobile:col-span-1">
                 <DetailItem label="Địa chỉ" value={displayText(selectedDetail?.address)} />

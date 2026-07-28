@@ -277,11 +277,18 @@ const OperationPriceScreen = () => {
         render: (date: string) => displayOperationPriceDate(date)
       },
       {
-        title: 'Người cập nhật',
-        key: 'updatedBy',
+        title: 'Người tạo',
+        dataIndex: 'createdByUsername',
+        key: 'createdByUsername',
         width: K_SIZE_160,
-        render: (_: unknown, record: OperationPrice) =>
-          displayText(record.updatedBy || record.createdBy)
+        render: (text: string) => renderTruncatedText(text, 'max-w-[160px]')
+      },
+      {
+        title: 'Người cập nhật',
+        dataIndex: 'updatedByUsername',
+        key: 'updatedByUsername',
+        width: K_SIZE_160,
+        render: (text: string) => renderTruncatedText(text, 'max-w-[160px]')
       },
       {
         title: t('common:action'),

@@ -13,6 +13,7 @@ import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import Link from 'next/link';
 import type { ChangeEvent } from 'react';
+import { sanitizeIntegerInput } from 'utils/number-input';
 import useManageMeterForm, { ManageMeterFormProps } from '../hooks/useManageMeterForm';
 import { METER_STATUS_OPTIONS, METER_TYPE_OPTIONS, VOLTAGE_LEVEL_OPTIONS } from '../utils/constant';
 
@@ -58,7 +59,7 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
 
   const handleNumberFieldChange =
     (fieldName: 'multiplier' | 'initialReading') => (event: ChangeEvent<HTMLInputElement>) => {
-      setValue(fieldName, event.target.value.replace(/\D/g, ''), {
+      setValue(fieldName, sanitizeIntegerInput(event.target.value), {
         shouldDirty: true,
         shouldTouch: true,
         shouldValidate: true
@@ -151,8 +152,7 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             placeholder="Nhập hệ số nhân"
             isView={isView}
             inputMode="numeric"
-            pattern="[0-9]*"
-            onlyNumber
+            formatNumberWithCommas
             onChange={handleNumberFieldChange('multiplier')}
             control={control}
           />
@@ -163,8 +163,7 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             placeholder="Nhập chỉ số đầu"
             isView={isView}
             inputMode="numeric"
-            pattern="[0-9]*"
-            onlyNumber
+            formatNumberWithCommas
             onChange={handleNumberFieldChange('initialReading')}
             control={control}
           />

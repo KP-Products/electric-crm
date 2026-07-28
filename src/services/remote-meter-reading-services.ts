@@ -35,14 +35,6 @@ async function importRemoteMeterReadings(
   try {
     const formData = new FormData();
     formData.append('file', params.file);
-    formData.append('typeInput', params.typeInput || '2');
-
-    if (params.periodCode) formData.append('periodCode', params.periodCode);
-    if (params.periodFrom) formData.append('periodFrom', params.periodFrom);
-    if (params.periodTo) formData.append('periodTo', params.periodTo);
-    if (params.readingDate) formData.append('readingDate', params.readingDate);
-    if (params.saveMode) formData.append('saveMode', params.saveMode);
-    if (params.note) formData.append('note', params.note);
 
     const rs = await appServices.post(ApiConstants.BILLING_REMOTE_READING_IMPORT_UPLOAD, formData);
     return rs.data;

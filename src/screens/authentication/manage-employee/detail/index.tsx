@@ -1,25 +1,36 @@
 'use client';
 
-import { K_SIZE_1, K_SIZE_18, K_SIZE_24, K_SIZE_8, NULL_VALUE } from '@constant';
-import { Avatar, Divider, Flex, Spin, Tabs } from 'antd';
+import { K_SIZE_1, K_SIZE_18, K_SIZE_24, K_SIZE_8, NULL_VALUE, REQUIRED_MARK } from '@constant';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ADD_EMPLOYEE_SALARY_HISTORY, GET_EMPLOYEE_DETAIL } from '@redux-action-type/employee';
+import { dispatch } from '@redux-common';
+import { selectEmployeeLoadingDetail, selectSelectedEmployee } from '@redux-selector/employee';
+import { Avatar, Divider, Drawer, Flex, Spin, Tabs } from 'antd';
 import ButtonBase from 'components/button';
+import { AppDatePickerControl } from 'components/date-picker';
 import IconHover from 'components/icon-vec-local/icon-hover';
 import { IconSvgLocal } from 'components/icon-vec-local';
+import { AppSelectControl } from 'components/select';
 import Status, { KIND_STATUS } from 'components/status';
 import AppTable from 'components/table';
+import { AppTakeNoteControl } from 'components/take-note';
 import { TextBase } from 'components/text';
+import { AppTextFieldControl } from 'components/text-field';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { ErrorBase } from 'model/common';
-import { EmployeeSalaryHistory } from 'model/employee';
+import {
+  AddSalaryHistoryReq,
+  EmployeeSalaryHistory,
+  EmployeeWithHistoryRes,
+  SALARY_CHANGE_TYPE
+} from 'model/employee';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
-import { GET_EMPLOYEE_DETAIL } from '@redux-action-type/employee';
-import { dispatch } from '@redux-common';
-import { selectEmployeeLoadingDetail, selectSelectedEmployee } from '@redux-selector/employee';
 import employeeServices from 'services/employee-services';
 import {
   canViewBlobInline,
@@ -29,6 +40,7 @@ import {
 } from 'utils/blob-response';
 import { displayDateFromServer } from 'utils/date';
 import {
+  DATE_API_FORMAT,
   INLINE_AVATAR_MIME_TYPES,
   INLINE_CONTRACT_MIME_TYPES,
   SALARY_CHANGE_TYPE_LABEL_MAP,
@@ -41,13 +53,85 @@ import {
   getEmployeeErrorContent,
   getEmploymentStatusLabel,
   getEmploymentStatusType,
-  getEmploymentTypeLabel
+  getEmploymentTypeLabel,
+  optionalNumber,
+  optionalString
 } from '../utils';
+import { formatIntegerWithCommas, isFormattedIntegerInput } from 'utils/number-input';
+import { z } from 'zod';
 
 interface InfoItemProps {
   label: string;
   value?: React.ReactNode;
 }
+
+const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
+const SALARY_HISTORY_FORM_ID = 'employee-salary-history-form';
+
+const optionalDateSchema = z
+  .string()
+  .nullable()
+  .transform((value) => value?.trim() || '');
+
+const salaryInputSchema = (message: string) =>
+  z
+    .string()
+    .trim()
+    .min(K_SIZE_1, { message })
+    .refine(isFormattedIntegerInput, { message })
+    .refine(
+      (value) => {
+        const parsedValue = optionalNumber(value);
+        return parsedValue !== undefined && parsedValue > 0;
+      },
+      { message }
+    );
+
+const optionalSalaryInputSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || isFormattedIntegerInput(value), {
+    message: 'Lương cũ phải là số dương'
+  })
+  .refine(
+    (value) => {
+      if (!value) return true;
+      const parsedValue = optionalNumber(value);
+      return parsedValue !== undefined && parsedValue > 0;
+    },
+    {
+      message: 'Lương cũ phải là số dương'
+    }
+  );
+
+const optionalIntegerInputSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || /^\d+$/.test(value), {
+    message: 'Người duyệt phải là ID dạng số nguyên'
+  });
+
+const salaryHistorySchema = z.object({
+  oldBasicSalary: optionalSalaryInputSchema,
+  newBasicSalary: salaryInputSchema('Vui lòng nhập lương mới'),
+  effectiveDate: optionalDateSchema.refine(Boolean, {
+    message: 'Vui lòng chọn ngày hiệu lực'
+  }),
+  endDate: optionalDateSchema,
+  changeType: z.string().trim(),
+  decisionNumber: z.string().trim(),
+  decisionDate: optionalDateSchema,
+  reason: z.string().trim(),
+  note: z.string().trim(),
+  approvedBy: optionalIntegerInputSchema
+});
+
+type SalaryHistoryForm = z.infer<typeof salaryHistorySchema>;
+
+const SALARY_CHANGE_TYPE_OPTIONS = Object.values(SALARY_CHANGE_TYPE).map((value) => ({
+  value,
+  label: SALARY_CHANGE_TYPE_LABEL_MAP[value] || value
+}));
 
 const InfoItem = ({ label, value }: InfoItemProps) => (
   <div className="min-w-0">
@@ -77,6 +161,31 @@ const ManageEmployeeDetailScreen = () => {
     [selectedEmployeeWithHistory?.salaryHistory]
   );
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
+  const [openSalaryHistoryForm, setOpenSalaryHistoryForm] = useState(false);
+  const [salarySubmitLocked, setSalarySubmitLocked] = useState(false);
+
+  const salaryHistoryForm = useForm<SalaryHistoryForm>({
+    mode: 'onTouched',
+    defaultValues: {
+      oldBasicSalary: '',
+      newBasicSalary: '',
+      effectiveDate: '',
+      endDate: '',
+      changeType: SALARY_CHANGE_TYPE.SALARY_INCREASE,
+      decisionNumber: '',
+      decisionDate: '',
+      reason: '',
+      note: '',
+      approvedBy: ''
+    },
+    resolver: zodResolver(salaryHistorySchema)
+  });
+
+  const {
+    control: salaryHistoryControl,
+    handleSubmit: handleSalaryHistorySubmit,
+    formState: { isValid: isSalaryHistoryValid }
+  } = salaryHistoryForm;
 
   const onBack = useCallback(() => {
     router.push(ROUTES.EMPLOYEE_LIST);
@@ -141,6 +250,97 @@ const ManageEmployeeDetailScreen = () => {
     if (!employee?.id) return;
     router.push(`${ROUTES.EMPLOYEE_EDIT}?id=${employee.id}`);
   }, [employee?.id, router]);
+
+  const onOpenSalaryHistoryForm = useCallback(() => {
+    if (!employee?.id) return;
+
+    salaryHistoryForm.reset({
+      oldBasicSalary:
+        employee.basicSalary !== undefined && employee.basicSalary !== null
+          ? formatIntegerWithCommas(employee.basicSalary)
+          : '',
+      newBasicSalary: '',
+      effectiveDate: '',
+      endDate: '',
+      changeType: SALARY_CHANGE_TYPE.SALARY_INCREASE,
+      decisionNumber: '',
+      decisionDate: '',
+      reason: '',
+      note: '',
+      approvedBy: ''
+    });
+    setOpenSalaryHistoryForm(true);
+  }, [employee?.basicSalary, employee?.id, salaryHistoryForm]);
+
+  const onCloseSalaryHistoryForm = useCallback(() => {
+    setOpenSalaryHistoryForm(false);
+    setSalarySubmitLocked(false);
+    salaryHistoryForm.reset();
+  }, [salaryHistoryForm]);
+
+  const buildSalaryHistoryBody = useCallback(
+    (data: SalaryHistoryForm): AddSalaryHistoryReq | undefined => {
+      if (!employee?.id) return undefined;
+
+      const newBasicSalary = optionalNumber(data.newBasicSalary);
+      if (newBasicSalary === undefined) return undefined;
+
+      return {
+        employeeId: employee.id,
+        oldBasicSalary: optionalNumber(data.oldBasicSalary),
+        newBasicSalary,
+        effectiveDate: data.effectiveDate,
+        endDate: optionalString(data.endDate),
+        changeType: optionalString(data.changeType),
+        decisionNumber: optionalString(data.decisionNumber),
+        decisionDate: optionalString(data.decisionDate),
+        reason: optionalString(data.reason),
+        note: optionalString(data.note),
+        approvedBy: optionalNumber(data.approvedBy)
+      };
+    },
+    [employee?.id]
+  );
+
+  const onSubmitSalaryHistory = useCallback(
+    (data: SalaryHistoryForm) => {
+      if (salarySubmitLocked) return;
+
+      const body = buildSalaryHistoryBody(data);
+      if (!body) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Dữ liệu lịch sử tăng lương không hợp lệ'
+        });
+        return;
+      }
+
+      setSalarySubmitLocked(true);
+      dispatch({
+        type: ADD_EMPLOYEE_SALARY_HISTORY,
+        payload: {
+          body,
+          onSuccess: (_response: EmployeeWithHistoryRes) => {
+            setSalarySubmitLocked(false);
+            setOpenSalaryHistoryForm(false);
+            salaryHistoryForm.reset();
+            showToast({
+              type: TYPE_TOAST.SUCCESS,
+              content: 'Thêm lịch sử tăng lương thành công'
+            });
+          },
+          onFailed: (error?: ErrorBase) => {
+            setSalarySubmitLocked(false);
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content: getEmployeeErrorContent(error, 'Thêm lịch sử tăng lương thất bại')
+            });
+          }
+        }
+      });
+    },
+    [buildSalaryHistoryBody, salaryHistoryForm, salarySubmitLocked]
+  );
 
   const onViewContractFile = useCallback(async () => {
     if (!employee?.id) return;
@@ -262,10 +462,11 @@ const ManageEmployeeDetailScreen = () => {
       },
       {
         title: 'Người duyệt',
-        dataIndex: 'approvedBy',
-        key: 'approvedBy',
+        dataIndex: 'approvedByName',
+        key: 'approvedByName',
         width: 120,
-        render: (value: number) => displayText(value)
+        render: (_: number, record: EmployeeSalaryHistory) =>
+          displayText(record.approvedByName || record.approvedByUsername || record.approvedBy)
       }
     ],
     []
@@ -429,22 +630,153 @@ const ManageEmployeeDetailScreen = () => {
                 key: 'salary-history',
                 label: 'Lịch sử tăng lương',
                 children: (
-                  <div className="overflow-hidden rounded-radius-l border border-color-400 pb-4">
-                    <AppTable
-                      rootClassName="w-full"
-                      className="[&_.ant-pagination]:hidden"
-                      scroll={{ x: 'max-content' }}
-                      dataSource={sortedSalaryHistory}
-                      columns={salaryColumns}
-                      rowKey="id"
-                      pagination={false}
-                    />
+                  <div className="bg-color-50">
+                    <Flex justify="end" align="center" gap={K_SIZE_8} className="mb-12">
+                      <ButtonBase
+                        type="primary"
+                        leftIcon="IC_ADD_OUTLINE2"
+                        customContent="Thêm lịch sử tăng lương"
+                        onClick={onOpenSalaryHistoryForm}
+                        disabled={!employee?.id}
+                      />
+                    </Flex>
+                    <div className="overflow-hidden rounded-radius-l border border-color-400 pb-4">
+                      <AppTable
+                        rootClassName="w-full"
+                        className="[&_.ant-pagination]:hidden"
+                        scroll={{ x: 'max-content' }}
+                        dataSource={sortedSalaryHistory}
+                        columns={salaryColumns}
+                        rowKey="id"
+                        pagination={false}
+                      />
+                    </div>
                   </div>
                 )
               }
             ]}
           />
         </Spin>
+
+        <form
+          id={SALARY_HISTORY_FORM_ID}
+          onSubmit={handleSalaryHistorySubmit(onSubmitSalaryHistory)}
+        >
+          <Drawer
+            open={openSalaryHistoryForm}
+            title="Thêm lịch sử tăng lương"
+            width={560}
+            onClose={onCloseSalaryHistoryForm}
+            footer={
+              <Flex justify="end" gap={K_SIZE_8}>
+                <ButtonBase
+                  type="ghost"
+                  customContent="Huỷ"
+                  onClick={onCloseSalaryHistoryForm}
+                  disabled={salarySubmitLocked || detailLoading}
+                />
+                <ButtonBase
+                  type="primary"
+                  htmlType="submit"
+                  form={SALARY_HISTORY_FORM_ID}
+                  customContent={salarySubmitLocked || detailLoading ? 'Đang lưu...' : 'Lưu'}
+                  disabled={!isSalaryHistoryValid || salarySubmitLocked || detailLoading}
+                />
+              </Flex>
+            }
+          >
+            <Spin spinning={salarySubmitLocked || detailLoading}>
+              <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
+                <AppTextFieldControl
+                  name="oldBasicSalary"
+                  label="Lương cũ"
+                  placeholder="Nhập lương cũ"
+                  control={salaryHistoryControl}
+                  inputMode="numeric"
+                  formatNumberWithCommas
+                  suffix="VND"
+                />
+                <AppTextFieldControl
+                  name="newBasicSalary"
+                  label="Lương mới"
+                  labelSuffix={requiredMark}
+                  placeholder="Nhập lương mới"
+                  control={salaryHistoryControl}
+                  inputMode="numeric"
+                  formatNumberWithCommas
+                  suffix="VND"
+                />
+                <AppDatePickerControl
+                  name="effectiveDate"
+                  label="Ngày hiệu lực"
+                  labelSuffix={requiredMark}
+                  control={salaryHistoryControl}
+                  backendFormat={DATE_API_FORMAT}
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
+                />
+                <AppDatePickerControl
+                  name="endDate"
+                  label="Ngày kết thúc"
+                  control={salaryHistoryControl}
+                  backendFormat={DATE_API_FORMAT}
+                  allowClear
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
+                />
+                <AppSelectControl
+                  name="changeType"
+                  label="Loại biến động"
+                  placeholder="Chọn loại biến động"
+                  control={salaryHistoryControl}
+                  options={SALARY_CHANGE_TYPE_OPTIONS}
+                />
+                <AppTextFieldControl
+                  name="decisionNumber"
+                  label="Số quyết định"
+                  placeholder="Nhập số quyết định"
+                  control={salaryHistoryControl}
+                />
+                <AppDatePickerControl
+                  name="decisionDate"
+                  label="Ngày quyết định"
+                  control={salaryHistoryControl}
+                  backendFormat={DATE_API_FORMAT}
+                  allowClear
+                  wrapperClassName="w-full"
+                  datePickerClassName="w-full"
+                />
+                <AppTextFieldControl
+                  name="approvedBy"
+                  label="Người duyệt"
+                  placeholder="Nhập ID người duyệt"
+                  control={salaryHistoryControl}
+                  inputMode="numeric"
+                  onlyNumber
+                />
+                <div className="col-span-2 mobile:col-span-1">
+                  <AppTextFieldControl
+                    name="reason"
+                    label="Lý do"
+                    placeholder="Nhập lý do"
+                    control={salaryHistoryControl}
+                  />
+                </div>
+                <div className="col-span-2 mobile:col-span-1">
+                  <AppTakeNoteControl
+                    name="note"
+                    label="Ghi chú"
+                    placeholder="Nhập ghi chú"
+                    control={salaryHistoryControl}
+                    autoSize={{ minRows: 3, maxRows: 4 }}
+                    maxLength={500}
+                    showCount
+                  />
+                </div>
+              </div>
+            </Spin>
+          </Drawer>
+        </form>
       </div>
     </PageWithBreadcrumb>
   );

@@ -53,7 +53,6 @@ const ManageUser = () => {
     userPaginated,
     loadingUserList,
     pagination,
-    onDownload,
     onResetFilter,
     roleOptions,
     onDelete
@@ -312,16 +311,6 @@ const ManageUser = () => {
               classNames={'mobile:flex-1 mobile:justify-center'}
               onClick={() => router.push(ROUTES.MANAGE_USER_ADD)}
             />
-
-            {permission.canDownload && (
-              <ButtonBase
-                type={'primary'}
-                customContent={t('common:download')}
-                leftIcon={'IC_DOWNLOAD_OUTLINE'}
-                onClick={onDownload}
-                classNames={'mobile:flex-1 mobile:justify-center'}
-              />
-            )}
           </Flex>
         </Flex>
         <Divider className={'my-16 '} />

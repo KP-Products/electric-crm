@@ -13,6 +13,8 @@ export interface ParsedSheet {
 export interface ParsedRemoteMeterReadingWorkbook {
   meterSheet?: ParsedSheet;
   touSheet?: ParsedSheet;
+  readingSheet?: ParsedSheet;
+  sheets: Record<string, ParsedSheet>;
   missingSheets: string[];
 }
 
@@ -25,6 +27,51 @@ const ZIP_METHOD_STORE = 0;
 const ZIP_METHOD_DEFLATE = 8;
 const MAX_EOCD_SEARCH = 65557;
 const RELATIONSHIP_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const READING_IMPORT_IDENTIFY_HEADERS = ['period_code', 'period_from', 'period_to', 'reading_date'];
+
+const HEADER_ALIASES: Record<string, string> = {
+  meter_number: 'meter_number',
+  meter_code: 'meter_number',
+  ma_cong_to: 'meter_number',
+  so_cong_to: 'meter_number',
+  customer_id: 'customer_id',
+  customer_code: 'customer_id',
+  ma_khach_hang: 'customer_id',
+  customer_name: 'customer_name',
+  ten_khach_hang: 'customer_name',
+  period_code: 'period_code',
+  ma_ky: 'period_code',
+  ky_ghi: 'period_code',
+  ky_ghi_chi_so: 'period_code',
+  period_from: 'period_from',
+  tu_ngay: 'period_from',
+  ngay_bat_dau: 'period_from',
+  period_to: 'period_to',
+  den_ngay: 'period_to',
+  ngay_ket_thuc: 'period_to',
+  reading_date: 'reading_date',
+  ngay_ghi: 'reading_date',
+  ngay_ghi_chi_so: 'reading_date',
+  tou: 'tou',
+  khung_gio: 'tou',
+  khung_gio_tou: 'tou',
+  old_index: 'old_index',
+  chi_so_dau: 'old_index',
+  chi_so_cu: 'old_index',
+  new_index: 'new_index',
+  chi_so_cuoi: 'new_index',
+  chi_so_moi: 'new_index',
+  energy_raw: 'energy_raw',
+  san_luong_tho: 'energy_raw',
+  energy_adjusted: 'energy_adjusted',
+  san_luong_hieu_chinh: 'energy_adjusted',
+  multiplier: 'multiplier',
+  he_so_nhan: 'multiplier',
+  active_energy_index: 'active_energy_index',
+  chi_so_huu_cong: 'active_energy_index',
+  reactive_energy_index: 'reactive_energy_index',
+  chi_so_vo_cong: 'reactive_energy_index'
+};
 
 const textDecoder = new TextDecoder('utf-8');
 
@@ -124,10 +171,20 @@ const getChildElementsByLocalName = (root: Element, localName: string) =>
 const getFirstTextByLocalName = (root: Element, localName: string) =>
   getElementsByLocalName(root, localName)[0]?.textContent || '';
 
-const normalizeHeader = (value: CellValue) =>
+const normalizeHeaderToken = (value: CellValue) =>
   String(value ?? '')
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const normalizeHeader = (value: CellValue) => {
+  const normalizedValue = normalizeHeaderToken(value);
+  return HEADER_ALIASES[normalizedValue] || normalizedValue;
+};
 
 const columnIndexFromRef = (ref: string) => {
   const column = ref.replace(/[0-9]/g, '').toUpperCase();
@@ -264,19 +321,26 @@ export const parseRemoteMeterReadingWorkbook = async (
   const entries = await readZipEntries(file);
   const sharedStrings = parseSharedStrings(entries);
   const sheetPaths = parseSheetPaths(entries);
+  const sheets = Object.entries(sheetPaths).reduce<Record<string, ParsedSheet>>(
+    (acc, [sheetName, sheetPath]) => {
+      const sheetXml = readZipText(entries, sheetPath);
+      if (sheetXml) acc[sheetName] = parseSheet(sheetXml, sharedStrings);
+      return acc;
+    },
+    {}
+  );
   const missingSheets = [METER_SHEET_NAME, TOU_SHEET_NAME].filter(
     (sheetName) => !sheetPaths[sheetName]
   );
-  const meterSheetXml = sheetPaths[METER_SHEET_NAME]
-    ? readZipText(entries, sheetPaths[METER_SHEET_NAME])
-    : '';
-  const touSheetXml = sheetPaths[TOU_SHEET_NAME]
-    ? readZipText(entries, sheetPaths[TOU_SHEET_NAME])
-    : '';
+  const readingSheet = Object.values(sheets).find((sheet) =>
+    READING_IMPORT_IDENTIFY_HEADERS.some((header) => sheet.headers.includes(header))
+  );
 
   return {
-    meterSheet: meterSheetXml ? parseSheet(meterSheetXml, sharedStrings) : undefined,
-    touSheet: touSheetXml ? parseSheet(touSheetXml, sharedStrings) : undefined,
+    meterSheet: sheets[METER_SHEET_NAME],
+    touSheet: sheets[TOU_SHEET_NAME],
+    readingSheet,
+    sheets,
     missingSheets
   };
 };

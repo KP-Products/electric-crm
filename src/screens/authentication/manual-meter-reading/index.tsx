@@ -25,6 +25,11 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
 import {
+  formatDecimalWithCommas,
+  formatNumberValueWithCommas,
+  parseFormattedNumber
+} from 'utils/number-input';
+import {
   ManualReadingMeter,
   ManualReadingRegister,
   ManualReadingStatus,
@@ -38,15 +43,11 @@ const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
 
 const formatNumber = (value?: number) => {
   if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
-  return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 }).format(value);
+  return formatNumberValueWithCommas(value);
 };
 
 const parseNumber = (value?: string | number) => {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
-  const normalizedValue = String(value ?? '').trim();
-  if (!normalizedValue) return undefined;
-  const parsed = Number(normalizedValue.replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return parseFormattedNumber(value);
 };
 
 const getRegisterUsage = (register: ManualReadingRegister) => {
@@ -111,7 +112,10 @@ const MeterListItem = ({
           <MeterStatus status={meter.status} />
         </Flex>
         <TextBase classNames="caption1 truncate !text-color-700" text={meter.address} />
-        <TextBase classNames="caption1 !text-color-800" text={`Hệ số nhân: ${meter.multiplier}`} />
+        <TextBase
+          classNames="caption1 !text-color-800"
+          text={`Hệ số nhân: ${formatNumber(meter.multiplier)}`}
+        />
       </div>
     </Flex>
   </button>
@@ -377,7 +381,7 @@ const ManualMeterReadingScreen = () => {
                     value={<span className="text-primary-700">{selectedMeter.customerName}</span>}
                   />
                   <InfoBox label="Địa chỉ" value={selectedMeter.address} />
-                  <InfoBox label="Hệ số nhân" value={selectedMeter.multiplier} />
+                  <InfoBox label="Hệ số nhân" value={formatNumber(selectedMeter.multiplier)} />
                 </div>
 
                 <div className="mt-16">
@@ -390,13 +394,17 @@ const ManualMeterReadingScreen = () => {
                       <thead>
                         <tr className="border-b border-color-300 bg-color-100 text-left text-13 font-semibold text-color-800">
                           <th className="w-[170px] px-12 py-[10px]">TOU</th>
-                          <th className="w-[130px] px-12 py-[10px]">Chỉ số cũ</th>
-                          <th className="w-[150px] px-12 py-[10px]">
+                          <th className="w-[130px] px-12 py-[10px] text-right">Chỉ số cũ</th>
+                          <th className="w-[150px] px-12 py-[10px] text-right">
                             Chỉ số mới <span className="text-error-600">*</span>
                           </th>
-                          <th className="w-[150px] px-12 py-[10px]">Sản lượng thô (kWh)</th>
-                          <th className="w-[120px] px-12 py-[10px]">Hệ số nhân</th>
-                          <th className="w-[160px] px-12 py-[10px]">Sản lượng quy đổi (kWh)</th>
+                          <th className="w-[150px] px-12 py-[10px] text-right">
+                            Sản lượng thô (kWh)
+                          </th>
+                          <th className="w-[120px] px-12 py-[10px] text-right">Hệ số nhân</th>
+                          <th className="w-[160px] px-12 py-[10px] text-right">
+                            Sản lượng quy đổi (kWh)
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -412,34 +420,45 @@ const ManualMeterReadingScreen = () => {
                                 {register.label}
                               </td>
                               <td className="px-12 py-8">
-                                <Input value={formatNumber(register.oldIndex)} disabled />
+                                <Input
+                                  className="text-right"
+                                  value={formatNumber(register.oldIndex)}
+                                  disabled
+                                />
                               </td>
                               <td className="px-12 py-8">
                                 <Input
+                                  className="text-right"
                                   status={invalid ? 'error' : undefined}
-                                  value={register.newIndex}
+                                  value={formatDecimalWithCommas(register.newIndex)}
                                   inputMode="decimal"
                                   placeholder="Nhập chỉ số"
                                   onChange={(event) =>
                                     onChangeRegister(
                                       selectedMeter.id,
                                       register.id,
-                                      event.target.value
+                                      formatDecimalWithCommas(event.target.value)
                                     )
                                   }
                                 />
                               </td>
                               <td className="px-12 py-8">
                                 <Input
+                                  className="text-right"
                                   value={rawKwh === undefined ? '' : formatNumber(rawKwh)}
                                   disabled
                                 />
                               </td>
                               <td className="px-12 py-8">
-                                <Input value={formatNumber(register.multiplier)} disabled />
+                                <Input
+                                  className="text-right"
+                                  value={formatNumber(register.multiplier)}
+                                  disabled
+                                />
                               </td>
                               <td className="px-12 py-8">
                                 <Input
+                                  className="text-right"
                                   value={adjustedKwh === undefined ? '' : formatNumber(adjustedKwh)}
                                   disabled
                                 />
@@ -505,11 +524,14 @@ const ManualMeterReadingScreen = () => {
                     <TextBase classNames="caption1 !text-color-700" text="Chỉ số vô công (kVArh)" />
                     <Input
                       className="mt-8"
-                      value={selectedMeter.reactiveIndex}
+                      value={formatDecimalWithCommas(selectedMeter.reactiveIndex)}
                       inputMode="decimal"
                       placeholder="Nhập chỉ số"
                       onChange={(event) =>
-                        onChangeReactiveIndex(selectedMeter.id, event.target.value)
+                        onChangeReactiveIndex(
+                          selectedMeter.id,
+                          formatDecimalWithCommas(event.target.value)
+                        )
                       }
                     />
                     <TextBase classNames="caption1 mt-12 !text-color-700" text="Ghi chú (nếu có)" />

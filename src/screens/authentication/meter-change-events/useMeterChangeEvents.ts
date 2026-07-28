@@ -1,11 +1,4 @@
-import {
-  DEFAULT_PAGE_SIZE,
-  K_SIZE_0,
-  K_SIZE_1,
-  K_SIZE_2,
-  MAX_PAGE_SIZE,
-  NULL_VALUE
-} from '@constant';
+import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1, MAX_PAGE_SIZE, NULL_VALUE } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CREATE_METER_CHANGE_EVENT,
@@ -41,7 +34,9 @@ import { useSelector } from 'react-redux';
 import meterChangeEventServices from 'services/meter-change-event-services';
 import { FORMAT_DATE_TIME_DOWNLOAD } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
+import { parseFormattedNumber } from 'utils/number-input';
 import { z } from 'zod';
+import useCustomerLookup from '../manage-contract/hooks/useCustomerLookup';
 import {
   DATE_API_FORMAT,
   displayEventDate,
@@ -74,39 +69,18 @@ const DEFAULT_FILTER: MeterChangeEventFilter = {
 
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 
-const normalizeDecimalInput = (value: string) => {
-  const compactValue = value.replace(/\s/g, '');
-  const lastDotIndex = compactValue.lastIndexOf('.');
-  const lastCommaIndex = compactValue.lastIndexOf(',');
-
-  if (lastDotIndex === -K_SIZE_1 && lastCommaIndex === -K_SIZE_1) return compactValue;
-
-  const decimalSeparator = lastDotIndex > lastCommaIndex ? '.' : ',';
-  const groupingSeparator = decimalSeparator === '.' ? ',' : '.';
-  const withoutGrouping = compactValue.split(groupingSeparator).join('');
-  const decimalParts = withoutGrouping.split(decimalSeparator);
-
-  if (decimalParts.length <= K_SIZE_2) return withoutGrouping.replace(decimalSeparator, '.');
-
-  const decimalValue = decimalParts[decimalParts.length - K_SIZE_1];
-  return `${decimalParts.slice(K_SIZE_0, -K_SIZE_1).join('')}.${decimalValue}`;
-};
-
 const parseNumberInput = (value?: string) => {
   const rawValue = String(value ?? '').trim();
   if (!rawValue) return undefined;
 
-  const normalized = normalizeDecimalInput(rawValue);
-  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized)) return undefined;
-
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  const parsed = parseFormattedNumber(rawValue);
+  return parsed !== undefined && parsed >= K_SIZE_0 ? parsed : undefined;
 };
 
 const isValidNonNegativeNumber = (value: string) => {
   if (!value) return true;
   const parsedValue = parseNumberInput(value);
-  return parsedValue !== undefined && parsedValue >= K_SIZE_0;
+  return parsedValue !== undefined;
 };
 
 const detailSchema = z
@@ -271,10 +245,19 @@ export default function useMeterChangeEvents() {
     defaultValues: buildFormValues(),
     resolver: zodResolver(meterChangeEventSchema)
   });
+  const selectedCustomerId = form.watch('customerId');
+  const pinnedCustomerIds = useMemo(
+    () => [selectedEvent?.event?.customerId, selectedCustomerId],
+    [selectedCustomerId, selectedEvent?.event?.customerId]
+  );
 
   const detailFieldArray = useFieldArray({
     control: form.control,
     name: 'details'
+  });
+  const { customerOptions, onOpenCustomerDropdown, customerDropdownRender } = useCustomerLookup({
+    pinnedIds: pinnedCustomerIds,
+    showErrorToast: true
   });
 
   const buildSearchBody = useCallback(
@@ -678,8 +661,11 @@ export default function useMeterChangeEvents() {
     openDetail,
     selectedEvent,
     selectedDetail,
+    customerOptions,
     form,
     detailFieldArray,
+    onOpenCustomerDropdown,
+    customerDropdownRender,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
