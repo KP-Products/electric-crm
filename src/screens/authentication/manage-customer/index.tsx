@@ -6,6 +6,7 @@ import {
   K_SIZE_1,
   K_SIZE_100,
   K_SIZE_120,
+  K_SIZE_130,
   K_SIZE_150,
   K_SIZE_160,
   K_SIZE_16,
@@ -23,6 +24,7 @@ import ButtonBase from 'components/button';
 import { AppDatePickerControl } from 'components/date-picker';
 import IconHover from 'components/icon-vec-local/icon-hover';
 import { AppSelectControl } from 'components/select';
+import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
 import TagFilter from 'components/tag-filter';
@@ -59,6 +61,12 @@ const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') 
 
 const renderDateTime = (date?: string | null) =>
   date ? displayDateTimeFromServer(date) : NULL_VALUE;
+
+const getCustomerStatusType = (status?: string) => {
+  if (status === 'ACTIVE') return TYPE_STATUS.SUCCESS;
+  if (status === 'DELETED') return TYPE_STATUS.ERROR;
+  return TYPE_STATUS.DEFAULT;
+};
 
 const ManageCustomerScreen = () => {
   const { isMobile, isTablet } = useResponsive();
@@ -187,6 +195,19 @@ const ManageCustomerScreen = () => {
         key: 'address',
         render: (text: string) => renderTruncatedText(text, 'max-w-[260px]'),
         width: K_SIZE_240
+      },
+      {
+        title: 'Trạng thái',
+        dataIndex: 'status',
+        key: 'status',
+        width: K_SIZE_130,
+        render: (status: string) => (
+          <Status
+            type={getCustomerStatusType(status)}
+            kind={KIND_STATUS.SECONDARY}
+            content={displayText(status)}
+          />
+        )
       },
       {
         title: 'Ngày tạo',

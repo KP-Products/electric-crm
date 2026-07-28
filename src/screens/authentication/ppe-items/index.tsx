@@ -9,7 +9,6 @@ import {
   K_SIZE_150,
   K_SIZE_160,
   K_SIZE_18,
-  K_SIZE_200,
   K_SIZE_220,
   K_SIZE_8,
   NULL_VALUE,
@@ -30,6 +29,7 @@ import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { PpeItem } from 'model/ppe-item';
+import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { useResponsive } from 'utils/responsive';
@@ -49,8 +49,7 @@ const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
 const FILTER_LABEL_MAP: Record<keyof PpeItemFilterForm, string> = {
   itemCode: 'Mã thiết bị',
   itemName: 'Tên thiết bị',
-  status: 'Trạng thái',
-  employeeId: 'Nhân viên được cấp'
+  status: 'Trạng thái'
 };
 
 const renderText = (text?: string | number | null) =>
@@ -62,8 +61,14 @@ const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') 
   </div>
 );
 
+const getStockQuantity = (item: PpeItem) => {
+  if (item.quantity === undefined || item.quantity === null) return undefined;
+  return item.quantity - (item.initQuantity ?? K_SIZE_0);
+};
+
 const PpeItemsScreen = () => {
   const { isMobile, isTablet } = useResponsive();
+  const router = useRouter();
   const {
     t,
     ppeItemList,
@@ -91,7 +96,7 @@ const PpeItemsScreen = () => {
     onCloseForm,
     onSubmit,
     onDelete,
-    getEmployeeName
+    hasHandoverHistory
   } = usePpeItems();
 
   const {
@@ -110,7 +115,6 @@ const PpeItemsScreen = () => {
 
   const getFilterDisplayValue = (key: keyof PpeItemFilterForm, value: string) => {
     if (key === 'status') return getPpeItemStatusLabel(value);
-    if (key === 'employeeId') return getEmployeeName(Number(value));
     return value;
   };
 
@@ -141,17 +145,20 @@ const PpeItemsScreen = () => {
         dataIndex: 'itemCode',
         key: 'itemCode',
         width: K_SIZE_150,
-        render: (text: string, record: PpeItem) => (
-          <TextBase
-            classNames={
-              permission.canEdit
-                ? 'sub-title4 cursor-pointer !text-secondary-500 hover:!text-secondary-700'
-                : 'sub-title4'
-            }
-            text={text || NULL_VALUE}
-            onClick={permission.canEdit ? () => onOpenUpdate(record) : undefined}
-          />
-        )
+        render: (text: string, record: PpeItem) => {
+          const canEditRecord = permission.canEdit && !hasHandoverHistory(record);
+          return (
+            <TextBase
+              classNames={
+                canEditRecord
+                  ? 'sub-title4 cursor-pointer !text-secondary-500 hover:!text-secondary-700'
+                  : 'sub-title4'
+              }
+              text={text || NULL_VALUE}
+              onClick={canEditRecord ? () => onOpenUpdate(record) : undefined}
+            />
+          );
+        }
       },
       {
         title: 'Tên thiết bị',
@@ -168,12 +175,20 @@ const PpeItemsScreen = () => {
         render: renderText
       },
       {
-        title: 'Số lượng',
+        title: 'Số lượng ban đầu',
+        dataIndex: 'initQuantity',
+        key: 'initQuantity',
+        align: 'right',
+        width: K_SIZE_140,
+        render: renderPpeItemNumber
+      },
+      {
+        title: 'Số lượng tồn',
         dataIndex: 'quantity',
         key: 'quantity',
         align: 'right',
         width: K_SIZE_120,
-        render: renderPpeItemNumber
+        render: (_: number, record: PpeItem) => renderPpeItemNumber(getStockQuantity(record))
       },
       {
         title: 'Ngày nhập kho',
@@ -200,25 +215,26 @@ const PpeItemsScreen = () => {
         key: 'createdBy',
         width: K_SIZE_160,
         render: (_: unknown, record: PpeItem) => renderTruncatedText(getPpeItemCreator(record))
-      },
-      {
-        title: 'Nhân viên được cấp',
-        dataIndex: 'employeeId',
-        key: 'employeeId',
-        width: K_SIZE_200,
-        render: (employeeId?: number) => renderTruncatedText(getEmployeeName(employeeId))
       }
     ];
 
-    if (permission.canEdit || permission.canDelete) {
-      cols.push({
-        title: t('common:action'),
-        fixed: 'right',
-        align: 'center',
-        width: K_SIZE_100,
-        render: (_: unknown, record: PpeItem) => (
+    cols.push({
+      title: t('common:action'),
+      fixed: 'right',
+      align: 'center',
+      width: K_SIZE_120,
+      render: (_: unknown, record: PpeItem) => {
+        const hasHistory = hasHandoverHistory(record);
+        return (
           <div className="flex justify-center gap-8">
-            {permission.canEdit && (
+            <IconHover
+              rootClassName="text-color-800"
+              title="Xem chi tiết"
+              icon="ICON_EYE_OPEN"
+              iconHeight={K_SIZE_18}
+              onClick={() => router.push(`${ROUTES.PPE_ITEM_DETAIL}?id=${record.id}`)}
+            />
+            {permission.canEdit && !hasHistory && (
               <IconHover
                 rootClassName="text-color-800"
                 title={t('common:edit')}
@@ -227,7 +243,7 @@ const PpeItemsScreen = () => {
                 onClick={() => onOpenUpdate(record)}
               />
             )}
-            {permission.canDelete && (
+            {permission.canDelete && !hasHistory && (
               <IconHover
                 rootClassName="text-error-500 hover:text-error-500"
                 title={t('common:delete')}
@@ -237,19 +253,20 @@ const PpeItemsScreen = () => {
               />
             )}
           </div>
-        )
-      });
-    }
+        );
+      }
+    });
 
     return cols;
   }, [
     currentPage,
-    getEmployeeName,
+    hasHandoverHistory,
     onDelete,
     onOpenUpdate,
     pagination.pageSize,
     permission.canDelete,
     permission.canEdit,
+    router,
     t
   ]);
 
@@ -304,7 +321,7 @@ const PpeItemsScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-12 grid grid-cols-[minmax(160px,1fr)_minmax(180px,1fr)_minmax(160px,1fr)_minmax(200px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-[minmax(160px,1fr)_minmax(180px,1fr)_minmax(160px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="itemCodeFilter"
             label="Mã thiết bị"
@@ -328,18 +345,6 @@ const PpeItemsScreen = () => {
             value={filter.status}
             options={PPE_ITEM_STATUS_OPTIONS}
             onSelectOption={({ key }) => updateFilter('status', String(key))}
-          />
-          <AppSelect
-            name="employeeFilter"
-            label="Nhân viên được cấp"
-            placeholder="Chọn nhân viên"
-            value={filter.employeeId}
-            options={employeeOptions}
-            dropdownRender={renderEmployeeDropdown}
-            onOpenChange={(open) => {
-              if (open) onOpenEmployeeDropdown();
-            }}
-            onSelectOption={({ key }) => updateFilter('employeeId', String(key))}
           />
           <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
             <ButtonBase

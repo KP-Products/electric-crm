@@ -7,6 +7,7 @@ export interface PpeItem {
   category?: string;
   unit?: string;
   quantity?: number;
+  initQuantity?: number;
   importDate?: string;
   employeeId?: number;
   status?: string;

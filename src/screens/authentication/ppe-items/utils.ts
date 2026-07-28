@@ -57,8 +57,7 @@ export const DEFAULT_PPE_ITEM_FORM_VALUES: PpeItemForm = {
 export const DEFAULT_PPE_ITEM_FILTER: PpeItemFilterForm = {
   itemCode: '',
   itemName: '',
-  status: '',
-  employeeId: ''
+  status: ''
 };
 
 export const getPpeItemErrorMessage = (error?: ErrorBase, fallback = 'Có lỗi xảy ra') =>
@@ -107,10 +106,7 @@ export const buildPpeItemSearchBody = (
   size: DEFAULT_PAGE_SIZE,
   ...(normalizeText(filter.itemCode) ? { itemCode: normalizeText(filter.itemCode) } : {}),
   ...(normalizeText(filter.itemName) ? { itemName: normalizeText(filter.itemName) } : {}),
-  ...(normalizeText(filter.status) ? { status: normalizeText(filter.status) } : {}),
-  ...(toOptionalNumber(filter.employeeId)
-    ? { employeeId: toOptionalNumber(filter.employeeId) }
-    : {})
+  ...(normalizeText(filter.status) ? { status: normalizeText(filter.status) } : {})
 });
 
 export const buildPpeItemFormValues = (item: PpeItem): PpeItemForm => ({

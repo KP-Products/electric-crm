@@ -12,6 +12,7 @@ export interface Customer {
   contactIssueDate?: string;
   address?: string;
   operationUnitId?: string;
+  status?: string;
   createdAt?: string;
   createdBy?: string;
   updatedAt?: string;

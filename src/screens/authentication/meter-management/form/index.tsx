@@ -13,14 +13,8 @@ import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import Link from 'next/link';
 import type { ChangeEvent } from 'react';
-import { displayDateTimeFromServer } from 'utils/date';
 import useManageMeterForm, { ManageMeterFormProps } from '../hooks/useManageMeterForm';
-import {
-  METER_STATUS_OPTIONS,
-  METER_TYPE_OPTIONS,
-  VOLTAGE_LEVEL_OPTIONS,
-  VOLTAGE_TYPE_OPTIONS
-} from '../utils/constant';
+import { METER_STATUS_OPTIONS, METER_TYPE_OPTIONS, VOLTAGE_LEVEL_OPTIONS } from '../utils/constant';
 
 const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
 
@@ -32,14 +26,10 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
     action,
     onSubmit,
     userForm,
-    selectedMeter,
-    customerOptions,
-    onOpenCustomerDropdown,
-    customerDropdownRender,
     parentMeterOptions,
     onOpenParentMeterDropdown,
     parentMeterDropdownRender,
-    isCustomerMeterType,
+    showParentMeterField,
     loading,
     onBack,
     onEdit
@@ -66,8 +56,6 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
     formState: { isDirty, isValid }
   } = userForm;
 
-  const renderAuditValue = (value?: string) => value || '-';
-  const renderAuditDate = (value?: string) => (value ? displayDateTimeFromServer(value) : '-');
   const handleNumberFieldChange =
     (fieldName: 'multiplier' | 'initialReading') => (event: ChangeEvent<HTMLInputElement>) => {
       setValue(fieldName, event.target.value.replace(/\D/g, ''), {
@@ -125,19 +113,6 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             control={control}
             disabled={!isAddMode}
           />
-          {!isAddMode && (
-            <AppSelectControl
-              name="customerId"
-              label="Mã khách hàng"
-              placeholder="Chọn khách hàng"
-              options={customerOptions}
-              dropdownRender={customerDropdownRender}
-              onOpenChange={onOpenCustomerDropdown}
-              suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
-              isView={isView}
-              control={control}
-            />
-          )}
           <AppSelectControl
             name="meterType"
             label="Loại công tơ"
@@ -150,13 +125,13 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
           <AppSelectControl
             name="parentId"
             label="Công tơ cha/Lộ tổng"
-            labelSuffix={isCustomerMeterType ? requiredMark : undefined}
-            placeholder={isCustomerMeterType ? 'Chọn công tơ cha/Lộ tổng' : '-'}
+            labelSuffix={showParentMeterField ? requiredMark : undefined}
+            placeholder={showParentMeterField ? 'Chọn công tơ cha/Lộ tổng' : '-'}
             options={parentMeterOptions}
             dropdownRender={parentMeterDropdownRender}
             onOpenChange={onOpenParentMeterDropdown}
             suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
-            disabled={!isCustomerMeterType}
+            disabled={!showParentMeterField}
             isView={isView}
             control={control}
           />
@@ -169,17 +144,6 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             options={VOLTAGE_LEVEL_OPTIONS}
             control={control}
           />
-          {!isAddMode && (
-            <AppSelectControl
-              name="voltageType"
-              label="Kiểu điện áp"
-              labelSuffix={requiredMark}
-              placeholder="Chọn kiểu điện áp"
-              isView={isView}
-              options={VOLTAGE_TYPE_OPTIONS}
-              control={control}
-            />
-          )}
           <AppTextFieldControl
             name="multiplier"
             label="Hệ số nhân"
@@ -205,9 +169,9 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
           <AppDatePickerControl
             control={control}
             name="installationDate"
-            label="Ngày lắp đặt"
+            label="Ngày mua"
             labelSuffix={requiredMark}
-            placeholder="Chọn ngày lắp đặt"
+            placeholder="Chọn ngày mua"
             isView={isView}
             wrapperClassName="w-full"
             datePickerClassName="w-full"
@@ -222,39 +186,6 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             control={control}
           />
         </div>
-
-        {!isAddMode && (
-          <div className="mt-20 grid grid-cols-2 gap-x-24 gap-y-16 rounded-radius-l bg-secondary-50 p-16 mobile:grid-cols-1">
-            <div>
-              <TextBase classNames="body4 !text-color-700" text="Ngày tạo" />
-              <TextBase
-                classNames="sub-title4 mt-4 !text-color-900"
-                text={renderAuditDate(selectedMeter?.createdAt)}
-              />
-            </div>
-            <div>
-              <TextBase classNames="body4 !text-color-700" text="Cập nhật lần cuối" />
-              <TextBase
-                classNames="sub-title4 mt-4 !text-color-900"
-                text={renderAuditDate(selectedMeter?.updatedAt)}
-              />
-            </div>
-            <div>
-              <TextBase classNames="body4 !text-color-700" text="Tạo bởi" />
-              <TextBase
-                classNames="sub-title4 mt-4 !text-color-900"
-                text={renderAuditValue(selectedMeter?.createdBy)}
-              />
-            </div>
-            <div>
-              <TextBase classNames="body4 !text-color-700" text="Cập nhật bởi" />
-              <TextBase
-                classNames="sub-title4 mt-4 !text-color-900"
-                text={renderAuditValue(selectedMeter?.updatedBy)}
-              />
-            </div>
-          </div>
-        )}
 
         {!isView && (
           <div className="fixed bottom-0 left-[254px] right-0 z-[9] bg-color-50 tablet:left-0">

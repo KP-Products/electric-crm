@@ -38,12 +38,9 @@ import {
   getMeterStatusType,
   getMeterTypeLabel,
   getVoltageLevelLabel,
-  getVoltageTypeLabel,
   METER_STATUS_OPTIONS,
   METER_STATUS_LABEL_MAP,
   VOLTAGE_LEVEL_OPTIONS,
-  VOLTAGE_TYPE_OPTIONS,
-  VOLTAGE_TYPE_LABEL_MAP,
   VOLTAGE_LEVEL_LABEL_MAP
 } from './utils/constant';
 
@@ -57,48 +54,48 @@ const renderNumber = (value?: string | number) => {
   if (!Number.isFinite(numericValue)) return String(value);
   return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(numericValue);
 };
-//
-// const formatCompactNumber = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
-//
-// const formatPercent = (value: number) =>
-//   new Intl.NumberFormat('vi-VN', {
-//     maximumFractionDigits: 2,
-//     minimumFractionDigits: 0
-//   }).format(value);
 
-// interface StatCardProps {
-//   label: string;
-//   value: string;
-//   suffix?: string;
-//   icon: React.ReactNode;
-//   colorClassName: string;
-//   extra?: string;
-// }
+const formatCompactNumber = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
 
-// const StatCard = ({
-//   label,
-//   value,
-//   suffix = 'công tơ',
-//   icon,
-//   colorClassName,
-//   extra
-// }: StatCardProps) => (
-//   <div className="flex min-h-[76px] items-center gap-16 rounded-radius-l border border-color-300 bg-color-50 px-16 py-12">
-//     <div
-//       className={`flex size-44 shrink-0 items-center justify-center rounded-radius-m ${colorClassName}`}
-//     >
-//       {icon}
-//     </div>
-//     <div className="min-w-0">
-//       <div className="mb-4 text-12 font-semibold leading-16 text-color-700">{label}</div>
-//       <div className="flex flex-wrap items-baseline gap-8">
-//         <span className="text-24 font-bold leading-28 text-color-900">{value}</span>
-//         <span className="text-12 font-semibold text-color-700">{suffix}</span>
-//         {extra && <span className="text-12 font-semibold text-color-700">{extra}</span>}
-//       </div>
-//     </div>
-//   </div>
-// );
+const formatPercent = (value: number) =>
+  new Intl.NumberFormat('vi-VN', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0
+  }).format(value);
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  suffix?: string;
+  icon: React.ReactNode;
+  colorClassName: string;
+  extra?: string;
+}
+
+const StatCard = ({
+  label,
+  value,
+  suffix = 'công tơ',
+  icon,
+  colorClassName,
+  extra
+}: StatCardProps) => (
+  <div className="flex min-h-[76px] items-center gap-16 rounded-radius-l border border-color-300 bg-color-50 px-16 py-12">
+    <div
+      className={`flex size-44 shrink-0 items-center justify-center rounded-radius-m ${colorClassName}`}
+    >
+      {icon}
+    </div>
+    <div className="min-w-0">
+      <div className="mb-4 text-12 font-semibold leading-16 text-color-700">{label}</div>
+      <div className="flex flex-wrap items-baseline gap-8">
+        <span className="text-24 font-bold leading-28 text-color-900">{value}</span>
+        <span className="text-12 font-semibold text-color-700">{suffix}</span>
+        {extra && <span className="text-12 font-semibold text-color-700">{extra}</span>}
+      </div>
+    </div>
+  </div>
+);
 
 const MeterManagementScreen = () => {
   const {
@@ -118,7 +115,7 @@ const MeterManagementScreen = () => {
     onApplyFilter,
     onResetFilter,
     meterList,
-    // meterStats,
+    meterStats,
     total,
     onExport,
     onImport
@@ -201,14 +198,6 @@ const MeterManagementScreen = () => {
         render: (voltageLevel: string) => getVoltageLevelLabel(voltageLevel)
       },
       {
-        title: 'Kiểu điện áp',
-        dataIndex: 'voltageType',
-        key: 'voltageType',
-        align: 'left',
-        width: K_SIZE_120,
-        render: (voltageType: string) => getVoltageTypeLabel(voltageType)
-      },
-      {
         title: 'Hệ số nhân',
         dataIndex: 'multiplier',
         key: 'multiplier',
@@ -226,15 +215,6 @@ const MeterManagementScreen = () => {
       },
       {
         title: 'Ngày mua',
-        dataIndex: 'purchaseDate',
-        key: 'purchaseDate',
-        align: 'left',
-        width: K_SIZE_130,
-        render: (_: string, record: Meter) =>
-          renderDate((record as Meter & { purchaseDate?: string }).purchaseDate)
-      },
-      {
-        title: 'Ngày lắp đặt',
         dataIndex: 'installationDate',
         key: 'installationDate',
         align: 'left',
@@ -301,8 +281,6 @@ const MeterManagementScreen = () => {
           return getMeterTypeLabel(value);
         case 'voltageLevel':
           return VOLTAGE_LEVEL_LABEL_MAP[value] || value;
-        case 'voltageType':
-          return VOLTAGE_TYPE_LABEL_MAP[value] || value;
         case 'customerId':
           return getCustomerDisplay(value);
         default:
@@ -315,9 +293,8 @@ const MeterManagementScreen = () => {
       meterType: 'Loại công tơ',
       status: 'Trạng thái',
       voltageLevel: 'Cấp điện áp',
-      voltageType: 'Kiểu điện áp',
-      installationDateFrom: 'Ngày lắp đặt từ',
-      installationDateTo: 'Ngày lắp đặt đến'
+      installationDateFrom: 'Ngày mua từ',
+      installationDateTo: 'Ngày mua đến'
     };
     return (
       <div
@@ -439,17 +416,9 @@ const MeterManagementScreen = () => {
               options={[ALL_OPTION, ...VOLTAGE_LEVEL_OPTIONS]}
               onSelectOption={({ key }) => onChangeFilter('voltageLevel', String(key))}
             />
-            <AppSelect
-              name="voltageType"
-              label="Kiểu điện áp"
-              placeholder="Chọn kiểu điện áp"
-              value={filterDraft.voltageType}
-              options={[ALL_OPTION, ...VOLTAGE_TYPE_OPTIONS]}
-              onSelectOption={({ key }) => onChangeFilter('voltageType', String(key))}
-            />
             <AppDatePicker
               name="installationDateFrom"
-              label="Ngày lắp đặt từ"
+              label="Ngày mua từ"
               placeholder="dd/mm/yyyy"
               wrapperClassName="w-full"
               datePickerClassName="w-full"
@@ -484,7 +453,7 @@ const MeterManagementScreen = () => {
                 }
               />
             </div>
-            <div className="col-span-2 flex items-end justify-end gap-16 tablet:col-span-2 mobile:col-span-1 mobile:flex-col">
+            <div className="col-span-3 flex items-end justify-end gap-16 tablet:col-span-2 mobile:col-span-1 mobile:flex-col">
               <ButtonBase
                 type="ghost"
                 leftIcon="IC_HISTORY_OUTLINE"
@@ -503,39 +472,39 @@ const MeterManagementScreen = () => {
           </div>
         </div>
 
-        {/*<div className="mb-12 grid grid-cols-5 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">*/}
-        {/*  <StatCard*/}
-        {/*    label="Tổng công tơ"*/}
-        {/*    value={formatCompactNumber(meterStats.total)}*/}
-        {/*    colorClassName="bg-[#0B63F6]"*/}
-        {/*    icon={<IconSvgLocal name="IC_DOWNLOAD_OUTLINE" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*  <StatCard*/}
-        {/*    label="Công tơ tổng (lộ)"*/}
-        {/*    value={formatCompactNumber(meterStats.feeder)}*/}
-        {/*    colorClassName="bg-[#F97316]"*/}
-        {/*    icon={<IconSvgLocal name="ICON_MORE" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*  <StatCard*/}
-        {/*    label="Công tơ đã lắp"*/}
-        {/*    value={formatCompactNumber(meterStats.installed)}*/}
-        {/*    colorClassName="bg-[#4F46E5]"*/}
-        {/*    icon={<IconSvgLocal name="ICON_EYE_OPEN" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*  <StatCard*/}
-        {/*    label="Công tơ chưa lắp"*/}
-        {/*    value={formatCompactNumber(meterStats.notInstalled)}*/}
-        {/*    colorClassName="bg-[#22C55E]"*/}
-        {/*    icon={<IconSvgLocal name="IC_UPLOAD_OUTLINE" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*  <StatCard*/}
-        {/*    label="Đang hoạt động"*/}
-        {/*    value={formatCompactNumber(meterStats.active)}*/}
-        {/*    extra={`(${formatPercent(meterStats.activeRate)}%)`}*/}
-        {/*    colorClassName="bg-[#06B6D4]"*/}
-        {/*    icon={<IconSvgLocal name="ICON_SEARCH" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*</div>*/}
+        <div className="mb-12 grid grid-cols-5 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <StatCard
+            label="Tổng công tơ"
+            value={formatCompactNumber(meterStats.total)}
+            colorClassName="bg-[#0B63F6]"
+            icon={<IconSvgLocal name="IC_DOWNLOAD_OUTLINE" height={22} width={22} fill="#fff" />}
+          />
+          <StatCard
+            label="Công tơ tổng (lộ)"
+            value={formatCompactNumber(meterStats.feeder)}
+            colorClassName="bg-[#F97316]"
+            icon={<IconSvgLocal name="ICON_MORE" height={22} width={22} fill="#fff" />}
+          />
+          <StatCard
+            label="Công tơ đã lắp"
+            value={formatCompactNumber(meterStats.installed)}
+            colorClassName="bg-[#4F46E5]"
+            icon={<IconSvgLocal name="ICON_EYE_OPEN" height={22} width={22} fill="#fff" />}
+          />
+          <StatCard
+            label="Công tơ chưa lắp"
+            value={formatCompactNumber(meterStats.notInstalled)}
+            colorClassName="bg-[#22C55E]"
+            icon={<IconSvgLocal name="IC_UPLOAD_OUTLINE" height={22} width={22} fill="#fff" />}
+          />
+          <StatCard
+            label="Đang hoạt động"
+            value={formatCompactNumber(meterStats.active)}
+            extra={`(${formatPercent(meterStats.activeRate)}%)`}
+            colorClassName="bg-[#06B6D4]"
+            icon={<IconSvgLocal name="ICON_SEARCH" height={22} width={22} fill="#fff" />}
+          />
+        </div>
 
         <TagFilterGroup />
 

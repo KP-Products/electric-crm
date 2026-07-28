@@ -43,6 +43,7 @@ export const ROUTES = {
   METER_VERIFICATION: '/meter-verification',
   METER_CHANGE_EVENTS: '/meter-change-events',
   PPE_ITEMS: '/ppe-items',
+  PPE_ITEM_DETAIL: '/ppe-items/detail',
   PPE_ITEM_HISTORY: '/ppe-item-history',
 
   // CONTRACT
