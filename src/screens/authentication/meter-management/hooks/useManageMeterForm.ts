@@ -60,6 +60,7 @@ const meterSchema = (t: TypedT) => {
         .string()
         .trim()
         .min(K_SIZE_1, { message: t('validate:required', { name: 'Trạng thái' }) }),
+      purchaseDate: optionalString,
       installationDate: optionalString,
       voltageLevel: optionalString,
       meterType: optionalString,
@@ -94,6 +95,7 @@ const meterSchema = (t: TypedT) => {
     .superRefine((data, ctx) => {
       const requiredFields: { field: keyof typeof data; label: string }[] = [
         { field: 'meterType', label: 'Loại công tơ' },
+        { field: 'purchaseDate', label: 'Ngày mua' },
         { field: 'installationDate', label: 'Ngày lắp' },
         { field: 'voltageLevel', label: 'Cấp điện áp' }
       ];
@@ -126,6 +128,7 @@ const defaultMeterFormValues: MeterForm = {
   status: METER_STATUS.ACTIVE,
   meterType: '',
   parentId: '',
+  purchaseDate: '',
   installationDate: '',
   voltageLevel: '',
   multiplier: '1',
@@ -184,6 +187,7 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       status: normalizeMeterStatus(meter.status),
       meterType: normalizeMeterType(meter.meterType),
       parentId: meter.parentId || '',
+      purchaseDate: normalizeDateToApi(meter.purchaseDate),
       installationDate: normalizeDateToApi(meter.installationDate),
       voltageLevel: normalizeVoltageLevel(meter.voltageLevel),
       multiplier:
@@ -271,6 +275,7 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       status: data.status,
       meterType: data.meterType || undefined,
       parentId: shouldSelectParentMeter(data.meterType) ? data.parentId || undefined : undefined,
+      purchaseDate: normalizeDateToApi(data.purchaseDate) || undefined,
       installationDate: normalizeDateToApi(data.installationDate) || undefined,
       voltageLevel: data.voltageLevel || undefined,
       multiplier: parseNumberInput(data.multiplier),

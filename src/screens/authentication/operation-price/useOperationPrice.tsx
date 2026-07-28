@@ -35,6 +35,11 @@ import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
+import {
+  formatIntegerWithCommas,
+  isFormattedIntegerInput,
+  parseFormattedIntegerNumber
+} from 'utils/number-input';
 import { z } from 'zod';
 
 export const DATE_API_FORMAT = FORMAT_DATE_API;
@@ -58,12 +63,12 @@ export const DEFAULT_OPERATION_PRICE_FILTER: OperationPriceFilter = {
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 
 const parseNumberInput = (value: string) => {
-  const normalized = value.trim().replace(/\./g, '').replace(',', '.');
-  return Number(normalized);
+  return parseFormattedIntegerNumber(value) ?? Number.NaN;
 };
 
 const isValidNonNegativeNumber = (value: string) => {
   if (!value) return true;
+  if (!isFormattedIntegerInput(value)) return false;
   const parsedValue = parseNumberInput(value);
   return Number.isFinite(parsedValue) && parsedValue >= K_SIZE_0;
 };
@@ -175,13 +180,13 @@ const buildFormValues = (operationPrice?: OperationPrice): OperationPriceForm =>
   customerName: operationPrice?.customerName || '',
   unitPrice:
     typeof operationPrice?.unitPrice === 'number' && Number.isFinite(operationPrice.unitPrice)
-      ? String(operationPrice.unitPrice)
+      ? formatIntegerWithCommas(operationPrice.unitPrice)
       : '',
   discountType: operationPrice?.discountType || '',
   discountValue:
     typeof operationPrice?.discountValue === 'number' &&
     Number.isFinite(operationPrice.discountValue)
-      ? String(operationPrice.discountValue)
+      ? formatIntegerWithCommas(operationPrice.discountValue)
       : '',
   effectiveFrom: normalizeDateForForm(operationPrice?.effectiveFrom),
   effectiveTo: normalizeDateForForm(operationPrice?.effectiveTo),

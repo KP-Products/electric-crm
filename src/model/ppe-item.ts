@@ -9,7 +9,9 @@ export interface PpeItem {
   quantity?: number;
   initQuantity?: number;
   importDate?: string;
-  employeeId?: number;
+  inputEmployeeId?: number;
+  inputEmployeeName?: string;
+  inputEmployeeFullName?: string;
   status?: string;
   note?: string;
   createBy?: string;
@@ -23,7 +25,7 @@ export interface SearchPpeItemsReq extends PaginationReq {
   itemName?: string;
   category?: string;
   status?: string;
-  employeeId?: number;
+  inputEmployeeId?: number;
 }
 
 export interface CreatePpeItemReq {
@@ -33,7 +35,7 @@ export interface CreatePpeItemReq {
   unit?: string;
   quantity?: number;
   importDate?: string;
-  employeeId?: number;
+  inputEmployeeId?: number;
   status?: string;
   note?: string;
 }

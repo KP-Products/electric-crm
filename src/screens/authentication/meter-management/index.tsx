@@ -215,6 +215,14 @@ const MeterManagementScreen = () => {
       },
       {
         title: 'Ngày mua',
+        dataIndex: 'purchaseDate',
+        key: 'purchaseDate',
+        align: 'left',
+        width: K_SIZE_130,
+        render: renderDate
+      },
+      {
+        title: 'Ngày lắp đặt',
         dataIndex: 'installationDate',
         key: 'installationDate',
         align: 'left',
@@ -293,8 +301,10 @@ const MeterManagementScreen = () => {
       meterType: 'Loại công tơ',
       status: 'Trạng thái',
       voltageLevel: 'Cấp điện áp',
-      installationDateFrom: 'Ngày mua từ',
-      installationDateTo: 'Ngày mua đến'
+      installationDateFrom: 'Ngày lắp đặt từ',
+      installationDateTo: 'Ngày lắp đặt đến',
+      purchaseDateFrom: 'Ngày mua từ',
+      purchaseDateTo: 'Ngày mua đến'
     };
     return (
       <div
@@ -418,7 +428,7 @@ const MeterManagementScreen = () => {
             />
             <AppDatePicker
               name="installationDateFrom"
-              label="Ngày mua từ"
+              label="Ngày lắp đặt từ"
               placeholder="dd/mm/yyyy"
               wrapperClassName="w-full"
               datePickerClassName="w-full"
@@ -453,7 +463,44 @@ const MeterManagementScreen = () => {
                 }
               />
             </div>
-            <div className="col-span-3 flex items-end justify-end gap-16 tablet:col-span-2 mobile:col-span-1 mobile:flex-col">
+            <AppDatePicker
+              name="purchaseDateFrom"
+              label="Ngày mua từ"
+              placeholder="dd/mm/yyyy"
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+              allowClear
+              value={
+                filterDraft.purchaseDateFrom
+                  ? dayjs(filterDraft.purchaseDateFrom, FORMAT_DATE_API)
+                  : null
+              }
+              onChange={(date) =>
+                onChangeFilter('purchaseDateFrom', date ? date.format(FORMAT_DATE_API) : '')
+              }
+            />
+            <div className="grid grid-cols-[24px_minmax(0,1fr)] items-end gap-8 tablet:grid-cols-1">
+              <div className="pb-12 text-center text-13 font-semibold text-color-800 tablet:hidden">
+                đến
+              </div>
+              <AppDatePicker
+                name="purchaseDateTo"
+                label=" "
+                placeholder="dd/mm/yyyy"
+                wrapperClassName="w-full"
+                datePickerClassName="w-full"
+                allowClear
+                value={
+                  filterDraft.purchaseDateTo
+                    ? dayjs(filterDraft.purchaseDateTo, FORMAT_DATE_API)
+                    : null
+                }
+                onChange={(date) =>
+                  onChangeFilter('purchaseDateTo', date ? date.format(FORMAT_DATE_API) : '')
+                }
+              />
+            </div>
+            <div className="col-span-5 flex items-end justify-end gap-16 tablet:col-span-2 mobile:col-span-1 mobile:flex-col">
               <ButtonBase
                 type="ghost"
                 leftIcon="IC_HISTORY_OUTLINE"

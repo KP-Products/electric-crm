@@ -35,7 +35,7 @@ import { useMemo } from 'react';
 import { useResponsive } from 'utils/responsive';
 import usePpeItems, { PpeItemFilterForm } from './usePpeItems';
 import {
-  getPpeItemCreator,
+  getPpeItemInputEmployee,
   getPpeItemStatusLabel,
   getPpeItemStatusType,
   PPE_DATE_FORMAT,
@@ -60,11 +60,6 @@ const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') 
     {renderText(text)}
   </div>
 );
-
-const getStockQuantity = (item: PpeItem) => {
-  if (item.quantity === undefined || item.quantity === null) return undefined;
-  return item.quantity - (item.initQuantity ?? K_SIZE_0);
-};
 
 const PpeItemsScreen = () => {
   const { isMobile, isTablet } = useResponsive();
@@ -96,7 +91,8 @@ const PpeItemsScreen = () => {
     onCloseForm,
     onSubmit,
     onDelete,
-    hasHandoverHistory
+    hasHandoverHistory,
+    getEmployeeName
   } = usePpeItems();
 
   const {
@@ -188,7 +184,7 @@ const PpeItemsScreen = () => {
         key: 'quantity',
         align: 'right',
         width: K_SIZE_120,
-        render: (_: number, record: PpeItem) => renderPpeItemNumber(getStockQuantity(record))
+        render: renderPpeItemNumber
       },
       {
         title: 'Ngày nhập kho',
@@ -212,9 +208,15 @@ const PpeItemsScreen = () => {
       },
       {
         title: 'Người nhập kho',
-        key: 'createdBy',
+        key: 'inputEmployeeId',
         width: K_SIZE_160,
-        render: (_: unknown, record: PpeItem) => renderTruncatedText(getPpeItemCreator(record))
+        render: (_: unknown, record: PpeItem) =>
+          renderTruncatedText(
+            record.inputEmployeeName ||
+              record.inputEmployeeFullName ||
+              getEmployeeName(record.inputEmployeeId) ||
+              getPpeItemInputEmployee(record)
+          )
       }
     ];
 
@@ -267,7 +269,8 @@ const PpeItemsScreen = () => {
     permission.canDelete,
     permission.canEdit,
     router,
-    t
+    t,
+    getEmployeeName
   ]);
 
   const breadcrumbList = [
@@ -475,6 +478,7 @@ const PpeItemsScreen = () => {
                   name="quantity"
                   label="Số lượng"
                   placeholder="Nhập số lượng"
+                  onlyNumber
                   control={control}
                 />
                 <AppSelectControl
@@ -496,8 +500,8 @@ const PpeItemsScreen = () => {
                   datePickerClassName="w-full"
                 />
                 <AppSelectControl
-                  name="employeeId"
-                  label="Nhân viên được cấp"
+                  name="inputEmployeeId"
+                  label="Nhân viên nhập kho"
                   placeholder="Chọn nhân viên"
                   options={employeeOptions}
                   dropdownRender={renderEmployeeDropdown}

@@ -45,6 +45,11 @@ import {
 import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
+import {
+  formatIntegerWithCommas,
+  isFormattedIntegerInput,
+  parseFormattedIntegerNumber
+} from 'utils/number-input';
 import { z } from 'zod';
 
 export const TARIFF_STATUS = {
@@ -87,7 +92,7 @@ const tariffSchema = z.object({
   effectiveTo: optionalTextSchema
 });
 
-const parseNumber = (value: string) => Number(value.trim().replace(',', '.'));
+const parseNumber = (value: string) => parseFormattedIntegerNumber(value) ?? Number.NaN;
 
 const getErrorMessage = (error?: ErrorBase, fallback = 'Thao tác thất bại') => {
   return (
@@ -143,11 +148,14 @@ export const getPriceWithVat = (unitPrice?: number) =>
 const getDetailPrices = (detail?: TariffDetail) => detail?.prices || detail?.touPrices || [];
 
 const getDraftUnitPrice = (unitPrice?: number) =>
-  typeof unitPrice === 'number' && Number.isFinite(unitPrice) ? String(unitPrice) : '';
+  typeof unitPrice === 'number' && Number.isFinite(unitPrice)
+    ? formatIntegerWithCommas(unitPrice)
+    : '';
 
 const getParsedTouPrice = (value: string) => {
   const trimmedValue = value.trim();
   if (!trimmedValue) return undefined;
+  if (!isFormattedIntegerInput(trimmedValue)) return undefined;
 
   const parsedValue = parseNumber(trimmedValue);
   return Number.isFinite(parsedValue) ? parsedValue : undefined;
@@ -419,13 +427,14 @@ export default function useElectricTariff() {
   }, []);
 
   const onChangeTouPrice = useCallback((tou: string, value: string) => {
+    const formattedValue = formatIntegerWithCommas(value);
     setTouPrices((prev) =>
       normalizeTouPrices(prev).map((price) =>
         price.tou === tou
           ? {
               ...price,
-              draftUnitPrice: value,
-              unitPrice: getParsedTouPrice(value)
+              draftUnitPrice: formattedValue,
+              unitPrice: getParsedTouPrice(formattedValue)
             }
           : price
       )

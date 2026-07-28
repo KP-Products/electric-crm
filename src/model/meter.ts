@@ -8,6 +8,7 @@ export interface Meter {
   customerId?: string;
   locationId?: string;
   customerName?: string;
+  purchaseDate?: string;
   installationDate?: string;
   inspectionDate?: string;
   inspectionExpiryDate?: string;
@@ -75,6 +76,7 @@ export interface GetMeterDetailRes extends ResultBase<MeterSearchItem> {}
 export interface AddMeterReq {
   meterCode: string;
   customerId?: string;
+  purchaseDate?: string;
   installationDate?: string;
   voltageLevel?: string;
   multiplier?: number;

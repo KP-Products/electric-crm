@@ -358,7 +358,7 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
                     label="Lương cơ bản"
                     placeholder="Nhập lương cơ bản"
                     control={control}
-                    inputMode="decimal"
+                    formatNumberWithCommas
                   />
                   <AppTextFieldControl
                     name="qualifications"

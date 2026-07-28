@@ -126,11 +126,10 @@ const ManageOperationContractScreen = () => {
       },
       {
         title: 'Đơn vị vận hành',
-        dataIndex: 'operationUnitId',
-        key: 'operationUnitId',
+        dataIndex: 'operationUnitName',
+        key: 'operationUnitName',
         width: K_SIZE_240,
-        render: (operationUnitId: string) =>
-          renderTruncatedText(getOperationUnitDisplay(operationUnitId), 'max-w-[280px]')
+        render: (text: string) => renderTruncatedText(text, 'max-w-[280px]')
       },
       {
         title: 'Loại hợp đồng',

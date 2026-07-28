@@ -9,6 +9,7 @@ import type { Ref } from 'react';
 import React, { forwardRef } from 'react';
 import type { Control, FieldError, FieldValues, Path } from 'react-hook-form';
 import { useController } from 'react-hook-form';
+import { formatIntegerWithCommas, sanitizeIntegerInput } from 'utils/number-input';
 
 export interface AppTextFieldProps extends InputProps {
   label?: React.ReactNode;
@@ -22,6 +23,8 @@ export interface AppTextFieldProps extends InputProps {
   classNameMore?: string;
   isView?: boolean;
   classNameIsView?: string;
+  onlyNumber?: boolean;
+  formatNumberWithCommas?: boolean;
 }
 
 export interface AppTextFieldControlProps<T extends FieldValues>
@@ -46,21 +49,57 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
     classNameMore,
     isView,
     classNameIsView,
+    onlyNumber,
+    formatNumberWithCommas,
     value,
+    onChange,
     onKeyDown,
+    inputMode,
+    pattern,
     ...restProps
   } = props;
 
   const isPasswordType = type === 'password';
+  const isNumericInput = type === 'number' || onlyNumber || formatNumberWithCommas;
+  const inputType = isNumericInput && !isPasswordType ? 'text' : type;
 
   const TextField = isPasswordType ? Input.Password : Input;
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (type === 'number' && !/^\d$/.test(event.key) && event.key !== 'Backspace') {
+    const allowedControlKeys = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End'
+    ];
+
+    if (
+      isNumericInput &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !allowedControlKeys.includes(event.key) &&
+      event.key.length === 1 &&
+      !/^\d$/.test(event.key)
+    ) {
       event.preventDefault();
     }
     if (onKeyDown) {
       onKeyDown(event);
     }
+  };
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isNumericInput) {
+      event.target.value = formatNumberWithCommas
+        ? formatIntegerWithCommas(event.target.value)
+        : sanitizeIntegerInput(event.target.value);
+    }
+    onChange?.(event);
   };
   const renderPasswordSuffix = (visible: boolean) => (
     <div>
@@ -95,11 +134,16 @@ export const AppTextField = forwardRef((props: AppTextFieldProps, ref: Ref<Input
         <TextBase classNames={classNameIsView}>{displayValue}</TextBase>
       ) : (
         <TextField
-          type={type}
+          type={inputType}
           id={name}
           name={name}
           size={size}
           onKeyDown={handleKeyDown}
+          onChange={handleChange}
+          inputMode={isNumericInput ? inputMode || 'numeric' : inputMode}
+          pattern={
+            isNumericInput ? pattern || (formatNumberWithCommas ? '[0-9,]*' : '[0-9]*') : pattern
+          }
           value={value}
           {...restProps}
           ref={ref}

@@ -152,6 +152,7 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             isView={isView}
             inputMode="numeric"
             pattern="[0-9]*"
+            onlyNumber
             onChange={handleNumberFieldChange('multiplier')}
             control={control}
           />
@@ -163,15 +164,26 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             isView={isView}
             inputMode="numeric"
             pattern="[0-9]*"
+            onlyNumber
             onChange={handleNumberFieldChange('initialReading')}
             control={control}
           />
           <AppDatePickerControl
             control={control}
-            name="installationDate"
+            name="purchaseDate"
             label="Ngày mua"
             labelSuffix={requiredMark}
             placeholder="Chọn ngày mua"
+            isView={isView}
+            wrapperClassName="w-full"
+            datePickerClassName="w-full"
+          />
+          <AppDatePickerControl
+            control={control}
+            name="installationDate"
+            label="Ngày lắp đặt"
+            labelSuffix={requiredMark}
+            placeholder="Chọn ngày lắp đặt"
             isView={isView}
             wrapperClassName="w-full"
             datePickerClassName="w-full"

@@ -33,6 +33,8 @@ export interface MeterFilterForm {
   voltageLevel: string;
   installationDateFrom: string;
   installationDateTo: string;
+  purchaseDateFrom: string;
+  purchaseDateTo: string;
 }
 
 export interface MeterStats {
@@ -51,7 +53,13 @@ const formatDate = (value?: string) => {
 };
 
 const hasClientOnlyFilters = (filter: MeterFilterForm) =>
-  Boolean(filter.voltageLevel || filter.installationDateFrom || filter.installationDateTo);
+  Boolean(
+    filter.voltageLevel ||
+      filter.installationDateFrom ||
+      filter.installationDateTo ||
+      filter.purchaseDateFrom ||
+      filter.purchaseDateTo
+  );
 
 const parseMeterDate = (value?: string) => {
   if (!value) return undefined;
@@ -62,15 +70,30 @@ const parseMeterDate = (value?: string) => {
 };
 
 const applyClientOnlyFilters = (meters: Meter[], filter: MeterFilterForm) => {
-  const fromDate = parseMeterDate(filter.installationDateFrom)?.startOf('day');
-  const toDate = parseMeterDate(filter.installationDateTo)?.endOf('day');
+  const installationFromDate = parseMeterDate(filter.installationDateFrom)?.startOf('day');
+  const installationToDate = parseMeterDate(filter.installationDateTo)?.endOf('day');
+  const purchaseFromDate = parseMeterDate(filter.purchaseDateFrom)?.startOf('day');
+  const purchaseToDate = parseMeterDate(filter.purchaseDateTo)?.endOf('day');
 
   return meters.filter((meter) => {
     if (filter.voltageLevel && meter.voltageLevel !== filter.voltageLevel) return false;
 
     const installationDate = parseMeterDate(meter.installationDate);
-    if (fromDate && (!installationDate || installationDate.isBefore(fromDate))) return false;
-    if (toDate && (!installationDate || installationDate.isAfter(toDate))) return false;
+    if (
+      installationFromDate &&
+      (!installationDate || installationDate.isBefore(installationFromDate))
+    ) {
+      return false;
+    }
+    if (installationToDate && (!installationDate || installationDate.isAfter(installationToDate))) {
+      return false;
+    }
+
+    const purchaseDate = parseMeterDate(meter.purchaseDate);
+    if (purchaseFromDate && (!purchaseDate || purchaseDate.isBefore(purchaseFromDate))) {
+      return false;
+    }
+    if (purchaseToDate && (!purchaseDate || purchaseDate.isAfter(purchaseToDate))) return false;
 
     return true;
   });
@@ -80,6 +103,8 @@ const getMeterDisplayValue = (meter: Meter, key: string) => {
   switch (key) {
     case 'status':
       return getMeterStatusLabel(meter.status);
+    case 'purchaseDate':
+      return formatDate(meter.purchaseDate);
     case 'installationDate':
       return formatDate(meter.installationDate);
     case 'voltageLevel':
@@ -114,7 +139,9 @@ export default function useManageMeter() {
       status: '',
       voltageLevel: '',
       installationDateFrom: '',
-      installationDateTo: ''
+      installationDateTo: '',
+      purchaseDateFrom: '',
+      purchaseDateTo: ''
     }),
     []
   );
@@ -297,6 +324,7 @@ export default function useManageMeter() {
       ['voltageLevel', 'Cấp điện áp'],
       ['multiplier', 'Hệ số nhân'],
       ['initialReading', 'Chỉ số đầu'],
+      ['purchaseDate', 'Ngày mua'],
       ['installationDate', 'Ngày lắp đặt'],
       ['status', 'Trạng thái']
     ];

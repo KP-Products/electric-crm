@@ -30,6 +30,7 @@ import { useSelector } from 'react-redux';
 import employeeServices from 'services/employee-services';
 import { normalizeDateToApi } from 'utils/date';
 import { z } from 'zod';
+import { formatIntegerWithCommas, isFormattedIntegerInput } from 'utils/number-input';
 import {
   DATE_API_FORMAT,
   buildEmployeeSelectOptions,
@@ -54,12 +55,9 @@ const integerStringSchema = (message: string) =>
     });
 
 const decimalStringSchema = (message: string) =>
-  z
-    .string()
-    .trim()
-    .refine((value) => !value || /^\d+(\.\d+)?$/.test(value.replaceAll(',', '')), {
-      message
-    });
+  z.string().trim().refine(isFormattedIntegerInput, {
+    message
+  });
 
 const optionalEmailSchema = z
   .string()
@@ -296,7 +294,7 @@ export default function useManageEmployeeForm({ isEditMode }: UseManageEmployeeF
         employmentType: employee.employmentType || EMPLOYMENT_TYPE.FULL_TIME,
         basicSalary:
           employee.basicSalary !== undefined && employee.basicSalary !== null
-            ? String(employee.basicSalary)
+            ? formatIntegerWithCommas(employee.basicSalary)
             : '',
         qualifications: employee.qualifications || '',
         bankName: employee.bankName || '',
