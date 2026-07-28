@@ -37,13 +37,6 @@ export interface SearchRemoteMeterReadingsRes
 
 export interface ImportRemoteMeterReadingReq {
   file: File;
-  periodCode?: string;
-  periodFrom?: string;
-  periodTo?: string;
-  readingDate?: string;
-  saveMode?: string;
-  note?: string;
-  typeInput?: string;
 }
 
 export interface RemoteMeterReadingImportResult {

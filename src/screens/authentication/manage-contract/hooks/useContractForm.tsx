@@ -12,7 +12,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
-import { getVoltageLevelLabel } from 'screens/authentication/meter-management/utils/constant';
+import {
+  getVoltageLevelLabel,
+  METER_TYPE
+} from 'screens/authentication/meter-management/utils/constant';
 import { z } from 'zod';
 import {
   buildContractFormValues,
@@ -102,7 +105,8 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
 
   const { meterOptions, getMeterById, onOpenMeterDropdown, meterDropdownRender } = useMeterLookup({
     pinnedIds: pinnedMeterIds,
-    showErrorToast: true
+    showErrorToast: true,
+    meterType: METER_TYPE.CUSTOMER
   });
   const selectedMeter = useMemo(
     () => (selectedMeterId ? getMeterById(selectedMeterId) : undefined),

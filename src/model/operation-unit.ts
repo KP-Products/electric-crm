@@ -18,8 +18,10 @@ export interface OperationUnit {
   contactIsueDate?: string;
   address?: string;
   createdBy?: string;
+  createdByUsername?: string;
   createdAt?: string;
   updateBy?: string;
+  updatedByUsername?: string;
   updatedAt?: string;
   status?: string;
   signedDate?: string;

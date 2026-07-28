@@ -2,11 +2,10 @@ import { K_SIZE_0, K_SIZE_1 } from '@constant';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import dayjs from 'dayjs';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RemoteMeterReadingImportResult } from 'model/remote-meter-reading';
 import remoteMeterReadingServices from 'services/remote-meter-reading-services';
-import { FORMAT_DATE_API } from 'utils/date';
+import { parseFormattedNumber } from 'utils/number-input';
 import { formatUploadFileSize, getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 import {
   ParsedRemoteMeterReadingWorkbook,
@@ -15,29 +14,24 @@ import {
   parseRemoteMeterReadingWorkbook
 } from './xlsxPreview';
 
-dayjs.extend(customParseFormat);
-
-const REMOTE_READING_TYPE_INPUT = '2';
 const PREVIEW_PAGE_SIZE = 5;
-const DEFAULT_PERIOD = '07/2026';
-const DEFAULT_READING_DATE = '22-07-2026';
-const TEMPLATE_EXPORT_URL =
-  'https://docs.google.com/spreadsheets/d/16anW_bKgAjQgvNKZR4KSVcW1uwlS4MDQ/export?format=xlsx&id=16anW_bKgAjQgvNKZR4KSVcW1uwlS4MDQ';
-
-const METER_HEADERS = [
+const VALID_TOU_CODES = ['CD', 'BT', 'TD'];
+const LEGACY_REQUIRED_METER_HEADERS = ['meter_number', 'customer_id', 'customer_name'];
+const LEGACY_TOU_HEADERS = ['meter_number', 'tou', 'old_index', 'new_index'];
+const IMPORT_REQUIRED_HEADERS = [
   'meter_number',
   'customer_id',
-  'customer_name',
-  'active_energy_index',
-  'reactive_energy_index'
+  'period_code',
+  'period_from',
+  'period_to',
+  'reading_date',
+  'tou',
+  'old_index',
+  'new_index'
 ];
-const REQUIRED_METER_HEADERS = ['meter_number', 'customer_id', 'customer_name'];
-const TOU_HEADERS = ['meter_number', 'tou', 'old_index', 'new_index'];
-const VALID_TOU_CODES = ['CD', 'BT', 'TD'];
 
-export type RemoteImportTabKey = 'ALL' | 'VALID' | 'WARNING' | 'ERROR';
+export type RemoteImportTabKey = 'ALL';
 export type RemoteImportValidationStatus = 'VALID' | 'WARNING' | 'ERROR';
-export type RemoteReadingSaveMode = 'OFFICIAL' | 'DRAFT';
 
 export interface RemoteReadingTouDetail {
   id: string;
@@ -46,6 +40,8 @@ export interface RemoteReadingTouDetail {
   oldIndex?: number;
   newIndex?: number;
   usage?: number;
+  energyRaw?: number;
+  energyAdjusted?: number;
   messages: string[];
 }
 
@@ -55,9 +51,14 @@ export interface RemoteReadingPreviewRow {
   meterNumber: string;
   customerId: string;
   customerName: string;
+  periodCode?: string;
+  periodFrom?: string;
+  periodTo?: string;
+  readingDate?: string;
   multiplier: number;
   activeEnergyIndex?: number;
   activeEnergyUsage?: number;
+  energyAdjustedUsage?: number;
   reactiveEnergyIndex?: number;
   reactiveEnergyUsage?: number;
   status: RemoteImportValidationStatus;
@@ -77,96 +78,20 @@ interface BuildPreviewResult {
   messages: string[];
 }
 
-const SAMPLE_METER_ROWS: ParsedSheetRow[] = [
-  {
-    rowNumber: 2,
-    values: {
-      meter_number: 'CT-11-19001234',
-      customer_id: 1001,
-      customer_name: 'Công ty TNHH An Phát',
-      active_energy_index: 4900,
-      reactive_energy_index: 150
-    }
-  },
-  {
-    rowNumber: 3,
-    values: {
-      meter_number: 'CT-12-19001235',
-      customer_id: 1001,
-      customer_name: 'Công ty TNHH An Phát',
-      active_energy_index: 7380,
-      reactive_energy_index: 180
-    }
-  },
-  {
-    rowNumber: 4,
-    values: {
-      meter_number: 'CT-13-19001236',
-      customer_id: 1001,
-      customer_name: 'Công ty TNHH An Phát',
-      active_energy_index: 3150,
-      reactive_energy_index: 110
-    }
-  },
-  {
-    rowNumber: 5,
-    values: {
-      meter_number: 'CT-14-19001237',
-      customer_id: 1002,
-      customer_name: 'Cửa hàng Điện Máy Minh',
-      active_energy_index: 5250,
-      reactive_energy_index: 120
-    }
-  },
-  {
-    rowNumber: 6,
-    values: {
-      meter_number: 'CT-15-19001238',
-      customer_id: 1002,
-      customer_name: 'Cửa hàng Điện Máy Minh',
-      active_energy_index: 10900,
-      reactive_energy_index: 200
-    }
-  }
-];
-
-const SAMPLE_TOU_ROWS: ParsedSheetRow[] = [
-  ['CT-11-19001234', 'CD', 1250, 1380],
-  ['CT-11-19001234', 'BT', 2340, 2520],
-  ['CT-11-19001234', 'TD', 890, 1000],
-  ['CT-12-19001235', 'CD', 2100, 2200],
-  ['CT-12-19001235', 'BT', 3500, 3650],
-  ['CT-12-19001235', 'TD', 1300, 1530],
-  ['CT-13-19001236', 'CD', 900, 980],
-  ['CT-13-19001236', 'BT', 1400, 1510],
-  ['CT-13-19001236', 'TD', 600, 660],
-  ['CT-14-19001237', 'CD', 1500, 1570],
-  ['CT-14-19001237', 'BT', 2500, 2650],
-  ['CT-14-19001237', 'TD', 800, 1030],
-  ['CT-15-19001238', 'CD', 3000, 3200],
-  ['CT-15-19001238', 'BT', 5000, 5450],
-  ['CT-15-19001238', 'TD', 1800, 2250]
-].map(([meterNumber, tou, oldIndex, newIndex], index) => ({
-  rowNumber: index + 2,
-  values: {
-    meter_number: meterNumber,
-    tou,
-    old_index: oldIndex,
-    new_index: newIndex
-  }
-}));
-
-const SAMPLE_WORKBOOK: ParsedRemoteMeterReadingWorkbook = {
-  meterSheet: {
-    headers: METER_HEADERS,
-    rows: SAMPLE_METER_ROWS
-  },
-  touSheet: {
-    headers: TOU_HEADERS,
-    rows: SAMPLE_TOU_ROWS
-  },
-  missingSheets: []
-};
+interface ImportPreviewGroup {
+  lineNumber: number;
+  meterNumber: string;
+  customerId: string;
+  customerName: string;
+  periodCode: string;
+  periodFrom: string;
+  periodTo: string;
+  readingDate: string;
+  multiplier: number;
+  details: RemoteReadingTouDetail[];
+  errors: string[];
+  warnings: string[];
+}
 
 const getErrorMessage = (error?: any, fallback = 'Thao tác thất bại') => {
   return (
@@ -181,32 +106,19 @@ const getErrorMessage = (error?: any, fallback = 'Thao tác thất bại') => {
 const getStringValue = (row: ParsedSheetRow, key: string) => {
   const value = row.values[key];
   if (value === undefined || value === null) return '';
+  if (
+    typeof value === 'number' &&
+    ['period_from', 'period_to', 'reading_date'].includes(key) &&
+    value > 20000
+  ) {
+    return dayjs('1899-12-30').add(value, 'day').format('DD-MM-YYYY');
+  }
   if (typeof value === 'number') return Number.isInteger(value) ? String(value) : String(value);
   return value.trim();
 };
 
 const toNumber = (value?: string | number) => {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
-
-  const rawValue = String(value ?? '')
-    .trim()
-    .replace(/\s/g, '');
-
-  if (!rawValue) return undefined;
-
-  const hasDot = rawValue.includes('.');
-  const hasComma = rawValue.includes(',');
-  const normalized =
-    hasDot && hasComma
-      ? rawValue.replace(/\./g, '').replace(',', '.')
-      : hasComma
-        ? rawValue.replace(',', '.')
-        : /^\d{1,3}(\.\d{3})+$/.test(rawValue)
-          ? rawValue.replace(/\./g, '')
-          : rawValue;
-
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return parseFormattedNumber(value);
 };
 
 const getMissingHeaders = (sheet: ParsedSheet | undefined, requiredHeaders: string[]) =>
@@ -219,7 +131,31 @@ const appendMessage = (map: Map<string, string[]>, meterNumber: string, message:
   map.set(meterNumber, messages);
 };
 
-const getSamplePreview = () => buildPreviewRows(SAMPLE_WORKBOOK).rows;
+const getFileExtension = (fileName: string) => fileName.split('.').pop()?.toLowerCase() || '';
+
+const isXlsxFile = (file?: File) => Boolean(file && getFileExtension(file.name) === 'xlsx');
+
+const isExcelFile = (file?: File) => {
+  const extension = getFileExtension(file?.name || '');
+  return extension === 'xlsx';
+};
+
+const getStats = (rows: RemoteReadingPreviewRow[]): RemoteReadingStats => ({
+  total: rows.length,
+  valid: rows.filter((row) => row.status === 'VALID').length,
+  warning: rows.filter((row) => row.status === 'WARNING').length,
+  error: rows.filter((row) => row.status === 'ERROR').length
+});
+
+const downloadByBlob = (blob: Blob, fileName: string) => {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+};
 
 const buildTouDetails = (touSheet?: ParsedSheet) => {
   const detailsByMeter = new Map<string, RemoteReadingTouDetail[]>();
@@ -232,20 +168,17 @@ const buildTouDetails = (touSheet?: ParsedSheet) => {
     const newIndex = toNumber(row.values.new_index as string | number);
     const messages: string[] = [];
 
-    if (!meterNumber) messages.push(`Dòng ${row.rowNumber}: thiếu meter_number`);
+    if (!meterNumber) messages.push(`Dòng ${row.rowNumber}: thiếu số công tơ`);
     if (!VALID_TOU_CODES.includes(tou)) {
-      messages.push(`Dòng ${row.rowNumber}: TOU phải là CD, BT hoặc TD`);
+      messages.push(`Dòng ${row.rowNumber}: khung giờ phải là CD, BT hoặc TD`);
     }
-    if (oldIndex === undefined) messages.push(`Dòng ${row.rowNumber}: old_index không hợp lệ`);
-    if (newIndex === undefined) messages.push(`Dòng ${row.rowNumber}: new_index không hợp lệ`);
+    if (oldIndex === undefined) messages.push(`Dòng ${row.rowNumber}: chỉ số đầu không hợp lệ`);
+    if (newIndex === undefined) messages.push(`Dòng ${row.rowNumber}: chỉ số cuối không hợp lệ`);
     if (oldIndex !== undefined && newIndex !== undefined && newIndex < oldIndex) {
-      messages.push(`Dòng ${row.rowNumber}: new_index nhỏ hơn old_index`);
+      messages.push(`Dòng ${row.rowNumber}: chỉ số cuối nhỏ hơn chỉ số đầu`);
     }
 
-    if (messages.length) {
-      appendMessage(detailMessagesByMeter, meterNumber, messages.join('; '));
-    }
-
+    if (messages.length) appendMessage(detailMessagesByMeter, meterNumber, messages.join('; '));
     if (!meterNumber) return;
 
     const details = detailsByMeter.get(meterNumber) || [];
@@ -267,30 +200,21 @@ const buildTouDetails = (touSheet?: ParsedSheet) => {
   };
 };
 
-function buildPreviewRows(workbook: ParsedRemoteMeterReadingWorkbook): BuildPreviewResult {
+const buildLegacyPreviewRows = (workbook: ParsedRemoteMeterReadingWorkbook): BuildPreviewResult => {
   const messages: string[] = [];
-  const missingSheets = workbook.missingSheets;
-  const missingMeterHeaders = getMissingHeaders(workbook.meterSheet, REQUIRED_METER_HEADERS);
-  const missingTouHeaders = getMissingHeaders(workbook.touSheet, TOU_HEADERS);
+  const missingMeterHeaders = getMissingHeaders(workbook.meterSheet, LEGACY_REQUIRED_METER_HEADERS);
+  const missingTouHeaders = getMissingHeaders(workbook.touSheet, LEGACY_TOU_HEADERS);
 
-  if (missingSheets.length) {
-    messages.push(`Thiếu sheet: ${missingSheets.join(', ')}`);
+  if (workbook.missingSheets.length) {
+    messages.push(`Thiếu sheet: ${workbook.missingSheets.join(', ')}`);
   }
-
   if (missingMeterHeaders.length) {
     messages.push(`Sheet Du_lieu_cong_to thiếu cột: ${missingMeterHeaders.join(', ')}`);
   }
-
   if (missingTouHeaders.length && workbook.touSheet) {
     messages.push(`Sheet Chi_tiet_TOU thiếu cột: ${missingTouHeaders.join(', ')}`);
   }
-
-  if (!workbook.meterSheet || missingMeterHeaders.length) {
-    return {
-      rows: [],
-      messages
-    };
-  }
+  if (!workbook.meterSheet || missingMeterHeaders.length) return { rows: [], messages };
 
   const { detailsByMeter, detailMessagesByMeter } = buildTouDetails(workbook.touSheet);
   const seenMeterNumbers = new Set<string>();
@@ -311,35 +235,19 @@ function buildPreviewRows(workbook: ParsedRemoteMeterReadingWorkbook): BuildPrev
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    if (!meterNumber) errors.push(`Dòng ${row.rowNumber}: thiếu meter_number`);
-    if (!customerId) errors.push(`Dòng ${row.rowNumber}: thiếu customer_id`);
-    if (!customerName) errors.push(`Dòng ${row.rowNumber}: thiếu customer_name`);
+    if (!meterNumber) errors.push(`Dòng ${row.rowNumber}: thiếu số công tơ`);
+    if (!customerId) errors.push(`Dòng ${row.rowNumber}: thiếu mã khách hàng`);
+    if (!customerName) warnings.push(`Dòng ${row.rowNumber}: thiếu tên khách hàng`);
     if (meterNumber && seenMeterNumbers.has(meterNumber)) {
-      errors.push(`Dòng ${row.rowNumber}: trùng meter_number ${meterNumber}`);
+      errors.push(`Dòng ${row.rowNumber}: trùng số công tơ ${meterNumber}`);
     }
     if (activeEnergyIndex === undefined) {
-      errors.push(`Dòng ${row.rowNumber}: thiếu active_energy_index hoặc chi tiết TOU`);
+      errors.push(`Dòng ${row.rowNumber}: thiếu chỉ số hữu công hoặc chi tiết TOU`);
     }
     if (activeEnergyIndex !== undefined && activeEnergyIndex < K_SIZE_0) {
-      errors.push(`Dòng ${row.rowNumber}: active_energy_index không được âm`);
+      errors.push(`Dòng ${row.rowNumber}: chỉ số hữu công không được âm`);
     }
-    if (!touDetails.length) {
-      warnings.push(`Dòng ${row.rowNumber}: chưa có chi tiết TOU`);
-    }
-    if (
-      activeEnergyIndex !== undefined &&
-      touDetails.length &&
-      Math.abs(activeEnergyIndex - touNewIndexTotal) > 0.001
-    ) {
-      warnings.push(`Dòng ${row.rowNumber}: active_energy_index chưa khớp tổng new_index TOU`);
-    }
-    if (
-      row.values.reactive_energy_index !== undefined &&
-      String(row.values.reactive_energy_index).trim() &&
-      reactiveEnergyIndex === undefined
-    ) {
-      warnings.push(`Dòng ${row.rowNumber}: reactive_energy_index không hợp lệ, sẽ lưu null`);
-    }
+    if (!touDetails.length) warnings.push(`Dòng ${row.rowNumber}: chưa có chi tiết TOU`);
 
     (detailMessagesByMeter.get(meterNumber) || []).forEach((message) => errors.push(message));
     if (meterNumber) seenMeterNumbers.add(meterNumber);
@@ -369,92 +277,175 @@ function buildPreviewRows(workbook: ParsedRemoteMeterReadingWorkbook): BuildPrev
     };
   });
 
-  return {
-    rows,
-    messages
-  };
-}
-
-const getFileExtension = (fileName: string) => fileName.split('.').pop()?.toLowerCase() || '';
-
-const isXlsxFile = (file?: File) => Boolean(file && getFileExtension(file.name) === 'xlsx');
-
-const isExcelFile = (file?: File) => {
-  const extension = getFileExtension(file?.name || '');
-  return ['xlsx', 'xls'].includes(extension);
+  return { rows, messages };
 };
 
-const getStats = (rows: RemoteReadingPreviewRow[]): RemoteReadingStats => ({
-  total: rows.length,
-  valid: rows.filter((row) => row.status === 'VALID').length,
-  warning: rows.filter((row) => row.status === 'WARNING').length,
-  error: rows.filter((row) => row.status === 'ERROR').length
-});
-
-const getPeriodDateRange = (periodStart: string, periodEnd: string) => {
-  const start = dayjs(periodStart, 'MM/YYYY', true);
-  const end = dayjs(periodEnd, 'MM/YYYY', true);
-
-  if (!start.isValid() || !end.isValid()) {
+const buildImportPreviewRows = (sheet: ParsedSheet): BuildPreviewResult => {
+  const missingHeaders = getMissingHeaders(sheet, IMPORT_REQUIRED_HEADERS);
+  if (missingHeaders.length) {
     return {
-      label: '',
-      from: '',
-      to: ''
+      rows: [],
+      messages: [`File thiếu cột bắt buộc: ${missingHeaders.join(', ')}`]
     };
   }
 
-  return {
-    label: `${periodStart} (${start.startOf('month').format('DD/MM/YYYY')} - ${end
-      .endOf('month')
-      .format('DD/MM/YYYY')})`,
-    from: start.startOf('month').format(FORMAT_DATE_API),
-    to: end.endOf('month').format(FORMAT_DATE_API)
-  };
+  const groups = new Map<string, ImportPreviewGroup>();
+
+  sheet.rows.forEach((row) => {
+    const meterNumber = getStringValue(row, 'meter_number');
+    const customerId = getStringValue(row, 'customer_id');
+    const customerName = getStringValue(row, 'customer_name');
+    const periodCode = getStringValue(row, 'period_code');
+    const periodFrom = getStringValue(row, 'period_from');
+    const periodTo = getStringValue(row, 'period_to');
+    const readingDate = getStringValue(row, 'reading_date');
+    const tou = getStringValue(row, 'tou').toUpperCase();
+    const oldIndex = toNumber(row.values.old_index as string | number);
+    const newIndex = toNumber(row.values.new_index as string | number);
+    const energyRaw = toNumber(row.values.energy_raw as string | number);
+    const energyAdjusted = toNumber(row.values.energy_adjusted as string | number);
+    const multiplier = toNumber(row.values.multiplier as string | number) || K_SIZE_1;
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!meterNumber) errors.push(`Dòng ${row.rowNumber}: thiếu số công tơ`);
+    if (!customerId) errors.push(`Dòng ${row.rowNumber}: thiếu mã khách hàng`);
+    if (!periodCode) errors.push(`Dòng ${row.rowNumber}: thiếu mã kỳ`);
+    if (!periodFrom) errors.push(`Dòng ${row.rowNumber}: thiếu từ ngày`);
+    if (!periodTo) errors.push(`Dòng ${row.rowNumber}: thiếu đến ngày`);
+    if (!readingDate) errors.push(`Dòng ${row.rowNumber}: thiếu ngày ghi`);
+    if (!VALID_TOU_CODES.includes(tou)) {
+      errors.push(`Dòng ${row.rowNumber}: khung giờ phải là CD, BT hoặc TD`);
+    }
+    if (oldIndex === undefined) errors.push(`Dòng ${row.rowNumber}: chỉ số đầu không hợp lệ`);
+    if (newIndex === undefined) errors.push(`Dòng ${row.rowNumber}: chỉ số cuối không hợp lệ`);
+    if (oldIndex !== undefined && newIndex !== undefined && newIndex < oldIndex) {
+      errors.push(`Dòng ${row.rowNumber}: chỉ số cuối nhỏ hơn chỉ số đầu`);
+    }
+    if (
+      row.values.energy_raw !== undefined &&
+      String(row.values.energy_raw).trim() &&
+      energyRaw === undefined
+    ) {
+      warnings.push(`Dòng ${row.rowNumber}: sản lượng thô không hợp lệ`);
+    }
+    if (
+      row.values.energy_adjusted !== undefined &&
+      String(row.values.energy_adjusted).trim() &&
+      energyAdjusted === undefined
+    ) {
+      warnings.push(`Dòng ${row.rowNumber}: sản lượng hiệu chỉnh không hợp lệ`);
+    }
+
+    const groupKey =
+      meterNumber && customerId && periodCode
+        ? `${meterNumber}|${customerId}|${periodCode}`
+        : `row-${row.rowNumber}`;
+    const group = groups.get(groupKey) || {
+      lineNumber: row.rowNumber,
+      meterNumber,
+      customerId,
+      customerName,
+      periodCode,
+      periodFrom,
+      periodTo,
+      readingDate,
+      multiplier,
+      details: [],
+      errors: [],
+      warnings: []
+    };
+
+    if (tou && group.details.some((detail) => detail.tou === tou)) {
+      errors.push(`Dòng ${row.rowNumber}: trùng khung giờ ${tou} của công tơ ${meterNumber}`);
+    }
+
+    group.errors.push(...errors);
+    group.warnings.push(...warnings);
+    group.details.push({
+      id: `${groupKey}-${tou || row.rowNumber}`,
+      lineNumber: row.rowNumber,
+      tou,
+      oldIndex,
+      newIndex,
+      usage:
+        energyAdjusted ??
+        energyRaw ??
+        (oldIndex !== undefined && newIndex !== undefined ? newIndex - oldIndex : undefined),
+      energyRaw,
+      energyAdjusted,
+      messages: [...errors, ...warnings]
+    });
+    groups.set(groupKey, group);
+  });
+
+  const rows = Array.from(groups.entries()).map<RemoteReadingPreviewRow>(([groupKey, group]) => {
+    const totalNewIndex = group.details.reduce(
+      (sum, detail) => sum + (detail.newIndex || K_SIZE_0),
+      K_SIZE_0
+    );
+    const totalRaw = group.details.reduce(
+      (sum, detail) =>
+        sum +
+        (detail.energyRaw ??
+          (detail.oldIndex !== undefined && detail.newIndex !== undefined
+            ? detail.newIndex - detail.oldIndex
+            : K_SIZE_0)),
+      K_SIZE_0
+    );
+    const totalAdjusted = group.details.reduce(
+      (sum, detail) =>
+        sum + (detail.energyAdjusted ?? detail.energyRaw ?? detail.usage ?? K_SIZE_0),
+      K_SIZE_0
+    );
+    const status: RemoteImportValidationStatus = group.errors.length
+      ? 'ERROR'
+      : group.warnings.length
+        ? 'WARNING'
+        : 'VALID';
+
+    return {
+      id: groupKey,
+      lineNumber: group.lineNumber,
+      meterNumber: group.meterNumber,
+      customerId: group.customerId,
+      customerName: group.customerName,
+      periodCode: group.periodCode,
+      periodFrom: group.periodFrom,
+      periodTo: group.periodTo,
+      readingDate: group.readingDate,
+      multiplier: group.multiplier,
+      activeEnergyIndex: totalNewIndex,
+      activeEnergyUsage: totalRaw,
+      energyAdjustedUsage: totalAdjusted,
+      status,
+      messages: [...group.errors, ...group.warnings],
+      touDetails: group.details
+    };
+  });
+
+  return { rows, messages: [] };
 };
 
-const downloadByBlob = (blob: Blob, fileName: string) => {
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
-};
-
-const openExternalTemplate = () => {
-  const link = document.createElement('a');
-  link.href = TEMPLATE_EXPORT_URL;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+function buildPreviewRows(workbook: ParsedRemoteMeterReadingWorkbook): BuildPreviewResult {
+  if (workbook.readingSheet) return buildImportPreviewRows(workbook.readingSheet);
+  return buildLegacyPreviewRows(workbook);
+}
 
 export default function useRemoteMeterReading() {
   const [selectedFile, setSelectedFile] = useState<File>();
-  const [previewRows, setPreviewRows] = useState<RemoteReadingPreviewRow[]>(getSamplePreview);
+  const [previewRows, setPreviewRows] = useState<RemoteReadingPreviewRow[]>([]);
   const [workbookMessages, setWorkbookMessages] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<RemoteImportTabKey>('ALL');
   const [keyword, setKeyword] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
   const [pageSize, setPageSize] = useState<number>(PREVIEW_PAGE_SIZE);
-  const [periodStart, setPeriodStart] = useState<string>(DEFAULT_PERIOD);
-  const [periodEnd, setPeriodEnd] = useState<string>(DEFAULT_PERIOD);
-  const [readingDate, setReadingDate] = useState<string>(DEFAULT_READING_DATE);
-  const [saveMode, setSaveMode] = useState<RemoteReadingSaveMode>('OFFICIAL');
-  const [note, setNote] = useState<string>('');
   const [checkingData, setCheckingData] = useState<boolean>(false);
   const [importing, setImporting] = useState<boolean>(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState<boolean>(false);
   const [importResult, setImportResult] = useState<RemoteMeterReadingImportResult>();
   const [checkedAt, setCheckedAt] = useState<string>('');
-
-  const periodInfo = useMemo(
-    () => getPeriodDateRange(periodStart, periodEnd),
-    [periodEnd, periodStart]
-  );
+  const [previewBlockingError, setPreviewBlockingError] = useState<boolean>(false);
 
   const stats = useMemo(() => getStats(previewRows), [previewRows]);
 
@@ -462,16 +453,18 @@ export default function useRemoteMeterReading() {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
     return previewRows.filter((row) => {
-      const matchedTab = activeTab === 'ALL' || row.status === activeTab;
       const matchedKeyword =
         !normalizedKeyword ||
         row.meterNumber.toLowerCase().includes(normalizedKeyword) ||
         row.customerId.toLowerCase().includes(normalizedKeyword) ||
-        row.customerName.toLowerCase().includes(normalizedKeyword);
+        row.customerName.toLowerCase().includes(normalizedKeyword) ||
+        String(row.periodCode || '')
+          .toLowerCase()
+          .includes(normalizedKeyword);
 
-      return matchedTab && matchedKeyword;
+      return matchedKeyword;
     });
-  }, [activeTab, keyword, previewRows]);
+  }, [keyword, previewRows]);
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - K_SIZE_1) * pageSize;
@@ -490,13 +483,8 @@ export default function useRemoteMeterReading() {
   );
 
   const tabItems = useMemo(
-    () => [
-      { key: 'ALL' as const, label: `Tất cả (${stats.total})` },
-      { key: 'VALID' as const, label: `Hợp lệ (${stats.valid})` },
-      { key: 'WARNING' as const, label: `Cảnh báo (${stats.warning})` },
-      { key: 'ERROR' as const, label: `Lỗi (${stats.error})` }
-    ],
-    [stats.error, stats.total, stats.valid, stats.warning]
+    () => [{ key: 'ALL' as const, label: `Tất cả (${stats.total})` }],
+    [stats.total]
   );
 
   useEffect(() => {
@@ -515,15 +503,17 @@ export default function useRemoteMeterReading() {
     if (!isExcelFile(file)) {
       showToast({
         type: TYPE_TOAST.ERROR,
-        content: 'Vui lòng chọn file Excel đúng định dạng .xlsx hoặc .xls'
+        content: 'Vui lòng chọn file Excel đúng định dạng .xlsx'
       });
       return;
     }
 
     setSelectedFile(file);
+    setPreviewRows([]);
     setImportResult(undefined);
     setWorkbookMessages([]);
     setCheckedAt('');
+    setPreviewBlockingError(false);
     showToast({
       type: TYPE_TOAST.SUCCESS,
       content: `Đã chọn ${file.name} (${formatUploadFileSize(file.size)})`
@@ -532,29 +522,31 @@ export default function useRemoteMeterReading() {
 
   const onRemoveFile = useCallback(() => {
     setSelectedFile(undefined);
-    setPreviewRows(getSamplePreview());
+    setPreviewRows([]);
     setWorkbookMessages([]);
     setCheckedAt('');
     setImportResult(undefined);
+    setPreviewBlockingError(false);
   }, []);
 
   const onCheckData = useCallback(async () => {
-    setCheckingData(true);
-    setImportResult(undefined);
-
     if (!selectedFile) {
-      const sample = buildPreviewRows(SAMPLE_WORKBOOK);
-      setPreviewRows(sample.rows);
-      setWorkbookMessages(['Đang hiển thị dữ liệu mẫu theo file Excel tham chiếu']);
-      setCheckedAt(dayjs().format('HH:mm DD/MM/YYYY'));
-      setCheckingData(false);
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: 'Vui lòng chọn file Excel cần kiểm tra'
+      });
       return;
     }
 
+    setCheckingData(true);
+    setImportResult(undefined);
+    setPreviewBlockingError(false);
+
     if (!isXlsxFile(selectedFile)) {
-      setWorkbookMessages([
-        'Chỉ hỗ trợ xem trước file .xlsx. File .xls sẽ được backend kiểm tra khi upload.'
-      ]);
+      setPreviewRows([]);
+      setWorkbookMessages(['Chỉ hỗ trợ kiểm tra và upload file .xlsx theo Swagger 5.2.']);
+      setCheckedAt(dayjs().format('HH:mm DD/MM/YYYY'));
+      setPreviewBlockingError(true);
       setCheckingData(false);
       return;
     }
@@ -567,6 +559,9 @@ export default function useRemoteMeterReading() {
       setPreviewRows(result.rows);
       setWorkbookMessages(result.messages);
       setCheckedAt(dayjs().format('HH:mm DD/MM/YYYY'));
+      setPreviewBlockingError(
+        Boolean(nextStats.error || (result.messages.length && !result.rows.length))
+      );
 
       if (nextStats.error) {
         showToast({
@@ -587,6 +582,7 @@ export default function useRemoteMeterReading() {
     } catch (error: any) {
       setPreviewRows([]);
       setWorkbookMessages([getErrorMessage(error, 'Không đọc được file Excel')]);
+      setPreviewBlockingError(true);
       showToast({
         type: TYPE_TOAST.ERROR,
         content: getErrorMessage(error, 'Không đọc được file Excel')
@@ -605,7 +601,7 @@ export default function useRemoteMeterReading() {
       return;
     }
 
-    if (stats.error) {
+    if (previewBlockingError || (previewRows.length && stats.error)) {
       showToast({
         type: TYPE_TOAST.ERROR,
         content: 'File còn dòng lỗi. Vui lòng kiểm tra lại trước khi nhập'
@@ -613,24 +609,9 @@ export default function useRemoteMeterReading() {
       return;
     }
 
-    if (!periodInfo.from || !periodInfo.to || !readingDate) {
-      showToast({
-        type: TYPE_TOAST.ERROR,
-        content: 'Vui lòng chọn kỳ ghi chỉ số và ngày ghi chỉ số'
-      });
-      return;
-    }
-
     setImporting(true);
     const response = await remoteMeterReadingServices.importRemoteMeterReadings({
-      file: selectedFile,
-      periodCode: periodStart,
-      periodFrom: periodInfo.from,
-      periodTo: periodInfo.to,
-      readingDate,
-      saveMode,
-      note,
-      typeInput: REMOTE_READING_TYPE_INPUT
+      file: selectedFile
     });
     setImporting(false);
 
@@ -658,17 +639,7 @@ export default function useRemoteMeterReading() {
       type: TYPE_TOAST.SUCCESS,
       content: `Đã nhập ${response.data.rowCount || stats.total} dòng chỉ số vào hệ thống`
     });
-  }, [
-    note,
-    periodInfo.from,
-    periodInfo.to,
-    periodStart,
-    readingDate,
-    saveMode,
-    selectedFile,
-    stats.error,
-    stats.total
-  ]);
+  }, [previewBlockingError, previewRows.length, selectedFile, stats.error, stats.total]);
 
   const onDownloadTemplate = useCallback(async () => {
     setDownloadingTemplate(true);
@@ -680,10 +651,9 @@ export default function useRemoteMeterReading() {
       return;
     }
 
-    openExternalTemplate();
     showToast({
-      type: TYPE_TOAST.WARNING,
-      content: 'Không tải được file mẫu từ hệ thống, đang mở file mẫu tham chiếu'
+      type: TYPE_TOAST.ERROR,
+      content: getErrorMessage(response, 'Không tải được file mẫu từ hệ thống')
     });
   }, []);
 
@@ -695,41 +665,18 @@ export default function useRemoteMeterReading() {
     setPageSize(value);
   }, []);
 
-  const onChangePeriodStart = useCallback(
-    (value: string) => {
-      setPeriodStart(value);
-      const nextStart = dayjs(value, 'MM/YYYY', true);
-      const currentEnd = dayjs(periodEnd, 'MM/YYYY', true);
-
-      if (nextStart.isValid() && currentEnd.isValid() && currentEnd.isBefore(nextStart, 'month')) {
-        setPeriodEnd(value);
-      }
-    },
-    [periodEnd]
-  );
-
-  const onChangePeriodEnd = useCallback((value: string) => {
-    setPeriodEnd(value);
-  }, []);
-
   return {
     activeTab,
     tabItems,
     keyword,
     selectedFile,
-    displayFileName: selectedFile?.name || 'Chi_so_cong_to_07_2026.xlsx',
+    displayFileName: selectedFile?.name || 'Chọn file Excel',
     selectedFileSize: selectedFile ? formatUploadFileSize(selectedFile.size) : '',
     previewRows,
     paginatedRows,
     filteredRows,
     stats,
     workbookMessages,
-    periodStart,
-    periodEnd,
-    periodInfo,
-    readingDate,
-    saveMode,
-    note,
     checkingData,
     importing,
     downloadingTemplate,
@@ -738,6 +685,12 @@ export default function useRemoteMeterReading() {
     pagination,
     currentPage,
     pageSize,
+    canImportData:
+      Boolean(selectedFile) &&
+      !importing &&
+      !checkingData &&
+      !previewBlockingError &&
+      !(previewRows.length && stats.error),
     onSelectFile,
     onRemoveFile,
     onCheckData,
@@ -745,11 +698,6 @@ export default function useRemoteMeterReading() {
     onDownloadTemplate,
     onChangeTab,
     onChangeKeyword: setKeyword,
-    onChangePageSize,
-    onChangePeriodStart,
-    onChangePeriodEnd,
-    onChangeReadingDate: setReadingDate,
-    onChangeSaveMode: setSaveMode,
-    onChangeNote: setNote
+    onChangePageSize
   };
 }

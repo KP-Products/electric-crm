@@ -71,7 +71,6 @@ const MeterVerificationScreen = () => {
     t,
     configs,
     meterOptions,
-    alertMeters,
     verifications,
     filterDraft,
     total,
@@ -80,7 +79,6 @@ const MeterVerificationScreen = () => {
     listLoading,
     detailLoading,
     fileLoading,
-    exportLoading,
     openForm,
     selectedVerification,
     selectedMeter,
@@ -97,7 +95,6 @@ const MeterVerificationScreen = () => {
     onDownloadFile,
     onCloseForm,
     onSubmit,
-    onExportAlerts,
     resetComputedNextDate,
     getMeterLabel,
     getEquipmentTypeLabel,
@@ -266,14 +263,6 @@ const MeterVerificationScreen = () => {
             gap={K_SIZE_16}
             className="mobile:w-full mobile:flex-col"
           >
-            <ButtonBase
-              type="ghost"
-              leftIcon="IC_DOWNLOAD_OUTLINE"
-              customContent={exportLoading ? 'Đang xuất...' : 'Xuất cảnh báo'}
-              disabled={exportLoading || alertMeters.length === K_SIZE_0}
-              classNames="mobile:flex-1 mobile:justify-center"
-              onClick={onExportAlerts}
-            />
             <ButtonBase
               type="primary"
               leftIcon="IC_ADD_OUTLINE2"

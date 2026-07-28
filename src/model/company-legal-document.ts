@@ -18,6 +18,7 @@ export interface CompanyLegalDocument {
   note?: string;
   createdBy?: number;
   createdByName?: string;
+  createdByUsername?: string;
   createdAt?: string;
   updatedAt?: string;
 }

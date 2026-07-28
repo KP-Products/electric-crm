@@ -529,8 +529,7 @@ const PpeItemHistoryScreen = () => {
                   label="Số lượng"
                   placeholder="Nhập số lượng"
                   inputMode="numeric"
-                  pattern="[0-9]*"
-                  onlyNumber
+                  formatNumberWithCommas
                   control={control}
                   onChange={onQuantityChange}
                 />

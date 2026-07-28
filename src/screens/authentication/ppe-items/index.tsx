@@ -478,7 +478,7 @@ const PpeItemsScreen = () => {
                   name="quantity"
                   label="Số lượng"
                   placeholder="Nhập số lượng"
-                  onlyNumber
+                  formatNumberWithCommas
                   control={control}
                 />
                 <AppSelectControl

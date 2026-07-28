@@ -15,6 +15,7 @@ export interface Contract {
   status?: string;
   note?: string;
   createdBy?: string;
+  createdByUsername?: string;
   updatedBy?: string;
   createdAt?: string;
   updatedAt?: string;

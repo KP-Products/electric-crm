@@ -16,6 +16,7 @@ import employeeServices from 'services/employee-services';
 import ppeItemHistoryServices from 'services/ppe-item-history-services';
 import ppeItemServices from 'services/ppe-item-services';
 import { useAppTranslation } from 'utils/i18n';
+import { isFormattedIntegerInput, parseFormattedIntegerNumber } from 'utils/number-input';
 import { z } from 'zod';
 import {
   buildCreatePpeItemHistoryBody,
@@ -48,9 +49,15 @@ const ppeItemHistorySchema = z.object({
   quantity: z
     .string()
     .trim()
-    .refine((value) => !value || (/^\d+$/.test(value) && Number(value) > K_SIZE_0), {
-      message: 'Số lượng phải là số nguyên dương'
-    }),
+    .refine(
+      (value) =>
+        !value ||
+        (isFormattedIntegerInput(value) &&
+          (parseFormattedIntegerNumber(value) ?? K_SIZE_0) > K_SIZE_0),
+      {
+        message: 'Số lượng phải là số nguyên dương'
+      }
+    ),
   note: optionalString,
   type: optionalString,
   exportEmployeeId: requiredSelect('Vui lòng chọn nhân viên bàn giao')

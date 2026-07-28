@@ -28,6 +28,7 @@ import { useSelector } from 'react-redux';
 import employeeServices from 'services/employee-services';
 import ppeItemHistoryServices from 'services/ppe-item-history-services';
 import { useAppTranslation } from 'utils/i18n';
+import { isFormattedIntegerInput } from 'utils/number-input';
 import { z } from 'zod';
 import {
   buildCreatePpeItemBody,
@@ -50,12 +51,9 @@ const ppeItemSchema = z.object({
   itemName: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập tên thiết bị' }),
   category: optionalString,
   unit: optionalString,
-  quantity: z
-    .string()
-    .trim()
-    .refine((value) => !value || /^\d+$/.test(value), {
-      message: 'Số lượng phải là số nguyên không âm'
-    }),
+  quantity: z.string().trim().refine(isFormattedIntegerInput, {
+    message: 'Số lượng phải là số nguyên không âm'
+  }),
   importDate: optionalString,
   inputEmployeeId: optionalString,
   status: optionalString,

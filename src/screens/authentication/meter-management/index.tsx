@@ -31,6 +31,7 @@ import { Meter } from 'model/meter';
 import dayjs from 'dayjs';
 import { useCallback, useMemo } from 'react';
 import { FORMAT_DATE_API, displayDateFromServer } from 'utils/date';
+import { formatNumberValueWithCommas, parseFormattedNumber } from 'utils/number-input';
 import useManageMeter, { MeterFilterForm } from './hooks/useManageMeter';
 import {
   METER_TYPE_OPTIONS,
@@ -51,15 +52,15 @@ const renderDate = (date?: string) => (date ? displayDateFromServer(date) : NULL
 
 const renderNumber = (value?: string | number) => {
   if (value === undefined || value === null || value === '') return NULL_VALUE;
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) return String(value);
-  return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(numericValue);
+  const numericValue = parseFormattedNumber(value);
+  if (numericValue === undefined) return String(value);
+  return formatNumberValueWithCommas(numericValue, { maximumFractionDigits: 2 });
 };
 
-// const formatCompactNumber = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
+// const formatCompactNumber = (value: number) => new Intl.NumberFormat('en-US').format(value);
 //
 // const formatPercent = (value: number) =>
-//   new Intl.NumberFormat('vi-VN', {
+//   new Intl.NumberFormat('en-US', {
 //     maximumFractionDigits: 2,
 //     minimumFractionDigits: 0
 //   }).format(value);
@@ -109,7 +110,6 @@ const MeterManagementScreen = () => {
     onOpenCustomerDropdown,
     customerDropdownRender,
     loadingMeterList,
-    exportLoading,
     currentPage,
     pagination,
     expandedRowKeys,
@@ -123,7 +123,6 @@ const MeterManagementScreen = () => {
     onExpandMeterRow,
     onDeleteMeter,
     fetchChildMeters,
-    onExport,
     onImport
   } = useManageMeter();
 
@@ -574,14 +573,6 @@ const MeterManagementScreen = () => {
               customContent="Import Excel"
               classNames={'mobile:flex-1 mobile:justify-center'}
               onClick={onImport}
-            />
-            <ButtonBase
-              type={'ghost'}
-              leftIcon={'IC_DOWNLOAD_OUTLINE'}
-              customContent={exportLoading ? 'Đang xuất...' : 'Xuất Excel'}
-              disabled={exportLoading}
-              classNames={'mobile:flex-1 mobile:justify-center'}
-              onClick={onExport}
             />
             <ButtonBase
               type={'primary'}

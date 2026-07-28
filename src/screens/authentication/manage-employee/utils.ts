@@ -5,6 +5,7 @@ import { EMPLOYEE_GENDER, EMPLOYMENT_STATUS, EMPLOYMENT_TYPE, Employee } from 'm
 import { CURRENCY_VND, NULL_VALUE } from 'utils/constant';
 import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
 import { formatCurrency } from 'utils/math';
+import { parseFormattedNumber } from 'utils/number-input';
 import { MAX_UPLOAD_FILE_SIZE } from 'utils/upload';
 
 export const DATE_API_FORMAT = FORMAT_DATE_API;
@@ -81,8 +82,7 @@ export const optionalString = (value?: string | null) => {
 
 export const optionalNumber = (value?: string | number | null) => {
   if (value === undefined || value === null || value === '') return undefined;
-  const numberValue = Number(String(value).replaceAll(',', '').trim());
-  return Number.isFinite(numberValue) ? numberValue : undefined;
+  return parseFormattedNumber(value);
 };
 
 export const toDatePickerValue = (value?: string | null) => normalizeDateToApi(value);

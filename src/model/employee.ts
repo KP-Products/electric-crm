@@ -78,6 +78,8 @@ export interface EmployeeSalaryHistory {
   reason?: string;
   note?: string;
   approvedBy?: number;
+  approvedByName?: string;
+  approvedByUsername?: string;
   createdBy?: number;
   createdAt?: string;
 }

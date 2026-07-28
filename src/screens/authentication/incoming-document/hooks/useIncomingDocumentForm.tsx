@@ -34,6 +34,7 @@ import employeeServices from 'services/employee-services';
 import incomingDocumentServices from 'services/incoming-document-services';
 import { getAuthUserId } from 'utils/auth';
 import { normalizeDateToApi } from 'utils/date';
+import { isFormattedIntegerInput, parseFormattedIntegerNumber } from 'utils/number-input';
 import { z } from 'zod';
 import {
   buildEmployeeSelectOptions,
@@ -61,12 +62,9 @@ const requiredDateSchema = z
   .refine((value) => Boolean(value), { message: 'Vui lòng chọn ngày văn bản' });
 
 const numericStringSchema = (message: string) =>
-  z
-    .string()
-    .trim()
-    .refine((value) => !value || /^\d+$/.test(value), {
-      message
-    });
+  z.string().trim().refine(isFormattedIntegerInput, {
+    message
+  });
 
 const incomingDocumentSchema = z.object({
   incomingNumber: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập số đến' }),
@@ -95,7 +93,7 @@ const optionalString = (value?: string | null) => {
 
 const optionalNumber = (value?: string) => {
   const normalizedValue = optionalString(value);
-  return normalizedValue ? Number(normalizedValue) : undefined;
+  return normalizedValue ? parseFormattedIntegerNumber(normalizedValue) : undefined;
 };
 
 const optionalDate = (value?: string | null) => optionalString(normalizeDateToApi(value));

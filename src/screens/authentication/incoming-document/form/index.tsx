@@ -198,7 +198,7 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
                   placeholder="Nhập số trang"
                   control={control}
                   inputMode="numeric"
-                  onlyNumber
+                  formatNumberWithCommas
                 />
                 <AppDatePickerControl
                   name="dueDate"

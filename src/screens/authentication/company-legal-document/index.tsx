@@ -142,8 +142,8 @@ const CompanyLegalDocumentScreen = () => {
       },
       {
         title: 'Người soạn thảo',
-        dataIndex: 'draftedBy',
-        key: 'draftedBy',
+        dataIndex: 'draftedByName',
+        key: 'draftedByName',
         width: K_SIZE_130,
         render: (_: number, record: CompanyLegalDocument) =>
           displayText(record.draftedByName || record.draftedBy)
