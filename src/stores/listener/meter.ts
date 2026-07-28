@@ -5,6 +5,30 @@ import meterServices from '../../services/meter-services';
 
 const getCreatedTime = (createdAt?: string) => (createdAt ? new Date(createdAt).getTime() : 0);
 
+const hasError = (response: unknown) => {
+  if (!response) return true;
+  if (response instanceof Error) return true;
+  if (typeof response !== 'object') return false;
+
+  const responseData = response as {
+    status?: number;
+    statusCode?: number;
+    businessErrorMessage?: string;
+    systemErrorMessage?: string;
+    detailMessage?: string;
+    error?: unknown;
+  };
+  const status = Number(responseData.status ?? responseData.statusCode);
+
+  return Boolean(
+    (Number.isFinite(status) && status >= 400) ||
+      responseData.businessErrorMessage ||
+      responseData.systemErrorMessage ||
+      responseData.detailMessage ||
+      responseData.error
+  );
+};
+
 takeLatestListeners({
   actionCreator: meterActions.getListMeterSearch,
   effect: async (action, listenerApi) => {
@@ -77,7 +101,7 @@ takeLatestListeners({
     listenerApi.dispatch(meterActions.setLoadingDetail(true));
     const response = await meterServices.deleteMeter(body);
     listenerApi.dispatch(meterActions.setLoadingDetail(false));
-    if (!response || !response?.data) {
+    if (hasError(response)) {
       onFailed?.(response);
       return;
     }

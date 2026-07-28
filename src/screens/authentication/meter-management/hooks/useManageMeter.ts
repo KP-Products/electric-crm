@@ -1,7 +1,9 @@
 import { DEFAULT_PAGE_SIZE, FILE_EXT, K_SIZE_0, K_SIZE_1, MAX_PAGE_SIZE } from '@constant';
-import { GET_METER_SEARCH_LIST } from '@redux-action-type/meter';
+import { DELETE_METER, GET_METER_SEARCH_LIST } from '@redux-action-type/meter';
 import { dispatch } from '@redux-common';
 import { selectMeterLoadingList } from '@redux-selector/meter';
+import { showDialog } from 'components/dialog';
+import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ErrorBase } from 'model/common';
@@ -19,6 +21,7 @@ import { escapeHtml as escapeExcelHtml } from '../../manage-contract/utils';
 import {
   METER_STATUS,
   METER_TYPE,
+  getMeterRecordId,
   getMeterStatusLabel,
   getVoltageLevelLabel,
   normalizeMeterStatus,
@@ -46,6 +49,14 @@ export interface MeterStats {
   activeRate: number;
 }
 
+export interface MeterChildListState {
+  items: Meter[];
+  total: number;
+  currentPage: number;
+  loading: boolean;
+  loaded: boolean;
+}
+
 const formatDate = (value?: string) => {
   if (!value) return '-';
   const date = moment(value);
@@ -60,6 +71,17 @@ const hasClientOnlyFilters = (filter: MeterFilterForm) =>
       filter.purchaseDateFrom ||
       filter.purchaseDateTo
   );
+
+const getEmptyChildListState = (currentPage = K_SIZE_1): MeterChildListState => ({
+  items: [],
+  total: K_SIZE_0,
+  currentPage,
+  loading: false,
+  loaded: false
+});
+
+const getMeterErrorMessage = (error: ErrorBase | undefined, fallback: string) =>
+  error?.businessErrorMessage || error?.systemErrorMessage || fallback;
 
 const parseMeterDate = (value?: string) => {
   if (!value) return undefined;
@@ -130,6 +152,8 @@ export default function useManageMeter() {
   const [summaryMeterList, setSummaryMeterList] = useState<Meter[]>([]);
   const [total, setTotal] = useState<number>(K_SIZE_0);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
+  const [childMeterMap, setChildMeterMap] = useState<Record<string, MeterChildListState>>({});
 
   const defaultFilter: MeterFilterForm = useMemo(
     () => ({
@@ -149,6 +173,11 @@ export default function useManageMeter() {
   const [filterApplied, setFilterApplied] = useState<MeterFilterForm>(defaultFilter);
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
 
+  const resetExpandedRows = useCallback(() => {
+    setExpandedRowKeys([]);
+    setChildMeterMap({});
+  }, []);
+
   const pinnedCustomerIds = useMemo(
     () => [
       filterDraft.customerId,
@@ -165,7 +194,7 @@ export default function useManageMeter() {
       showErrorToast: true
     });
 
-  const buildSearchBody = useCallback(
+  const buildRootSearchBody = useCallback(
     (filter: MeterFilterForm, page: number, size = DEFAULT_PAGE_SIZE): GetListMeterReq => {
       const normalize = (value?: string) => {
         const normalized = value?.trim();
@@ -177,8 +206,44 @@ export default function useManageMeter() {
         size,
         meterCodeContains: normalize(filter.meterCodeContains),
         customerId: normalize(filter.customerId),
-        meterType: normalize(filter.meterType),
-        status: normalize(filter.status)
+        meterType: METER_TYPE.FEEDER,
+        status: normalize(filter.status),
+        voltageLevel: normalize(filter.voltageLevel),
+        installationDateFrom: normalize(filter.installationDateFrom),
+        installationDateTo: normalize(filter.installationDateTo),
+        purchaseDateFrom: normalize(filter.purchaseDateFrom),
+        purchaseDateTo: normalize(filter.purchaseDateTo)
+      };
+    },
+    []
+  );
+
+  const buildChildSearchBody = useCallback(
+    (
+      parentId: string,
+      filter: MeterFilterForm,
+      page: number,
+      size = DEFAULT_PAGE_SIZE
+    ): GetListMeterReq => {
+      const normalize = (value?: string) => {
+        const normalized = value?.trim();
+        return normalized || undefined;
+      };
+      const meterType = normalize(filter.meterType);
+
+      return {
+        page: page - K_SIZE_1,
+        size,
+        parentId,
+        meterCodeContains: normalize(filter.meterCodeContains),
+        customerId: normalize(filter.customerId),
+        meterType: meterType && meterType !== METER_TYPE.FEEDER ? meterType : undefined,
+        status: normalize(filter.status),
+        voltageLevel: normalize(filter.voltageLevel),
+        installationDateFrom: normalize(filter.installationDateFrom),
+        installationDateTo: normalize(filter.installationDateTo),
+        purchaseDateFrom: normalize(filter.purchaseDateFrom),
+        purchaseDateTo: normalize(filter.purchaseDateTo)
       };
     },
     []
@@ -190,7 +255,7 @@ export default function useManageMeter() {
       dispatch({
         type: GET_METER_SEARCH_LIST,
         payload: {
-          body: buildSearchBody(
+          body: buildRootSearchBody(
             filterApplied,
             shouldClientFilter ? K_SIZE_1 : page,
             shouldClientFilter ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE
@@ -226,7 +291,7 @@ export default function useManageMeter() {
         }
       });
     },
-    [buildSearchBody, filterApplied]
+    [buildRootSearchBody, filterApplied]
   );
 
   useEffect(() => {
@@ -238,7 +303,7 @@ export default function useManageMeter() {
 
     meterServices
       .getMeterSearchList({
-        ...buildSearchBody(filterApplied, K_SIZE_1, MAX_PAGE_SIZE)
+        ...buildRootSearchBody(filterApplied, K_SIZE_1, MAX_PAGE_SIZE)
       })
       .then((response) => {
         if (disposed) return;
@@ -254,7 +319,7 @@ export default function useManageMeter() {
     return () => {
       disposed = true;
     };
-  }, [buildSearchBody, filterApplied]);
+  }, [buildRootSearchBody, filterApplied]);
 
   const meterStats = useMemo<MeterStats>(() => {
     const summaryRows = summaryMeterList.length ? summaryMeterList : meterList;
@@ -283,10 +348,13 @@ export default function useManageMeter() {
       current: currentPage,
       total,
       pageSize: DEFAULT_PAGE_SIZE,
-      onChange: (page: number) => setCurrentPage(page),
+      onChange: (page: number) => {
+        resetExpandedRows();
+        setCurrentPage(page);
+      },
       showSizeChanger: false
     }),
-    [currentPage, total]
+    [currentPage, resetExpandedRows, total]
   );
 
   const onChangeFilter = useCallback(
@@ -297,9 +365,10 @@ export default function useManageMeter() {
   );
 
   const onApplyFilter = useCallback(() => {
+    resetExpandedRows();
     setFilterApplied(filterDraft);
     setCurrentPage(K_SIZE_1);
-  }, [filterDraft]);
+  }, [filterDraft, resetExpandedRows]);
 
   const onResetFilter = useCallback(
     (key?: keyof MeterFilterForm) => {
@@ -310,9 +379,197 @@ export default function useManageMeter() {
         setFilterDraft(defaultFilter);
         setFilterApplied(defaultFilter);
       }
+      resetExpandedRows();
       setCurrentPage(K_SIZE_1);
     },
-    [defaultFilter]
+    [defaultFilter, resetExpandedRows]
+  );
+
+  const fetchChildMeters = useCallback(
+    async (parentId: string, page = K_SIZE_1) => {
+      if (!parentId) return;
+
+      if (filterApplied.meterType === METER_TYPE.FEEDER) {
+        setChildMeterMap((prev) => ({
+          ...prev,
+          [parentId]: { ...getEmptyChildListState(page), loaded: true }
+        }));
+        return;
+      }
+
+      const shouldClientFilter = hasClientOnlyFilters(filterApplied);
+
+      setChildMeterMap((prev) => ({
+        ...prev,
+        [parentId]: {
+          ...(prev[parentId] || getEmptyChildListState(page)),
+          currentPage: page,
+          loading: true
+        }
+      }));
+
+      const response = await meterServices.getMeterSearchList(
+        buildChildSearchBody(
+          parentId,
+          filterApplied,
+          shouldClientFilter ? K_SIZE_1 : page,
+          shouldClientFilter ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE
+        )
+      );
+
+      if (!response || !response.data) {
+        setChildMeterMap((prev) => ({
+          ...prev,
+          [parentId]: {
+            ...(prev[parentId] || getEmptyChildListState(page)),
+            currentPage: page,
+            loading: false,
+            loaded: true
+          }
+        }));
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content:
+            response?.businessErrorMessage ||
+            response?.systemErrorMessage ||
+            'Tải danh sách công tơ con thất bại'
+        });
+        return;
+      }
+
+      const responseRows = (response.data.items || [])
+        .map(normalizeMeterSearchItem)
+        .filter(Boolean) as Meter[];
+      const filteredRows = shouldClientFilter
+        ? applyClientOnlyFilters(responseRows, filterApplied)
+        : responseRows;
+      const pageStart = (page - K_SIZE_1) * DEFAULT_PAGE_SIZE;
+      const pageEnd = pageStart + DEFAULT_PAGE_SIZE;
+
+      setChildMeterMap((prev) => ({
+        ...prev,
+        [parentId]: {
+          items: shouldClientFilter ? filteredRows.slice(pageStart, pageEnd) : filteredRows,
+          total: shouldClientFilter ? filteredRows.length : response.data?.total || K_SIZE_0,
+          currentPage: page,
+          loading: false,
+          loaded: true
+        }
+      }));
+    },
+    [buildChildSearchBody, filterApplied]
+  );
+
+  const onExpandMeterRow = useCallback(
+    (expanded: boolean, record: Meter) => {
+      const parentId = getMeterRecordId(record);
+      if (!parentId) return;
+
+      setExpandedRowKeys((prev) =>
+        expanded ? Array.from(new Set([...prev, parentId])) : prev.filter((key) => key !== parentId)
+      );
+
+      if (expanded && !childMeterMap[parentId]?.loaded && !childMeterMap[parentId]?.loading) {
+        void fetchChildMeters(parentId, K_SIZE_1);
+      }
+    },
+    [childMeterMap, fetchChildMeters]
+  );
+
+  const refreshRootAfterDelete = useCallback(
+    (deletedMeterId: string) => {
+      setSummaryMeterList((prev) =>
+        prev.filter((meter) => getMeterRecordId(meter) !== deletedMeterId)
+      );
+      resetExpandedRows();
+
+      if (meterList.length === K_SIZE_1 && currentPage > K_SIZE_1) {
+        setCurrentPage(currentPage - K_SIZE_1);
+        return;
+      }
+
+      fetchMeterList(currentPage);
+    },
+    [currentPage, fetchMeterList, meterList.length, resetExpandedRows]
+  );
+
+  const refreshChildAfterDelete = useCallback(
+    (record: Meter, deletedMeterId: string) => {
+      setSummaryMeterList((prev) =>
+        prev.filter((meter) => getMeterRecordId(meter) !== deletedMeterId)
+      );
+
+      const parentId = record.parentId;
+      if (!parentId || !childMeterMap[parentId]) {
+        refreshRootAfterDelete(deletedMeterId);
+        return;
+      }
+
+      const childState = childMeterMap[parentId];
+      const nextPage =
+        childState.items.length === K_SIZE_1 && childState.currentPage > K_SIZE_1
+          ? childState.currentPage - K_SIZE_1
+          : childState.currentPage;
+
+      void fetchChildMeters(parentId, nextPage);
+    },
+    [childMeterMap, fetchChildMeters, refreshRootAfterDelete]
+  );
+
+  const onDeleteMeter = useCallback(
+    (record: Meter) => {
+      const meterId = getMeterRecordId(record);
+      if (!meterId) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Không tìm thấy ID công tơ để xoá'
+        });
+        return;
+      }
+
+      showDialog({
+        title: t('common:delete_confirm'),
+        content: `Bạn có chắc chắn xoá công tơ ${record.meterCode || meterId}?`,
+        type: TYPE_MESSAGE.ALERT,
+        actions: [
+          {
+            title: t('common:agree'),
+            type: TYPE_ACTION.PRIMARY,
+            onPress: () => {
+              dispatch({
+                type: DELETE_METER,
+                payload: {
+                  body: { meterId },
+                  onSuccess: () => {
+                    if (record.parentId) {
+                      refreshChildAfterDelete(record, meterId);
+                    } else {
+                      refreshRootAfterDelete(meterId);
+                    }
+
+                    showToast({
+                      type: TYPE_TOAST.SUCCESS,
+                      content: 'Xoá công tơ thành công'
+                    });
+                  },
+                  onFailed: (error?: ErrorBase) => {
+                    showToast({
+                      type: TYPE_TOAST.ERROR,
+                      content: getMeterErrorMessage(error, 'Xoá công tơ thất bại')
+                    });
+                  }
+                }
+              });
+            }
+          },
+          {
+            title: t('common:cancel'),
+            type: TYPE_ACTION.SECONDARY
+          }
+        ]
+      });
+    },
+    [refreshChildAfterDelete, refreshRootAfterDelete, t]
   );
 
   const exportRowsToExcel = useCallback((rows: Meter[]) => {
@@ -351,7 +608,7 @@ export default function useManageMeter() {
   const onExport = useCallback(async () => {
     setExportLoading(true);
     const response = await meterServices.getMeterSearchList({
-      ...buildSearchBody(filterApplied, K_SIZE_1, MAX_PAGE_SIZE)
+      ...buildRootSearchBody(filterApplied, K_SIZE_1, MAX_PAGE_SIZE)
     });
     setExportLoading(false);
 
@@ -373,7 +630,7 @@ export default function useManageMeter() {
       )
     );
     showToast({ type: TYPE_TOAST.SUCCESS, content: 'Xuất Excel danh sách công tơ thành công' });
-  }, [buildSearchBody, exportRowsToExcel, filterApplied]);
+  }, [buildRootSearchBody, exportRowsToExcel, filterApplied]);
 
   const onImport = useCallback(() => {
     showToast({
@@ -398,10 +655,15 @@ export default function useManageMeter() {
     exportLoading,
     currentPage,
     pagination,
+    expandedRowKeys,
+    childMeterMap,
     onResetFilter,
     meterList,
     meterStats,
     total,
+    onExpandMeterRow,
+    onDeleteMeter,
+    fetchChildMeters,
     onExport,
     onImport
   };

@@ -60,9 +60,15 @@ export interface GetListMeterReq extends PaginationReq {
   filter?: string;
   meterCodeContains?: string;
   customerId?: string;
+  parentId?: string;
   voltageType?: string;
+  voltageLevel?: string;
   status?: string;
   meterType?: string;
+  installationDateFrom?: string;
+  installationDateTo?: string;
+  purchaseDateFrom?: string;
+  purchaseDateTo?: string;
 }
 
 export interface GetListMeterRes extends ResultBase<PaginationRes<MeterSearchItem>> {}
