@@ -4,7 +4,7 @@ export interface Contract {
   id: string;
   contractId?: string;
   contractNumber: string;
-  customerId: string;
+  customerId?: number;
   meterId?: string;
   voltageLevelId?: string;
   customerType?: string;
@@ -23,7 +23,7 @@ export interface Contract {
 
 export interface ContractSearchReq extends PaginationReq {
   contractNumber?: string;
-  customerId?: string;
+  customerId?: number;
   meterId?: string;
   status?: string;
   signedDate?: string;
@@ -34,7 +34,7 @@ export interface ContractSearchReq extends PaginationReq {
 
 export interface CreateContractReq {
   contractNumber: string;
-  customerId: string;
+  customerId: number;
   meterId?: string;
   signedDate: string;
   effectiveDate: string;

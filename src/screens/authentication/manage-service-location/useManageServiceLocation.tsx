@@ -126,8 +126,9 @@ export default function useManageServiceLocation() {
 
   const buildSearchBody = useCallback(
     (filter: ServiceLocationFilterForm, page: number): ServiceLocationSearchReq => {
+      const { customerId, ...textFilters } = filter;
       const normalizedFilter = Object.fromEntries(
-        Object.entries(filter)
+        Object.entries(textFilters)
           .map(([key, value]) => [key, value.trim()])
           .filter(([, value]) => Boolean(value))
       );
@@ -135,7 +136,8 @@ export default function useManageServiceLocation() {
       return {
         page: page - K_SIZE_1,
         size: DEFAULT_PAGE_SIZE,
-        ...normalizedFilter
+        ...normalizedFilter,
+        customerId: customerId ? Number(customerId) : undefined
       };
     },
     []

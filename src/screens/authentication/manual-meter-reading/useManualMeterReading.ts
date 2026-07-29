@@ -59,7 +59,7 @@ export interface ManualReadingPendingPhoto {
 export interface ManualReadingMeter {
   id: string;
   periodId?: number;
-  customerId?: number | string;
+  customerId?: number;
   meterCode: string;
   serialNo: string;
   customerCode: string;
@@ -396,11 +396,11 @@ const getPeriodComparableDate = (period?: {
   K_SIZE_0;
 
 const getCustomerIdForRequest = (meter: ManualReadingMeter) => {
-  if (meter.customerId !== undefined && meter.customerId !== null && meter.customerId !== '') {
+  if (meter.customerId !== undefined && meter.customerId !== null) {
     return meter.customerId;
   }
 
-  return meter.customerCode || undefined;
+  return undefined;
 };
 
 const buildReadingItems = (meter: ManualReadingMeter): ReadingItem[] =>
@@ -513,6 +513,7 @@ export const getStatusMeta = (status: ManualReadingStatus) => {
 export default function useManualMeterReading() {
   const objectUrlsRef = useRef<Set<string>>(new Set());
   const searchLookupRequestIdRef = useRef<number>(K_SIZE_0);
+  const meterSearchRequestIdRef = useRef<number>(K_SIZE_0);
   const [filterDraft, setFilterDraft] = useState<ManualReadingFilter>(DEFAULT_FILTER);
   const [filterApplied, setFilterApplied] = useState<ManualReadingFilter>(DEFAULT_FILTER);
   const [meters, setMeters] = useState<ManualReadingMeter[]>([]);
@@ -620,7 +621,8 @@ export default function useManualMeterReading() {
   );
 
   const selectedMeter = useMemo(
-    () => filteredMeters.find((meter) => meter.id === selectedMeterId) || filteredMeters[K_SIZE_0],
+    () =>
+      selectedMeterId ? filteredMeters.find((meter) => meter.id === selectedMeterId) : undefined,
     [filteredMeters, selectedMeterId]
   );
 
@@ -750,6 +752,8 @@ export default function useManualMeterReading() {
 
   const fetchMeters = useCallback(
     async (nextFilter: ManualReadingFilter) => {
+      const requestId = meterSearchRequestIdRef.current + K_SIZE_1;
+      meterSearchRequestIdRef.current = requestId;
       setLoadingMeters(true);
       const keyword = optionalValue(nextFilter.keyword);
       const searchValue = optionalValue(nextFilter.customerCode) || keyword;
@@ -758,6 +762,7 @@ export default function useManualMeterReading() {
         size: DEFAULT_PAGE_SIZE,
         ...getSearchMeterParamsByField(nextFilter.searchBy, searchValue)
       });
+      if (requestId !== meterSearchRequestIdRef.current) return;
       setLoadingMeters(false);
 
       if (hasApiError(response) || !response.data) {
@@ -811,19 +816,29 @@ export default function useManualMeterReading() {
 
   const onChangeFilter = useCallback(
     (key: keyof ManualReadingFilter, value: string) => {
+      const clearStaleMeterData = () => {
+        meterSearchRequestIdRef.current += K_SIZE_1;
+        setSelectedMeterId('');
+        setLoadingDetail(false);
+      };
+
       if (key === 'searchBy') {
         searchLookupRequestIdRef.current += K_SIZE_1;
         debouncedFetchSearchLookupOptions.cancel();
         setSearchLookupSearch('');
         setSearchLookupOptions([]);
         setSearchLookupLoading(false);
+        if (filterDraft.searchBy === value && !filterDraft.customerCode) return;
+        clearStaleMeterData();
         setFilterDraft((prev) => ({ ...prev, searchBy: value, customerCode: '' }));
         return;
       }
 
+      if (filterDraft[key] === value) return;
+      clearStaleMeterData();
       setFilterDraft((prev) => ({ ...prev, [key]: value }));
     },
-    [debouncedFetchSearchLookupOptions]
+    [debouncedFetchSearchLookupOptions, filterDraft]
   );
 
   const onApplyFilter = useCallback(async () => {

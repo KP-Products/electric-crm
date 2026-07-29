@@ -53,7 +53,7 @@ const buildReviewRequest = (filter: ReadingApprovalFilter, page: number): Review
   page: page - K_SIZE_1,
   size: DEFAULT_PAGE_SIZE,
   periodCode: filter.periodCode.trim() || undefined,
-  customerId: filter.customerCode || undefined,
+  customerId: filter.customerCode ? Number(filter.customerCode) : undefined,
   status: (filter.status || undefined) as ReadingPeriodStatus | undefined
 });
 
@@ -118,9 +118,9 @@ export default function useReadingDataApproval() {
       const customers = Array.isArray(response.data) ? response.data : [];
       setCustomerOptions(
         customers
-          .filter((customer: Customer) => Boolean(customer.customerCode))
+          .filter((customer: Customer) => customer.id !== undefined)
           .map((customer: Customer) => ({
-            value: String(customer.customerCode),
+            value: String(customer.id),
             label: [customer.customerCode, customer.fullName].filter(Boolean).join(' - ')
           }))
       );

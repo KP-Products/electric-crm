@@ -27,7 +27,7 @@ export const CONTRACT_STATUS_OPTIONS: AppSelectOption[] = [
 
 export interface ContractFilter {
   contractNumber: string;
-  customerId: string;
+  customerId?: number;
   meterId: string;
   status: string;
   signedDate: string;
@@ -38,7 +38,7 @@ export interface ContractFilter {
 
 export interface ContractForm {
   contractNumber: string;
-  customerId: string;
+  customerId?: number;
   meterId: string;
   signedDate: string;
   effectiveDate: string;
@@ -56,7 +56,7 @@ export interface ContractStats {
 
 export const DEFAULT_CONTRACT_FILTER: ContractFilter = {
   contractNumber: '',
-  customerId: '',
+  customerId: undefined,
   meterId: '',
   status: '',
   signedDate: '',
@@ -67,7 +67,7 @@ export const DEFAULT_CONTRACT_FILTER: ContractFilter = {
 
 export const DEFAULT_CONTRACT_FORM: ContractForm = {
   contractNumber: '',
-  customerId: '',
+  customerId: undefined,
   meterId: '',
   signedDate: '',
   effectiveDate: '',
@@ -134,7 +134,7 @@ export const isContractDateBefore = (nextDate?: string, previousDate?: string) =
 
 export const buildContractFormValues = (contract?: Contract): ContractForm => ({
   contractNumber: contract?.contractNumber || '',
-  customerId: contract?.customerId || '',
+  customerId: contract?.customerId,
   meterId: contract?.meterId || '',
   signedDate: formatContractDate(contract?.signedDate),
   effectiveDate: formatContractDate(contract?.effectiveDate || contract?.signedDate),
@@ -152,7 +152,7 @@ export const buildSearchContractBody = (
     page: page - K_SIZE_1,
     size,
     contractNumber: normalizeText(filter.contractNumber),
-    customerId: normalizeText(filter.customerId),
+    customerId: filter.customerId,
     meterId: normalizeText(filter.meterId),
     status: normalizeText(filter.status),
     signedDate: normalizeText(formatContractDate(filter.signedDate)),
@@ -163,7 +163,7 @@ export const buildSearchContractBody = (
 
 export const buildCreateContractBody = (data: ContractForm): CreateContractReq => ({
   contractNumber: data.contractNumber.trim(),
-  customerId: data.customerId.trim(),
+  customerId: data.customerId as number,
   meterId: normalizeText(data.meterId),
   signedDate: formatContractDate(data.signedDate),
   effectiveDate: formatContractDate(data.effectiveDate),
@@ -251,8 +251,8 @@ export const getContractStatusMeta = (status?: string | null) => {
 
 export const getCustomerLabel = (customer?: Customer) => {
   if (!customer) return '';
-  const name = customer.fullName || customer.customerCode || customer.id;
-  return customer.customerCode ? `${customer.customerCode} - ${name}` : name;
+  const name = customer.fullName || customer.customerCode || String(customer.id);
+  return customer.customerCode ? `${customer.customerCode} - ${name}` : String(name);
 };
 
 export const buildCustomerOptions = (customers: Customer[]): AppSelectOption[] =>

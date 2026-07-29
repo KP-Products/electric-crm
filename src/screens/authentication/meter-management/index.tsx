@@ -171,8 +171,8 @@ const MeterManagementScreen = () => {
         key: 'customerId',
         align: 'left',
         width: K_SIZE_150,
-        render: (customerId: string, record: Meter) => (
-          <span title={customerId || record.customerName || ''}>
+        render: (customerId: number, record: Meter) => (
+          <span title={String(customerId || record.customerName || '')}>
             {customerId || record.customerName || NULL_VALUE}
           </span>
         )
@@ -325,8 +325,8 @@ const MeterManagementScreen = () => {
         key: 'customerId',
         align: 'left',
         width: K_SIZE_150,
-        render: (customerId: string, record: Meter) => (
-          <span title={customerId || record.customerName || ''}>
+        render: (customerId: number, record: Meter) => (
+          <span title={String(customerId || record.customerName || '')}>
             {customerId || record.customerName || NULL_VALUE}
           </span>
         )
@@ -494,18 +494,18 @@ const MeterManagementScreen = () => {
   const TagFilterGroup = useCallback(() => {
     const entries = Object.entries(filterApplied) as [keyof MeterFilterForm, string][];
     const activeFilters = entries.filter(([, value]) => Boolean(value));
-    const formatValue = (key: keyof MeterFilterForm, value: string) => {
+    const formatValue = (key: keyof MeterFilterForm, value: string | number) => {
       switch (key) {
         case 'status':
-          return METER_STATUS_LABEL_MAP[value] || value;
+          return METER_STATUS_LABEL_MAP[String(value)] || String(value);
         case 'meterType':
-          return getMeterTypeLabel(value);
+          return getMeterTypeLabel(String(value));
         case 'voltageLevel':
-          return VOLTAGE_LEVEL_LABEL_MAP[value] || value;
+          return VOLTAGE_LEVEL_LABEL_MAP[String(value)] || String(value);
         case 'customerId':
-          return getCustomerDisplay(value);
+          return getCustomerDisplay(value as number);
         default:
-          return value;
+          return String(value);
       }
     };
     const labelMap: Record<keyof MeterFilterForm, string> = {
@@ -604,7 +604,9 @@ const MeterManagementScreen = () => {
               options={[ALL_OPTION, ...customerOptions]}
               dropdownRender={customerDropdownRender}
               onOpenChange={onOpenCustomerDropdown}
-              onSelectOption={({ key }) => onChangeFilter('customerId', String(key))}
+              onSelectOption={({ key }) =>
+                onChangeFilter('customerId', key === '' ? undefined : Number(key))
+              }
               suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
             />
             <AppSelect

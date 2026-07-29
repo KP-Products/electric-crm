@@ -220,7 +220,7 @@ export default function useMeterVerification() {
       page: K_SIZE_0,
       size: MAX_PAGE_SIZE,
       meterCodeContains: '',
-      customerId: '',
+      customerId: undefined,
       voltageType: '',
       status: ''
     });

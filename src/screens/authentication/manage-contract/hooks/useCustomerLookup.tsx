@@ -18,14 +18,14 @@ const CUSTOMER_DETAIL_CHUNK_SIZE = 5;
 
 interface UseCustomerLookupProps {
   autoLoad?: boolean;
-  pinnedIds?: Array<string | undefined>;
+  pinnedIds?: Array<number | undefined>;
   showErrorToast?: boolean;
 }
 
 const mergeById = (customers: Customer[]) => {
-  const customerMap = new Map<string, Customer>();
+  const customerMap = new Map<number, Customer>();
   customers.forEach((customer) => {
-    if (customer.id) customerMap.set(customer.id, customer);
+    if (customer.id !== undefined) customerMap.set(customer.id, customer);
   });
   return Array.from(customerMap.values());
 };
@@ -43,9 +43,12 @@ export default function useCustomerLookup({
   const mountedRef = useRef<boolean>(true);
   const searchRequestIdRef = useRef<number>(0);
 
-  const pinnedIdsKey = pinnedIds.filter(Boolean).join('|');
+  const pinnedIdsKey = pinnedIds.filter((id) => id !== undefined).join('|');
   const normalizedPinnedIds = useMemo(
-    () => Array.from(new Set(pinnedIdsKey.split('|').filter(Boolean))),
+    () =>
+      Array.from(
+        new Set(pinnedIdsKey.split('|').filter(Boolean).map(Number).filter(Number.isFinite))
+      ),
     [pinnedIdsKey]
   );
 
@@ -153,10 +156,10 @@ export default function useCustomerLookup({
   );
 
   const ensureCustomers = useCallback(
-    async (ids: Array<string | undefined>) => {
-      const missingIds = Array.from(new Set(ids.filter(Boolean) as string[])).filter(
-        (id) => !customerMapRef.current[id]
-      );
+    async (ids: Array<number | undefined>) => {
+      const missingIds = Array.from(
+        new Set(ids.filter((id): id is number => id !== undefined))
+      ).filter((id) => !customerMapRef.current[String(id)]);
       if (!missingIds.length) return;
 
       const loadedCustomers: Customer[] = [];
@@ -192,22 +195,24 @@ export default function useCustomerLookup({
   );
 
   const customerOptions = useMemo(() => {
-    const optionMap = new Map<string, Customer>();
+    const optionMap = new Map<number, Customer>();
 
     dropdownCustomers.forEach((customer) => {
-      if (customer.id) optionMap.set(customer.id, customer);
+      if (customer.id !== undefined) optionMap.set(customer.id, customer);
     });
     normalizedPinnedIds.forEach((id) => {
       const customer = customerMap[id];
-      if (customer) optionMap.set(id, customer);
+      if (customer) optionMap.set(Number(id), customer);
     });
 
     return buildCustomerOptions(Array.from(optionMap.values()));
   }, [customerMap, dropdownCustomers, normalizedPinnedIds]);
 
   const getCustomerDisplay = useCallback(
-    (customerId?: string) =>
-      customerId ? customerLabelMap[customerId] || customerId : displayText(),
+    (customerId?: number) =>
+      customerId !== undefined
+        ? customerLabelMap[String(customerId)] || String(customerId)
+        : displayText(),
     [customerLabelMap]
   );
 

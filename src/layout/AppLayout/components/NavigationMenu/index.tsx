@@ -262,6 +262,13 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
+            key: ROUTES.EVN_READING_BATCH,
+            label: 'Chốt điện với EVN',
+            icon: <CarryOutOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
             key: ROUTES.ELECTRICITY_NOTICE_CSPK,
             label: 'Quản lý giấy báo tiền điện CSPK',
             icon: <FileTextOutlined />,

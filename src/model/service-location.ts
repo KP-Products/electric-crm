@@ -3,7 +3,7 @@ import { PaginationReq, PaginationRes, ResultBase } from './common';
 export interface ServiceLocation {
   id: string;
   contractId: string;
-  customerId?: string;
+  customerId?: number;
   address: string;
   ward: string;
   voltageLevel: string;
@@ -17,7 +17,7 @@ export interface ServiceLocation {
 
 export interface ServiceLocationSearchReq extends PaginationReq {
   contractId?: string;
-  customerId?: string;
+  customerId?: number;
   voltageLevel?: string;
   usagePurpose?: string;
   keyword?: string;

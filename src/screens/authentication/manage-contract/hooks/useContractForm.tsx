@@ -36,7 +36,7 @@ const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim(
 const contractSchema = z
   .object({
     contractNumber: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập số hợp đồng' }),
-    customerId: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn khách hàng' }),
+    customerId: z.number().int().positive({ message: 'Vui lòng chọn khách hàng' }),
     meterId: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn công tơ' }),
     signedDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày ký kết' }),
     effectiveDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày hiệu lực' }),

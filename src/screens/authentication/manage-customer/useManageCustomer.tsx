@@ -157,7 +157,7 @@ export const buildFormValues = (customer?: Customer): CustomerForm => ({
   operationUnitId: customer?.operationUnitId || ''
 });
 
-export const buildUpdateBody = (id: string, data: CustomerForm): UpdateCustomerReq => ({
+export const buildUpdateBody = (id: number, data: CustomerForm): UpdateCustomerReq => ({
   id,
   customerCode: data.customerCode.trim(),
   fullName: updateTextValue(data.fullName),
@@ -338,7 +338,7 @@ export default function useManageCustomer() {
         return;
       }
 
-      router.push(`${ROUTES.MANAGE_CUSTOMER_EDIT}?id=${encodeURIComponent(customer.id)}`);
+      router.push(`${ROUTES.MANAGE_CUSTOMER_EDIT}?id=${encodeURIComponent(String(customer.id))}`);
     },
     [router]
   );
@@ -405,7 +405,7 @@ export default function useManageCustomer() {
         return;
       }
 
-      router.push(`${ROUTES.MANAGE_CUSTOMER_DETAIL}?id=${encodeURIComponent(customer.id)}`);
+      router.push(`${ROUTES.MANAGE_CUSTOMER_DETAIL}?id=${encodeURIComponent(String(customer.id))}`);
     },
     [router]
   );

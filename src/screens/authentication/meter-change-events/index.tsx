@@ -139,9 +139,13 @@ const MeterChangeEventsScreen = () => {
     selectedEvent,
     selectedDetail,
     customerOptions,
+    oldDeviceOptions,
+    newDeviceOptionsByRow,
     form,
     detailFieldArray,
     onOpenCustomerDropdown,
+    onOpenOldDeviceDropdown,
+    onChangeOldDevice,
     customerDropdownRender,
     onChangeFilter,
     onApplyFilter,
@@ -204,7 +208,7 @@ const MeterChangeEventsScreen = () => {
         key: 'customerId',
         width: K_SIZE_200,
         render: (_: unknown, record: MeterChangeEventWithDetails) =>
-          renderTruncatedText(record.event?.customerId, 'max-w-[240px]')
+          renderTruncatedText(String(record.event?.customerId || ''), 'max-w-[240px]')
       },
       {
         title: 'Thời gian sự kiện',
@@ -580,14 +584,20 @@ const MeterChangeEventsScreen = () => {
                             <div className="pt-12 text-14 font-medium text-color-900">
                               {index + K_SIZE_1}
                             </div>
-                            <AppTextFieldControl
+                            <AppSelectControl
                               name={`details.${index}.oldDeviceId` as const}
-                              placeholder="Nhập thiết bị cũ"
+                              placeholder="Chọn thiết bị cũ"
+                              options={oldDeviceOptions}
+                              onOpenChange={onOpenOldDeviceDropdown}
+                              onChange={(value) => onChangeOldDevice(index, value)}
                               control={control}
                             />
-                            <AppTextFieldControl
+                            <AppSelectControl
                               name={`details.${index}.newDeviceId` as const}
-                              placeholder="Nhập thiết bị mới"
+                              placeholder="Chọn thiết bị mới"
+                              options={newDeviceOptionsByRow[index] || []}
+                              onOpenChange={onOpenOldDeviceDropdown}
+                              disabled={!form.watch(`details.${index}.oldDeviceId` as const)}
                               control={control}
                             />
                             <AppTextFieldControl

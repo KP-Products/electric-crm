@@ -15,7 +15,7 @@ export interface MeterSearchForReadingRow {
   voltageLevel?: string;
   multiplier?: number;
   meterType?: string;
-  customerId?: number | string;
+  customerId?: number;
   customerCode?: string;
   customerName?: string;
 }
@@ -42,7 +42,7 @@ export interface MeterReading extends ReadingItem {
 export interface MeterReadingPeriod {
   id: number;
   meterNumber: string;
-  customerId: number | string;
+  customerId: number;
   periodCode: string;
   periodFrom: string;
   periodTo: string;
@@ -85,7 +85,7 @@ export interface ManualMeterReadingRow extends MeterReadingPeriod {
 
 export interface SearchReadingPeriodsReq extends PaginationReq {
   meterNumber?: string;
-  customerId?: number | string;
+  customerId?: number;
   periodCode?: string;
   status?: string;
   typeInput?: string;
@@ -103,7 +103,7 @@ export interface GetReadingPeriodRes extends ResultBase<ReadingPeriodDetail> {}
 
 export interface CreateReadingPeriodReq {
   meterNumber: string;
-  customerId: number | string;
+  customerId: number;
   periodCode: string;
   periodFrom: string;
   periodTo: string;
@@ -208,14 +208,14 @@ export interface RejectReadingRes extends ResultBase<RejectReadingResult> {}
 
 export interface ReviewReadingsReq extends PaginationReq {
   periodCode?: string;
-  customerId?: number | string;
+  customerId?: number;
   status?: ReadingPeriodStatus;
 }
 
 export interface ReadingReviewRow {
   periodId?: number;
   meterNumber?: string;
-  customerId?: number | string;
+  customerId?: number;
   periodCode?: string;
   readingDate?: string;
   status?: string;
