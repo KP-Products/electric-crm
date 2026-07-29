@@ -212,6 +212,16 @@ const ApiEndPoint = {
   BILLING_BILL_CONFIRM: '/admin/billing/bills/confirm',
   BILLING_BILL_EXPORT_NOTICE: '/admin/billing/bills/export-notice',
 
+  // BILLING 6.1 - NHAP DU LIEU SAO KE
+  BILLING_PAYMENT_SEARCH: '/admin/billing/payments/search',
+  BILLING_PAYMENT_UPLOAD: '/admin/billing/payments/upload',
+  BILLING_PAYMENT_TEMPLATE: '/admin/billing/payments/template',
+  BILLING_PAYMENT_EXPORT: '/admin/billing/payments/export',
+  BILLING_PAYMENT_DETAIL: '/admin/billing/payments/detail',
+  BILLING_PAYMENT_CREATE: '/admin/billing/payments/create',
+  BILLING_PAYMENT_UPDATE: '/admin/billing/payments/update',
+  BILLING_PAYMENT_DELETE: '/admin/billing/payments/delete',
+
   // APPROVAL MATRIX
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
   EDIT_APPROVAL_MATRIX: '/approval-matrix',
