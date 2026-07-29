@@ -144,14 +144,14 @@ const ManageContractScreen = () => {
 
   const formatFilterValue = useCallback(
     (key: keyof ContractFilter, value: ContractFilter[keyof ContractFilter]) => {
-      if (key === 'customerId') return getCustomerDisplay(value);
-      if (key === 'meterId') return getMeterDisplay(value);
-      if (key === 'createdBy') return getUserDisplay(value);
-      if (key === 'status') return getContractStatusMeta(value).label;
+      if (key === 'customerId') return getCustomerDisplay(value as number | undefined);
+      if (key === 'meterId') return getMeterDisplay(value as string | undefined);
+      if (key === 'createdBy') return getUserDisplay(value as string | undefined);
+      if (key === 'status') return getContractStatusMeta(value as string).label;
       if (key === 'signedDate' || key === 'effectiveDate' || key === 'expiryDate') {
-        return renderContractDate(value);
+        return renderContractDate(value as string | undefined);
       }
-      return value;
+      return String(value ?? '');
     },
     [getCustomerDisplay, getMeterDisplay, getUserDisplay]
   );
@@ -221,7 +221,7 @@ const ManageContractScreen = () => {
         dataIndex: 'customerId',
         key: 'customerId',
         width: K_SIZE_220,
-        render: (customerId: string) =>
+        render: (customerId: number) =>
           renderTruncatedText(getCustomerDisplay(customerId), 'max-w-[260px]')
       },
       {
@@ -399,7 +399,9 @@ const ManageContractScreen = () => {
               options={[ALL_OPTION, ...customerOptions]}
               dropdownRender={customerDropdownRender}
               onOpenChange={onOpenCustomerDropdown}
-              onSelectOption={({ key }) => onChangeFilter('customerId', String(key))}
+              onSelectOption={({ key }) =>
+                onChangeFilter('customerId', key === '' ? undefined : Number(key))
+              }
               suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
             />
             <AppSelect

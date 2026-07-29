@@ -255,7 +255,7 @@ export default function useManageContract() {
     (contract: Contract, override?: Partial<UpdateContractReq>): UpdateContractReq => ({
       id: getContractId(contract),
       contractNumber: contract.contractNumber,
-      customerId: contract.customerId,
+      customerId: contract.customerId as number,
       meterId: contract.meterId || undefined,
       signedDate: formatContractDate(contract.signedDate),
       effectiveDate: formatContractDate(contract.effectiveDate || contract.signedDate),

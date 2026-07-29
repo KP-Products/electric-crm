@@ -18,7 +18,7 @@ type OwnerSearchResponse<T> = {
 };
 
 type CustomerOwner = Customer & {
-  customerId?: string;
+  customerId?: number;
   customerName?: string;
   name?: string;
 };
@@ -50,7 +50,8 @@ const mergeById = <T,>(items: T[], getId: (item: T) => string | undefined) => {
 const getItems = <T,>(response: OwnerSearchResponse<T> | undefined) =>
   Array.isArray(response?.data?.items) ? response.data.items : [];
 
-const getCustomerOwnerId = (customer: CustomerOwner) => customer.id || customer.customerId || '';
+const getCustomerOwnerId = (customer: CustomerOwner) =>
+  String(customer.id ?? customer.customerId ?? '');
 
 const getContractOwnerId = (contract: ContractOwner) => contract.id || contract.contractId || '';
 

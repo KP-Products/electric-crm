@@ -115,6 +115,7 @@ const ManageCustomerDetailScreen = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
+  const customerId = id ? Number(id) : undefined;
   const mountedRef = useRef<boolean>(true);
   const [detail, setDetail] = useState<CustomerDetail>();
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
@@ -131,12 +132,12 @@ const ManageCustomerDetailScreen = () => {
   }, [router]);
 
   const fetchCustomerDetail = useCallback(async () => {
-    if (!id) return;
+    if (!customerId || !Number.isInteger(customerId)) return;
 
     setDetailLoading(true);
     setDetailLoadFailed(false);
 
-    const response = await customerServices.getCustomerDetail({ id });
+    const response = await customerServices.getCustomerDetail({ id: customerId });
     if (!mountedRef.current) return;
 
     setDetailLoading(false);
@@ -152,10 +153,10 @@ const ManageCustomerDetailScreen = () => {
     }
 
     setDetail(response.data);
-  }, [id]);
+  }, [customerId]);
 
   const fetchContracts = useCallback(async () => {
-    if (!id) return;
+    if (!customerId || !Number.isInteger(customerId)) return;
 
     setContractsLoading(true);
     setContractsLoadFailed(false);
@@ -163,7 +164,7 @@ const ManageCustomerDetailScreen = () => {
     const response = await contractServices.searchContract({
       page: K_SIZE_0,
       size: K_SIZE_200,
-      customerId: id
+      customerId
     });
     if (!mountedRef.current) return;
 
@@ -180,7 +181,7 @@ const ManageCustomerDetailScreen = () => {
     }
 
     setContracts(Array.isArray(response.data.items) ? response.data.items : []);
-  }, [id]);
+  }, [customerId]);
 
   useEffect(
     () => () => {
@@ -206,7 +207,7 @@ const ManageCustomerDetailScreen = () => {
       return;
     }
 
-    router.push(`${ROUTES.MANAGE_CUSTOMER_EDIT}?id=${encodeURIComponent(customer.id)}`);
+    router.push(`${ROUTES.MANAGE_CUSTOMER_EDIT}?id=${encodeURIComponent(String(customer.id))}`);
   }, [customer?.id, router]);
 
   const operationUnitLabel =

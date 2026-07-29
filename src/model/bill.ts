@@ -46,7 +46,7 @@ export interface BillDetail {
 
 export interface SearchBillsReq extends PaginationReq {
   periodCode?: string;
-  customerId?: number | string;
+  customerId?: number;
   meterNumber?: string;
   status?: BillStatus;
   payStatus?: BillPayStatus;

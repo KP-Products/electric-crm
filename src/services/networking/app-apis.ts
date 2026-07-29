@@ -78,6 +78,10 @@ const ApiEndPoint = {
   METER_DETAIL: '/admin/meters/detail',
   // METER
 
+  // MEASURING DEVICE
+  MEASURING_DEVICE_SEARCH: '/admin/measuring-devices/search',
+  // MEASURING DEVICE
+
   // METER VERIFICATION
   METER_VERIFICATION_SEARCH: '/admin/meter-verifications/search',
   METER_VERIFICATION_LIST: '/admin/meter-verifications/list',

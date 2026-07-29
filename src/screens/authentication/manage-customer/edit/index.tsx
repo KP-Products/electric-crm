@@ -36,6 +36,7 @@ const ManageCustomerEditScreen = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
+  const customerId = id ? Number(id) : undefined;
   const mountedRef = useRef<boolean>(true);
 
   const [customer, setCustomer] = useState<Customer>();
@@ -68,12 +69,12 @@ const ManageCustomerEditScreen = () => {
   }, [detailUrl, router]);
 
   const fetchCustomerDetail = useCallback(async () => {
-    if (!id) return;
+    if (!customerId || !Number.isInteger(customerId)) return;
 
     setDetailLoading(true);
     setDetailLoadFailed(false);
 
-    const response = await customerServices.getCustomerDetail({ id });
+    const response = await customerServices.getCustomerDetail({ id: customerId });
     if (!mountedRef.current) return;
 
     setDetailLoading(false);
@@ -90,7 +91,7 @@ const ManageCustomerEditScreen = () => {
 
     setCustomer(response.data.customer);
     form.reset(buildFormValues(response.data.customer));
-  }, [form, id]);
+  }, [customerId, form]);
 
   useEffect(
     () => () => {
@@ -162,7 +163,7 @@ const ManageCustomerEditScreen = () => {
       }
 
       showToast({ type: TYPE_TOAST.SUCCESS, content: 'Cập nhật khách hàng thành công' });
-      router.push(`${ROUTES.MANAGE_CUSTOMER_DETAIL}?id=${encodeURIComponent(customer.id)}`);
+      router.push(`${ROUTES.MANAGE_CUSTOMER_DETAIL}?id=${encodeURIComponent(String(customer.id))}`);
     },
     [customer?.id, router, submitting]
   );

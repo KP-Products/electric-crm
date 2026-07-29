@@ -5,7 +5,7 @@ export interface Meter {
   meterId: string;
   meterCode: string;
   meterType?: string;
-  customerId?: string;
+  customerId?: number;
   locationId?: string;
   customerName?: string;
   purchaseDate?: string;
@@ -59,7 +59,7 @@ export const normalizeMeterSearchItem = (item?: MeterSearchItem): Meter | undefi
 export interface GetListMeterReq extends PaginationReq {
   filter?: string;
   meterCodeContains?: string;
-  customerId?: string;
+  customerId?: number;
   parentId?: string;
   voltageType?: string;
   voltageLevel?: string;
@@ -81,7 +81,7 @@ export interface GetMeterDetailRes extends ResultBase<MeterSearchItem> {}
 
 export interface AddMeterReq {
   meterCode: string;
-  customerId?: string;
+  customerId?: number;
   purchaseDate?: string;
   installationDate?: string;
   voltageLevel?: string;

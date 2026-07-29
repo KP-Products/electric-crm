@@ -30,7 +30,7 @@ import {
 
 export interface MeterFilterForm {
   meterCodeContains: string;
-  customerId: string;
+  customerId?: number;
   meterType: string;
   status: string;
   voltageLevel: string;
@@ -158,7 +158,7 @@ export default function useManageMeter() {
   const defaultFilter: MeterFilterForm = useMemo(
     () => ({
       meterCodeContains: '',
-      customerId: '',
+      customerId: undefined,
       meterType: '',
       status: '',
       voltageLevel: '',
@@ -205,7 +205,7 @@ export default function useManageMeter() {
         page: page - K_SIZE_1,
         size,
         meterCodeContains: normalize(filter.meterCodeContains),
-        customerId: normalize(filter.customerId),
+        customerId: filter.customerId,
         meterType: METER_TYPE.FEEDER,
         status: normalize(filter.status),
         voltageLevel: normalize(filter.voltageLevel),
@@ -236,7 +236,7 @@ export default function useManageMeter() {
         size,
         parentId,
         meterCodeContains: normalize(filter.meterCodeContains),
-        customerId: normalize(filter.customerId),
+        customerId: filter.customerId,
         meterType: meterType && meterType !== METER_TYPE.FEEDER ? meterType : undefined,
         status: normalize(filter.status),
         voltageLevel: normalize(filter.voltageLevel),

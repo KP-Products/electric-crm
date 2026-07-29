@@ -6,7 +6,7 @@ export enum CUSTOMER_STATUS {
 }
 
 export interface Customer {
-  id: string;
+  id: number;
   customerCode?: string;
   fullName?: string;
   taxNo?: string;
@@ -48,11 +48,11 @@ export interface CreateCustomerReq {
 }
 
 export interface UpdateCustomerReq extends Partial<CreateCustomerReq> {
-  id: string;
+  id: number;
 }
 
 export interface CustomerIdReq {
-  id: string;
+  id: number;
 }
 
 export interface OperationUnitInfo {
