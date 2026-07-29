@@ -260,6 +260,13 @@ const NavigationMenu = () => {
             icon: <CloudSyncOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.PAYMENT_STATEMENT,
+            label: 'Nhập dữ liệu sao kê',
+            icon: <FileTextOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
         ]
       }
