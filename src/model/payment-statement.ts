@@ -16,6 +16,7 @@ export interface PaymentStatementRow {
   fileId?: number;
   createdAt?: string;
   createdBy?: string;
+  createdByName?: string;
 }
 
 export interface SearchPaymentStatementsReq {

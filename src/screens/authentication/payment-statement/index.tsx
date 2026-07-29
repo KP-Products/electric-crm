@@ -396,7 +396,12 @@ const PaymentStatementScreen = () => {
       { title: 'Tài khoản chuyển', dataIndex: 'sourceAccount', width: 160 },
       { title: 'Tài khoản nhận', dataIndex: 'destinationAccount', width: 160 },
       { title: 'Số giao dịch', dataIndex: 'transactionNo', width: 160 },
-      { title: 'Người tạo', dataIndex: 'createdBy', width: 140, render: (value) => value || '-' },
+      {
+        title: 'Người tạo',
+        dataIndex: 'createdByName',
+        width: 140,
+        render: (value) => value || '-'
+      },
       { title: 'Ngày tạo', dataIndex: 'createdAt', width: 140, render: displayDate },
       {
         title: 'Thao tác',
