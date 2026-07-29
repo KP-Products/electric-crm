@@ -1,5 +1,10 @@
 import { PaginationReq, PaginationRes, ResultBase } from './common';
 
+export enum CUSTOMER_STATUS {
+  ACTIVE = 'ACTIVE',
+  DELETED = 'DELETED'
+}
+
 export interface Customer {
   id: string;
   customerCode?: string;

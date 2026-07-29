@@ -205,6 +205,13 @@ const ApiEndPoint = {
   BILLING_REMOTE_READING_IMPORT_UPLOAD: '/admin/billing/readings/import/upload',
   BILLING_REMOTE_READING_IMPORT_TEMPLATE: '/admin/billing/readings/import/template',
 
+  // BILLING 5.3 - TINH HOA DON / GIAY BAO CSPK
+  BILLING_BILL_SEARCH: '/admin/billing/bills/search',
+  BILLING_BILL_CREATE_FOR_PERIOD: '/admin/billing/bills/create-for-period',
+  BILLING_BILL_DETAIL: '/admin/billing/bills/detail',
+  BILLING_BILL_CONFIRM: '/admin/billing/bills/confirm',
+  BILLING_BILL_EXPORT_NOTICE: '/admin/billing/bills/export-notice',
+
   // BILLING 6.1 - NHAP DU LIEU SAO KE
   BILLING_PAYMENT_SEARCH: '/admin/billing/payments/search',
   BILLING_PAYMENT_UPLOAD: '/admin/billing/payments/upload',

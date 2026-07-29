@@ -84,6 +84,8 @@ export const ROUTES = {
   OPERATION_PRICE: '/billing/operation-price',
   MANUAL_METER_READING: '/billing/manual-meter-reading',
   REMOTE_METER_READING: '/billing/remote-meter-reading',
+  ELECTRICITY_NOTICE_CSPK: '/billing/electricity-notice-cspk',
+  READING_DATA_APPROVAL: '/billing/reading-data-approval',
   PAYMENT_STATEMENT: '/billing/payment-statement',
 
   APPROVAL_MATRIX: '/approval-matrix',

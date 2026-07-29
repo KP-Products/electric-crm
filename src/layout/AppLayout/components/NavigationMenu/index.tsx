@@ -262,6 +262,20 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
+            key: ROUTES.ELECTRICITY_NOTICE_CSPK,
+            label: 'Quản lý giấy báo tiền điện CSPK',
+            icon: <FileTextOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.READING_DATA_APPROVAL,
+            label: 'Xác nhận số liệu',
+            icon: <CarryOutOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
             key: ROUTES.PAYMENT_STATEMENT,
             label: 'Nhập dữ liệu sao kê',
             icon: <FileTextOutlined />,

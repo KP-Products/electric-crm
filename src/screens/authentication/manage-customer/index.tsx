@@ -32,7 +32,7 @@ import { TextBase } from 'components/text';
 import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
-import { Customer } from 'model/customer';
+import { CUSTOMER_STATUS, Customer } from 'model/customer';
 import { useCallback, useMemo } from 'react';
 import { FORMAT_DATE_API, displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
@@ -62,10 +62,16 @@ const renderTruncatedText = (text?: string | null, className = 'max-w-[220px]') 
 const renderDateTime = (date?: string | null) =>
   date ? displayDateTimeFromServer(date) : NULL_VALUE;
 
-const getCustomerStatusType = (status?: string) => {
-  if (status === 'ACTIVE') return TYPE_STATUS.SUCCESS;
-  if (status === 'DELETED') return TYPE_STATUS.ERROR;
-  return TYPE_STATUS.DEFAULT;
+const getCustomerStatusMeta = (status?: string) => {
+  if (status === CUSTOMER_STATUS.ACTIVE) {
+    return { label: 'Đang hoạt động', type: TYPE_STATUS.SUCCESS };
+  }
+
+  if (status === CUSTOMER_STATUS.DELETED) {
+    return { label: 'Đã xoá', type: TYPE_STATUS.ERROR };
+  }
+
+  return { label: displayText(status), type: TYPE_STATUS.DEFAULT };
 };
 
 const ManageCustomerScreen = () => {
@@ -201,13 +207,10 @@ const ManageCustomerScreen = () => {
         dataIndex: 'status',
         key: 'status',
         width: K_SIZE_130,
-        render: (status: string) => (
-          <Status
-            type={getCustomerStatusType(status)}
-            kind={KIND_STATUS.SECONDARY}
-            content={displayText(status)}
-          />
-        )
+        render: (status: string) => {
+          const meta = getCustomerStatusMeta(status);
+          return <Status type={meta.type} kind={KIND_STATUS.SECONDARY} content={meta.label} />;
+        }
       },
       {
         title: 'Ngày tạo',
@@ -237,20 +240,24 @@ const ManageCustomerScreen = () => {
               iconHeight={K_SIZE_18}
               onClick={() => onOpenDetail(record)}
             />
-            <IconHover
-              rootClassName="text-color-800"
-              title={t('common:edit')}
-              icon="ICON_EDIT"
-              iconHeight={K_SIZE_18}
-              onClick={() => onOpenUpdate(record)}
-            />
-            <IconHover
-              rootClassName="text-error-500 hover:text-error-500"
-              title={t('common:delete')}
-              icon="IC_TRASH_OUTLINE"
-              iconHeight={K_SIZE_18}
-              onClick={() => onDelete(record)}
-            />
+            {record.status !== CUSTOMER_STATUS.DELETED && (
+              <IconHover
+                rootClassName="text-color-800"
+                title={t('common:edit')}
+                icon="ICON_EDIT"
+                iconHeight={K_SIZE_18}
+                onClick={() => onOpenUpdate(record)}
+              />
+            )}
+            {record.status !== CUSTOMER_STATUS.DELETED && (
+              <IconHover
+                rootClassName="text-error-500 hover:text-error-500"
+                title={t('common:delete')}
+                icon="IC_TRASH_OUTLINE"
+                iconHeight={K_SIZE_18}
+                onClick={() => onDelete(record)}
+              />
+            )}
           </div>
         )
       }
