@@ -2,8 +2,9 @@
 
 import {
   DeleteOutlined,
-  DownloadOutlined,
+  CloudUploadOutlined,
   EditOutlined,
+  FileSearchOutlined,
   FileExcelOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -55,6 +56,31 @@ interface LocalUploadRow extends PaymentUploadPreviewRow {
   id: string;
   errors: string[];
 }
+
+interface ImportHistoryRow {
+  id: string;
+  importedAt: string;
+  fileName: string;
+  total: number;
+  success: number;
+  failed: number;
+  result: string;
+}
+
+const ImportStepCard = ({
+  children,
+  step,
+  title
+}: {
+  children: React.ReactNode;
+  step: number;
+  title: string;
+}) => (
+  <div className="min-h-[250px] rounded-radius-m border border-color-300 bg-color-50 p-16">
+    <TextBase classNames="sub-title3 !text-primary-700" text={`${step}. ${title}`} />
+    <div className="mt-16">{children}</div>
+  </div>
+);
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const API_DATE_FORMAT = 'DD-MM-YYYY';
@@ -182,6 +208,7 @@ const PaymentStatementScreen = () => {
   const [selectedFile, setSelectedFile] = useState<File>();
   const [previewRows, setPreviewRows] = useState<LocalUploadRow[]>([]);
   const [uploadError, setUploadError] = useState('');
+  const [importHistory, setImportHistory] = useState<ImportHistoryRow[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerLoading, setCustomerLoading] = useState(false);
   const [filterBillOptions, setFilterBillOptions] = useState<AppSelectOption[]>([]);
@@ -362,17 +389,30 @@ const PaymentStatementScreen = () => {
     setUploading(true);
     const response = await paymentStatementServices.upload({ file: selectedFile });
     setUploading(false);
-    if (!response?.data?.success) {
+    const uploadResult = response?.data;
+    if (!uploadResult?.success) {
       const errors =
         response?.data?.errors?.join('; ') || getErrorMessage(response, 'Upload dữ liệu thất bại');
       setUploadError(errors);
       return;
     }
+    setImportHistory((previous) => [
+      {
+        id: String(Date.now()),
+        importedAt: dayjs().format('DD/MM/YYYY HH:mm'),
+        fileName: selectedFile.name,
+        total: previewRows.length,
+        success: uploadResult.rowCount || previewRows.length,
+        failed: 0,
+        result: 'Hoàn thành'
+      },
+      ...previous
+    ]);
     setUploadOpen(false);
     setSelectedFile(undefined);
     setPreviewRows([]);
     state.refresh();
-  }, [invalidCount, selectedFile, state, uploadError]);
+  }, [invalidCount, previewRows.length, selectedFile, state, uploadError]);
 
   const columns = useMemo<ColumnsType<PaymentStatementRow>>(
     () => [
@@ -458,6 +498,28 @@ const PaymentStatementScreen = () => {
         dataIndex: 'errors',
         width: 260,
         render: (errors: string[]) => <span className="text-error-600">{errors.join('; ')}</span>
+      }
+    ],
+    []
+  );
+
+  const importHistoryColumns = useMemo<ColumnsType<ImportHistoryRow>>(
+    () => [
+      { title: 'STT', width: 64, render: (_value, _row, index) => index + 1 },
+      { title: 'Thời gian import', dataIndex: 'importedAt', width: 150 },
+      { title: 'Tên file import', dataIndex: 'fileName', width: 260 },
+      { title: 'Số dòng', dataIndex: 'total', align: 'right', width: 100 },
+      { title: 'Thành công', dataIndex: 'success', align: 'right', width: 100 },
+      { title: 'Thất bại', dataIndex: 'failed', align: 'right', width: 100 },
+      {
+        title: 'Kết quả',
+        dataIndex: 'result',
+        width: 130,
+        render: () => (
+          <span className="rounded-radius-s bg-success-50 px-8 py-4 text-success-700">
+            Hoàn thành
+          </span>
+        )
       }
     ],
     []
@@ -786,64 +848,125 @@ const PaymentStatementScreen = () => {
           </div>
         }
       >
-        <p className="mb-12 text-color-700">
-          Chọn file Excel mẫu, tối đa 10MB. Hệ thống hiện chỉ nhận .xlsx theo API.
-        </p>
-        <Space>
-          <ButtonBase
-            type="ghost"
-            onClick={async () => {
-              const r = await paymentStatementServices.downloadTemplate();
-              if (r.data) {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(r.data);
-                a.download = r.fileName || 'mau-upload-sao-ke.xlsx';
-                a.click();
-                URL.revokeObjectURL(a.href);
-              } else setUploadError(getErrorMessage(r, 'Không tải được file mẫu'));
-            }}
-            customContent={
-              <>
-                <DownloadOutlined className="mr-8" />
-                Tải file mẫu
-              </>
-            }
-          />
-          <Upload accept=".xlsx" showUploadList={false} beforeUpload={selectUploadFile}>
+        <TextBase
+          classNames="sub-title2 !text-primary-700"
+          text="Import danh sách khách hàng đã thanh toán"
+        />
+        <div className="mt-16 grid grid-cols-4 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <ImportStepCard step={1} title="Tải file mẫu">
+            <TextBase
+              classNames="body3 !text-color-700"
+              text="Tải file mẫu Excel để nhập dữ liệu đúng định dạng"
+            />
             <ButtonBase
-              type="secondary"
+              type="ghost"
+              classNames="mt-20"
+              onClick={async () => {
+                const r = await paymentStatementServices.downloadTemplate();
+                if (r.data) {
+                  const a = document.createElement('a');
+                  a.href = URL.createObjectURL(r.data);
+                  a.download = r.fileName || 'mau-upload-sao-ke.xlsx';
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                } else setUploadError(getErrorMessage(r, 'Không tải được file mẫu'));
+              }}
               customContent={
                 <>
-                  <FileExcelOutlined className="mr-8" />
-                  {selectedFile ? selectedFile.name : 'Chọn file dữ liệu'}
+                  <FileExcelOutlined className="mr-8 text-success-700" />
+                  Tải file mẫu Excel
                 </>
               }
             />
-          </Upload>
-          {selectedFile && (
-            <span className="text-color-700">{formatUploadFileSize(selectedFile.size)}</span>
-          )}
-        </Space>
-        {uploadError && <p className="mt-12 text-error-600">{uploadError}</p>}
-        <div className="mt-16 grid grid-cols-3 gap-12">
-          <div className="rounded-radius-m bg-color-100 p-12">
-            Tổng số lượng: <b>{previewRows.length}</b>
-          </div>
-          <div className="rounded-radius-m bg-success-50 p-12">
-            Hợp lệ: <b>{previewRows.length - invalidCount}</b>
-          </div>
-          <div className="rounded-radius-m bg-error-50 p-12">
-            Không hợp lệ: <b>{invalidCount}</b>
-          </div>
+          </ImportStepCard>
+          <ImportStepCard step={2} title="Chọn file import">
+            <Upload.Dragger
+              accept=".xlsx"
+              showUploadList={false}
+              beforeUpload={selectUploadFile}
+              className="!border-primary-200 !bg-primary-50"
+            >
+              <CloudUploadOutlined className="text-40 text-primary-600" />
+              <TextBase classNames="sub-title4 mt-8" text="Kéo thả file Excel vào đây" />
+              <TextBase classNames="caption1 mt-4 !text-color-700" text="hoặc" />
+              <ButtonBase type="primary" classNames="mt-12" customContent="Chọn file Excel" />
+              <TextBase
+                classNames="caption1 mt-16 !text-color-700"
+                text="Định dạng file: .xlsx | Dung lượng tối đa: 10MB"
+              />
+            </Upload.Dragger>
+            {selectedFile && (
+              <TextBase
+                classNames="caption1 mt-8 !text-success-700"
+                text={`${selectedFile.name} (${formatUploadFileSize(selectedFile.size)})`}
+              />
+            )}
+          </ImportStepCard>
+          <ImportStepCard step={3} title="Hướng dẫn import">
+            <ul className="list-disc space-y-12 pl-20 text-13 leading-20 text-color-700">
+              <li>Các cột có dấu (*) là bắt buộc.</li>
+              <li>Ngày thanh toán đúng định dạng dd/MM/yyyy HH:mm:ss.</li>
+              <li>Số tiền chỉ nhập số, không có ký tự đặc biệt.</li>
+              <li>Mỗi dòng tương ứng một giao dịch thanh toán.</li>
+              <li>Không được để trống các cột bắt buộc.</li>
+            </ul>
+          </ImportStepCard>
+          <ImportStepCard step={4} title="Xem trước dữ liệu">
+            {selectedFile ? (
+              <div className="grid grid-cols-3 gap-8">
+                <div className="rounded-radius-m bg-color-100 p-8 text-center text-13">
+                  Tổng
+                  <br />
+                  <b>{previewRows.length}</b>
+                </div>
+                <div className="rounded-radius-m bg-success-50 p-8 text-center text-13">
+                  Hợp lệ
+                  <br />
+                  <b>{previewRows.length - invalidCount}</b>
+                </div>
+                <div className="rounded-radius-m bg-error-50 p-8 text-center text-13">
+                  Lỗi
+                  <br />
+                  <b>{invalidCount}</b>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-[160px] flex-col items-center justify-center rounded-radius-m border border-color-300 bg-color-100">
+                <FileSearchOutlined className="text-48 text-primary-500" />
+                <TextBase
+                  classNames="caption1 mt-12 !text-color-700"
+                  text="Chưa có file được chọn"
+                />
+              </div>
+            )}
+          </ImportStepCard>
         </div>
-        <div className="mt-16 overflow-hidden rounded-radius-m border border-color-300">
-          <AppTable
-            rowKey="id"
-            columns={previewColumns as any}
-            dataSource={previewRows}
-            scroll={{ x: 1900, y: 360 }}
-            pagination={{ pageSize: 10 }}
+        {uploadError && <TextBase classNames="mt-12 !text-error-600" text={uploadError} />}
+        {selectedFile && (
+          <div className="mt-16 overflow-hidden rounded-radius-m border border-color-300">
+            <AppTable
+              rowKey="id"
+              columns={previewColumns as any}
+              dataSource={previewRows}
+              scroll={{ x: 1900, y: 300 }}
+              pagination={{ pageSize: 10 }}
+            />
+          </div>
+        )}
+        <div className="mt-24 border-t border-color-300 pt-16">
+          <TextBase classNames="sub-title3 !text-primary-700" text="Lịch sử import" />
+          <TextBase
+            classNames="caption1 mt-4 !text-color-700"
+            text="Hiển thị các lần import trong phiên làm việc hiện tại"
           />
+          <div className="mt-12 overflow-hidden rounded-radius-m border border-color-300">
+            <AppTable
+              rowKey="id"
+              columns={importHistoryColumns as any}
+              dataSource={importHistory}
+              pagination={false}
+            />
+          </div>
         </div>
       </Modal>
     </PageWithBreadcrumb>
