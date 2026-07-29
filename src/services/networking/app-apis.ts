@@ -216,6 +216,18 @@ const ApiEndPoint = {
   BILLING_BILL_CONFIRM: '/admin/billing/bills/confirm',
   BILLING_BILL_EXPORT_NOTICE: '/admin/billing/bills/export-notice',
 
+  // BILLING 5.5 - CHOT SO EVN
+  BILLING_READING_BATCH_SEARCH: '/admin/billing/reading-batches/search',
+  BILLING_READING_BATCH_CREATE: '/admin/billing/reading-batches/create',
+  BILLING_READING_BATCH_DETAIL: '/admin/billing/reading-batches/detail',
+  BILLING_READING_BATCH_UPDATE: '/admin/billing/reading-batches/update',
+  BILLING_READING_BATCH_DELETE: '/admin/billing/reading-batches/delete',
+  BILLING_READING_BATCH_SUBMIT: '/admin/billing/reading-batches/submit',
+  BILLING_READING_BATCH_CONFIRM: '/admin/billing/reading-batches/confirm',
+  BILLING_READING_BATCH_REJECT: '/admin/billing/reading-batches/reject',
+  BILLING_READING_BATCH_METERS_BY_FEEDER: '/admin/billing/reading-batches/meters-by-feeder',
+  BILLING_READING_BATCH_EXPORT_RECORD: '/admin/billing/reading-batches/export-record',
+
   // BILLING 6.1 - NHAP DU LIEU SAO KE
   BILLING_PAYMENT_SEARCH: '/admin/billing/payments/search',
   BILLING_PAYMENT_UPLOAD: '/admin/billing/payments/upload',
