@@ -267,6 +267,13 @@ const NavigationMenu = () => {
             icon: <FileTextOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.READING_DATA_APPROVAL,
+            label: 'Xác nhận số liệu',
+            icon: <CarryOutOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
         ]
       }
