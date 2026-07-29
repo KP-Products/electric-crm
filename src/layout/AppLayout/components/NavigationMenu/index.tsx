@@ -281,6 +281,13 @@ const NavigationMenu = () => {
             icon: <FileTextOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.DEBT_AGING,
+            label: 'Tính tuổi nợ',
+            icon: <HistoryOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
         ]
       }

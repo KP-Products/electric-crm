@@ -222,6 +222,10 @@ const ApiEndPoint = {
   BILLING_PAYMENT_UPDATE: '/admin/billing/payments/update',
   BILLING_PAYMENT_DELETE: '/admin/billing/payments/delete',
 
+  // BILLING 6.2 - TINH TUOI NO
+  BILLING_DEBT_AGING_CALCULATE: '/admin/billing/debt-aging/calculate',
+  BILLING_DEBT_AGING_EXPORT: '/admin/billing/debt-aging/export',
+
   // APPROVAL MATRIX
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
   EDIT_APPROVAL_MATRIX: '/approval-matrix',
