@@ -87,6 +87,7 @@ export const ROUTES = {
   ELECTRICITY_NOTICE_CSPK: '/billing/electricity-notice-cspk',
   READING_DATA_APPROVAL: '/billing/reading-data-approval',
   PAYMENT_STATEMENT: '/billing/payment-statement',
+  DEBT_AGING: '/billing/debt-aging',
 
   APPROVAL_MATRIX: '/approval-matrix',
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
