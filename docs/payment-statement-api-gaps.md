@@ -45,6 +45,7 @@ SRS ghi nhận `.xls`, `.xlsx`; Swagger chỉ ghi `.xlsx`. Frontend hiện giớ
 
 - SRS có cột **Người tạo** nhưng `PaymentRowDto` chưa có `createdBy`/`createdByName`.
 - SRS dùng kỳ `MM/YYYY`; ví dụ Swagger dùng `202607`. Cần xác nhận một format request/response duy nhất.
+- `bills/search` được frontend gọi với `customerId` là string từ API customer; backend cần nhận kiểu này để trả đúng hóa đơn của khách hàng được chọn.
 - SRS đánh dấu kỳ thanh toán bắt buộc; schema search hiện không bắt buộc. Backend nên validate để đảm bảo nhất quán.
 
 ## 4. Thời gian giao dịch

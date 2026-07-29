@@ -4,14 +4,13 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
-  ExportOutlined,
   FileExcelOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   UploadOutlined
 } from '@ant-design/icons';
-import { Button, DatePicker, Divider, Form, Input, Modal, Space, Table, Upload } from 'antd';
+import { Divider, Drawer, Form, Modal, Space, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -21,11 +20,22 @@ import {
   PaymentStatementRow,
   PaymentUploadPreviewRow
 } from 'model/payment-statement';
-import { useCallback, useMemo, useState } from 'react';
+import { Bill } from 'model/bill';
+import { Customer } from 'model/customer';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import billServices from 'services/bill-services';
+import customerServices from 'services/customer-services';
 import paymentStatementServices from 'services/payment-statement-services';
 import { parseFormattedNumber } from 'utils/number-input';
 import { formatUploadFileSize, getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 import { TextBase } from 'components/text';
+import ButtonBase from 'components/button';
+import { AppDatePicker } from 'components/date-picker';
+import { AppDateRangePicker } from 'components/date-picker/range-picker';
+import AppTable from 'components/table';
+import AppPagination from 'components/table/pagination';
+import { AppSelect, AppSelectOption } from 'components/select';
+import { AppTextField } from 'components/text-field';
 import { parseRemoteMeterReadingWorkbook } from '../remote-meter-reading/xlsxPreview';
 import usePaymentStatement from './usePaymentStatement';
 
@@ -33,9 +43,10 @@ dayjs.extend(customParseFormat);
 
 type PaymentFormValues = Omit<
   CreatePaymentStatementReq,
-  'paymentAmount' | 'transactionDate' | 'accountingDate'
+  'paymentAmount' | 'periodCode' | 'transactionDate' | 'accountingDate'
 > & {
   paymentAmount: string | number;
+  periodCode?: Dayjs;
   transactionDate: Dayjs;
   accountingDate?: Dayjs;
 };
@@ -107,6 +118,10 @@ const displayDate = (value?: string) =>
     : '-';
 const displayMoney = (value?: number) =>
   value === undefined || value === null ? '-' : new Intl.NumberFormat('vi-VN').format(value);
+const toApiPeriodCode = (periodCode?: string) => {
+  const match = /^(\d{2})\/(\d{4})$/.exec(periodCode?.trim() || '');
+  return match ? `${match[2]}${match[1]}` : undefined;
+};
 
 const normalizeHeader = (value: string) => HEADER_MAP[value] || value;
 const excelDate = (value: unknown) =>
@@ -167,19 +182,124 @@ const PaymentStatementScreen = () => {
   const [selectedFile, setSelectedFile] = useState<File>();
   const [previewRows, setPreviewRows] = useState<LocalUploadRow[]>([]);
   const [uploadError, setUploadError] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [filterBillOptions, setFilterBillOptions] = useState<AppSelectOption[]>([]);
+  const [formBillOptions, setFormBillOptions] = useState<AppSelectOption[]>([]);
+  const [formCustomerCode, setFormCustomerCode] = useState('');
+  const [formInvoiceNo, setFormInvoiceNo] = useState('');
+
+  const customerOptions = useMemo<AppSelectOption[]>(
+    () =>
+      customers
+        .filter((customer) => Boolean(customer.customerCode))
+        .map((customer) => ({
+          value: customer.customerCode || '',
+          label: [customer.customerCode, customer.fullName].filter(Boolean).join(' - ')
+        })),
+    [customers]
+  );
+
+  const loadBillOptions = useCallback(
+    async (customerCode: string, periodCode?: string) => {
+      const customer = customers.find((item) => item.customerCode === customerCode);
+      if (!customerCode) return [];
+      const response = await billServices.searchBills({
+        customerId: customer?.id,
+        periodCode: toApiPeriodCode(periodCode),
+        page: 0,
+        size: 100
+      });
+      return (response.data?.items || []).filter((bill) => Boolean(bill.invoiceNo));
+    },
+    [customers]
+  );
+
+  const toBillOptions = useCallback(
+    (bills: Bill[]): AppSelectOption[] =>
+      bills.map((bill) => ({
+        value: bill.invoiceNo || String(bill.id),
+        label: [bill.invoiceNo, bill.periodCode, displayMoney(bill.totalAmount)]
+          .filter(Boolean)
+          .join(' - ')
+      })),
+    []
+  );
+
+  useEffect(() => {
+    let active = true;
+    const loadCustomers = async () => {
+      setCustomerLoading(true);
+      const response = await customerServices.getCustomerList();
+      if (!active) return;
+      setCustomerLoading(false);
+      setCustomers(Array.isArray(response.data) ? response.data : []);
+    };
+    loadCustomers();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    loadBillOptions(state.filters.customerCode, state.filters.periodCode).then((bills) => {
+      if (active) setFilterBillOptions(toBillOptions(bills));
+    });
+    return () => {
+      active = false;
+    };
+  }, [loadBillOptions, state.filters.customerCode, state.filters.periodCode, toBillOptions]);
+
+  useEffect(() => {
+    let active = true;
+    loadBillOptions(formCustomerCode).then((bills) => {
+      if (active) setFormBillOptions(toBillOptions(bills));
+    });
+    return () => {
+      active = false;
+    };
+  }, [formCustomerCode, loadBillOptions, toBillOptions]);
+
+  const onSelectFilterCustomer = useCallback(
+    async (customerCode: string) => {
+      state.setFilters({ ...state.filters, customerCode, invoiceNo: '' });
+      setFilterBillOptions([]);
+      const bills = await loadBillOptions(customerCode, state.filters.periodCode);
+      setFilterBillOptions(toBillOptions(bills));
+    },
+    [loadBillOptions, state, toBillOptions]
+  );
+
+  const onSelectFormCustomer = useCallback(
+    async (customerCode: string) => {
+      setFormCustomerCode(customerCode);
+      setFormInvoiceNo('');
+      form.setFieldsValue({ customerCode, invoiceNo: undefined });
+      setFormBillOptions([]);
+      const bills = await loadBillOptions(customerCode);
+      setFormBillOptions(toBillOptions(bills));
+    },
+    [form, loadBillOptions, toBillOptions]
+  );
 
   const invalidCount = previewRows.filter((row) => row.errors.length).length;
   const openCreate = useCallback(() => {
     setEditing(undefined);
+    setFormCustomerCode('');
+    setFormInvoiceNo('');
     form.resetFields();
     setFormOpen(true);
   }, [form]);
   const openEdit = useCallback(
     (row: PaymentStatementRow) => {
       setEditing(row);
+      setFormCustomerCode(row.customerCode || '');
+      setFormInvoiceNo(row.invoiceNo || '');
       form.setFieldsValue({
         ...row,
         paymentAmount: row.paymentAmount || '',
+        periodCode: row.periodCode ? dayjs(row.periodCode, ['MM/YYYY', 'YYYYMM']) : undefined,
         transactionDate: row.transactionDate
           ? dayjs(row.transactionDate, [API_DATE_FORMAT, 'DD-MM-YYYY HH:mm:ss'])
           : undefined,
@@ -199,6 +319,7 @@ const PaymentStatementScreen = () => {
     const request = {
       ...values,
       paymentAmount,
+      periodCode: values.periodCode?.format('YYYYMM'),
       transactionDate: values.transactionDate.format(API_DATE_FORMAT),
       accountingDate: values.accountingDate?.format(API_DATE_FORMAT)
     };
@@ -283,17 +404,17 @@ const PaymentStatementScreen = () => {
         width: 105,
         render: (_v, row) => (
           <Space>
-            <Button
-              type="text"
-              aria-label="Sửa"
-              icon={<EditOutlined />}
+            <ButtonBase
+              type="ghost"
+              size={32}
+              customContent={<EditOutlined />}
               onClick={() => openEdit(row)}
             />
-            <Button
-              type="text"
-              danger
-              aria-label="Xóa"
-              icon={<DeleteOutlined />}
+            <ButtonBase
+              type="ghost"
+              size={32}
+              classNames="!text-error-600"
+              customContent={<DeleteOutlined />}
               onClick={() => state.remove(row)}
             />
           </Space>
@@ -349,184 +470,285 @@ const PaymentStatementScreen = () => {
               text="Quản lý giao dịch thanh toán hóa đơn điện"
             />
           </div>
-          <Space wrap>
-            <Button icon={<ExportOutlined />} loading={state.exporting} onClick={state.exportExcel}>
-              Xuất Excel
-            </Button>
-            <Button icon={<UploadOutlined />} onClick={() => setUploadOpen(true)}>
-              Upload lô
-            </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-              Thêm mới
-            </Button>
+          <Space wrap className="mobile:w-full mobile:flex-col">
+            <ButtonBase
+              type="secondary"
+              onClick={() => setUploadOpen(true)}
+              classNames="mobile:w-full mobile:justify-center"
+              customContent={
+                <>
+                  <UploadOutlined className="mr-8" />
+                  Upload lô
+                </>
+              }
+            />
+            <ButtonBase
+              type="primary"
+              onClick={openCreate}
+              classNames="mobile:w-full mobile:justify-center"
+              customContent={
+                <>
+                  <PlusOutlined className="mr-8" />
+                  Thêm mới
+                </>
+              }
+            />
           </Space>
         </div>
         <Divider />
         <div className="rounded-radius-l border border-color-300 bg-color-50 p-16">
           <div className="grid grid-cols-4 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
-            <div>
-              <label className="text-14 font-semibold">
-                Kỳ thanh toán <span className="text-error-600">*</span>
-              </label>
-              <DatePicker
-                picker="month"
-                className="mt-4 w-full"
-                format="MM/YYYY"
-                value={dayjs(state.filters.periodCode, 'MM/YYYY')}
-                onChange={(value) =>
-                  state.setFilters({ ...state.filters, periodCode: value?.format('MM/YYYY') || '' })
-                }
-              />
-            </div>
-            <div>
-              <label className="text-14 font-semibold">Mã khách hàng</label>
-              <Input
-                className="mt-4"
-                value={state.filters.customerCode}
-                onChange={(e) =>
-                  state.setFilters({ ...state.filters, customerCode: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="text-14 font-semibold">Mã hóa đơn</label>
-              <Input
-                className="mt-4"
-                value={state.filters.invoiceNo}
-                onChange={(e) => state.setFilters({ ...state.filters, invoiceNo: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-14 font-semibold">Ngày thanh toán từ - đến</label>
-              <DatePicker.RangePicker
-                className="mt-4 w-full"
-                format={DATE_FORMAT}
-                value={[
-                  state.filters.paymentDateFrom
-                    ? dayjs(state.filters.paymentDateFrom, API_DATE_FORMAT)
-                    : null,
-                  state.filters.paymentDateTo
-                    ? dayjs(state.filters.paymentDateTo, API_DATE_FORMAT)
-                    : null
-                ]}
-                onChange={(dates) =>
-                  state.setFilters({
-                    ...state.filters,
-                    paymentDateFrom: dates?.[0]?.format(API_DATE_FORMAT),
-                    paymentDateTo: dates?.[1]?.format(API_DATE_FORMAT)
-                  })
-                }
-              />
-            </div>
+            <AppDatePicker
+              name="periodCode"
+              label="Kỳ thanh toán"
+              labelSuffix={<span className="text-error-600">*</span>}
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+              picker="month"
+              format="MM/YYYY"
+              placeholder="mm/yyyy"
+              value={dayjs(state.filters.periodCode, 'MM/YYYY')}
+              onChange={(value) =>
+                state.setFilters({ ...state.filters, periodCode: value?.format('MM/YYYY') || '' })
+              }
+            />
+            <AppSelect
+              name="customerCode"
+              label="Mã khách hàng"
+              placeholder="Chọn mã khách hàng"
+              options={customerOptions}
+              isLoading={customerLoading}
+              value={state.filters.customerCode}
+              onSelectOption={({ key }) => onSelectFilterCustomer(String(key))}
+            />
+            <AppSelect
+              name="invoiceNo"
+              label="Mã hóa đơn"
+              placeholder={
+                state.filters.customerCode ? 'Chọn mã hóa đơn' : 'Chọn mã khách hàng trước'
+              }
+              options={filterBillOptions}
+              disabled={!state.filters.customerCode}
+              value={state.filters.invoiceNo}
+              onSelectOption={({ key }) =>
+                state.setFilters({ ...state.filters, invoiceNo: String(key) })
+              }
+            />
+            <AppDateRangePicker
+              name="paymentDateRange"
+              label="Ngày thanh toán từ - đến"
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+              format={DATE_FORMAT}
+              value={[
+                state.filters.paymentDateFrom
+                  ? dayjs(state.filters.paymentDateFrom, API_DATE_FORMAT)
+                  : null,
+                state.filters.paymentDateTo
+                  ? dayjs(state.filters.paymentDateTo, API_DATE_FORMAT)
+                  : null
+              ]}
+              onChange={(dates) =>
+                state.setFilters({
+                  ...state.filters,
+                  paymentDateFrom: dates?.[0]?.format(API_DATE_FORMAT),
+                  paymentDateTo: dates?.[1]?.format(API_DATE_FORMAT)
+                })
+              }
+            />
           </div>
           <Space className="mt-16">
-            <Button
+            <ButtonBase
               type="primary"
-              icon={<SearchOutlined />}
-              loading={state.loading}
+              disabled={state.loading}
               onClick={state.onSearch}
-            >
-              Tìm kiếm
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={state.reset}>
-              Làm mới
-            </Button>
+              customContent={
+                <>
+                  <SearchOutlined className="mr-8" />
+                  {state.loading ? 'Đang tìm...' : 'Tìm kiếm'}
+                </>
+              }
+            />
+            <ButtonBase
+              type="ghost"
+              onClick={state.reset}
+              customContent={
+                <>
+                  <ReloadOutlined className="mr-8" />
+                  Làm mới
+                </>
+              }
+            />
           </Space>
         </div>
         <div className="mt-16 overflow-hidden rounded-radius-l border border-color-300">
-          <Table
+          <AppTable
             rowKey="payId"
             loading={state.loading}
-            columns={columns}
+            columns={columns as any}
             dataSource={state.rows}
             scroll={{ x: 1900 }}
-            pagination={{
-              current: state.page,
-              pageSize: state.size,
-              total: state.total,
-              showSizeChanger: true,
-              onChange: state.onPageChange
-            }}
+            pagination={false}
           />
         </div>
+        <AppPagination
+          currentPage={state.page}
+          total={state.total}
+          pagination={{
+            current: state.page,
+            pageSize: state.size,
+            total: state.total,
+            onChange: state.onPageChange,
+            showSizeChanger: true
+          }}
+        />
       </section>
-      <Modal
+      <Drawer
         title={editing ? 'Sửa thông tin thanh toán' : 'Thêm mới giao dịch thanh toán'}
         open={formOpen}
-        onCancel={() => setFormOpen(false)}
-        onOk={saveForm}
-        confirmLoading={saving}
-        okText="Lưu"
-        cancelText="Hủy"
+        onClose={() => setFormOpen(false)}
+        placement="right"
         width={720}
         destroyOnClose
+        footer={
+          <div className="flex justify-end gap-8">
+            <ButtonBase
+              type="ghost"
+              customContent="Hủy"
+              onClick={() => setFormOpen(false)}
+              disabled={saving}
+            />
+            <ButtonBase
+              type="primary"
+              form="payment-statement-form"
+              htmlType="submit"
+              disabled={saving}
+              customContent={saving ? 'Đang lưu...' : 'Lưu'}
+            />
+          </div>
+        }
       >
-        <Form form={form} layout="vertical">
+        <Form id="payment-statement-form" form={form} layout="vertical" onFinish={saveForm}>
           <div className="grid grid-cols-2 gap-x-12">
             <Form.Item
               name="customerCode"
-              label="Mã khách hàng"
               rules={[{ required: !editing, message: 'Vui lòng nhập mã khách hàng' }]}
             >
-              <Input disabled={Boolean(editing)} />
+              <AppSelect
+                name="formCustomerCode"
+                label="Mã khách hàng"
+                labelSuffix={<span className="text-error-600">*</span>}
+                placeholder="Chọn mã khách hàng"
+                options={customerOptions}
+                value={formCustomerCode}
+                disabled={Boolean(editing)}
+                isLoading={customerLoading}
+                onSelectOption={({ key }) => onSelectFormCustomer(String(key))}
+              />
             </Form.Item>
-            <Form.Item name="invoiceNo" label="Mã hóa đơn">
-              <Input />
+            <Form.Item name="invoiceNo">
+              <AppSelect
+                name="formInvoiceNo"
+                label="Mã hóa đơn"
+                placeholder={formCustomerCode ? 'Chọn mã hóa đơn' : 'Chọn mã khách hàng trước'}
+                options={formBillOptions}
+                value={formInvoiceNo}
+                disabled={!formCustomerCode}
+                onSelectOption={({ key }) => {
+                  const invoiceNo = String(key);
+                  setFormInvoiceNo(invoiceNo);
+                  form.setFieldValue('invoiceNo', invoiceNo);
+                }}
+              />
             </Form.Item>
-            <Form.Item name="periodCode" label="Kỳ thanh toán">
-              <Input placeholder="MM/YYYY" />
+            <Form.Item name="periodCode">
+              <AppDatePicker
+                name="periodCode"
+                label="Kỳ thanh toán"
+                wrapperClassName="w-full"
+                datePickerClassName="w-full"
+                picker="month"
+                format="MM/YYYY"
+                placeholder="mm/yyyy"
+              />
             </Form.Item>
             <Form.Item
               name="paymentAmount"
-              label="Số tiền thanh toán"
               rules={[{ required: true, message: 'Vui lòng nhập số tiền' }]}
             >
-              <Input inputMode="numeric" />
+              <AppTextField
+                name="paymentAmount"
+                label="Số tiền thanh toán"
+                placeholder={'Nhập số tiền thanh toán'}
+                labelSuffix={<span className="text-error-600">*</span>}
+                wrapperClassName="w-full"
+                formatNumberWithCommas
+              />
             </Form.Item>
             <Form.Item
               name="transactionDate"
-              label="Ngày thanh toán"
               rules={[{ required: true, message: 'Vui lòng chọn ngày thanh toán' }]}
             >
-              <DatePicker className="w-full" format={DATE_FORMAT} />
+              <AppDatePicker
+                name="transactionDate"
+                label="Ngày thanh toán"
+                labelSuffix={<span className="text-error-600">*</span>}
+                wrapperClassName="w-full"
+                datePickerClassName="w-full"
+                format={DATE_FORMAT}
+              />
             </Form.Item>
-            <Form.Item name="accountingDate" label="Ngày hạch toán">
-              <DatePicker className="w-full" format={DATE_FORMAT} />
+            <Form.Item name="accountingDate">
+              <AppDatePicker
+                name="accountingDate"
+                label="Ngày hạch toán"
+                wrapperClassName="w-full"
+                datePickerClassName="w-full"
+                format={DATE_FORMAT}
+              />
             </Form.Item>
-            <Form.Item
-              name="sourceAccount"
-              label="Tài khoản chuyển"
-              rules={[{ max: 50, message: 'Tối đa 50 ký tự' }]}
-            >
-              <Input />
+            <Form.Item name="sourceAccount" rules={[{ max: 50, message: 'Tối đa 50 ký tự' }]}>
+              <AppTextField
+                name="sourceAccount"
+                label="Tài khoản chuyển"
+                placeholder={'Nhập tài khoản chuyển'}
+                wrapperClassName="w-full"
+              />
             </Form.Item>
-            <Form.Item
-              name="destinationAccount"
-              label="Tài khoản nhận"
-              rules={[{ max: 50, message: 'Tối đa 50 ký tự' }]}
-            >
-              <Input />
+            <Form.Item name="destinationAccount" rules={[{ max: 50, message: 'Tối đa 50 ký tự' }]}>
+              <AppTextField
+                name="destinationAccount"
+                label="Tài khoản nhận"
+                placeholder={'Nhập tài khoản nhận'}
+                wrapperClassName="w-full"
+              />
             </Form.Item>
             <Form.Item
               name="transactionNo"
-              label="Số giao dịch"
               rules={[
                 { required: !editing, message: 'Vui lòng nhập số giao dịch' },
                 { max: 100, message: 'Tối đa 100 ký tự' }
               ]}
             >
-              <Input />
+              <AppTextField
+                name="transactionNo"
+                label="Số giao dịch"
+                placeholder={'Nhập số giao dịch'}
+                labelSuffix={!editing ? <span className="text-error-600">*</span> : undefined}
+                wrapperClassName="w-full"
+              />
             </Form.Item>
-            <Form.Item
-              name="description"
-              label="Nội dung"
-              rules={[{ max: 250, message: 'Tối đa 250 ký tự' }]}
-            >
-              <Input.TextArea rows={3} />
+            <Form.Item name="description" rules={[{ max: 250, message: 'Tối đa 250 ký tự' }]}>
+              <AppTextField
+                name="description"
+                label="Nội dung"
+                wrapperClassName="w-full"
+                placeholder={'Nhập nội dung'}
+              />
             </Form.Item>
           </div>
         </Form>
-      </Modal>
+      </Drawer>
       <Modal
         title="Upload lô sao kê thanh toán"
         open={uploadOpen}
@@ -536,19 +758,35 @@ const PaymentStatementScreen = () => {
           setPreviewRows([]);
           setUploadError('');
         }}
-        onOk={confirmUpload}
-        okText="Xác nhận"
-        cancelText="Thoát"
-        confirmLoading={uploading}
-        okButtonProps={{ disabled: !selectedFile || invalidCount > 0 || Boolean(uploadError) }}
         width={1280}
+        footer={
+          <div className="flex justify-end gap-8">
+            <ButtonBase
+              type="ghost"
+              disabled={uploading}
+              onClick={() => {
+                setUploadOpen(false);
+                setSelectedFile(undefined);
+                setPreviewRows([]);
+                setUploadError('');
+              }}
+              customContent="Thoát"
+            />
+            <ButtonBase
+              type="primary"
+              disabled={!selectedFile || invalidCount > 0 || Boolean(uploadError) || uploading}
+              onClick={confirmUpload}
+              customContent={uploading ? 'Đang xác nhận...' : 'Xác nhận'}
+            />
+          </div>
+        }
       >
         <p className="mb-12 text-color-700">
           Chọn file Excel mẫu, tối đa 10MB. Hệ thống hiện chỉ nhận .xlsx theo API.
         </p>
         <Space>
-          <Button
-            icon={<DownloadOutlined />}
+          <ButtonBase
+            type="ghost"
             onClick={async () => {
               const r = await paymentStatementServices.downloadTemplate();
               if (r.data) {
@@ -559,13 +797,23 @@ const PaymentStatementScreen = () => {
                 URL.revokeObjectURL(a.href);
               } else setUploadError(getErrorMessage(r, 'Không tải được file mẫu'));
             }}
-          >
-            Tải file mẫu
-          </Button>
+            customContent={
+              <>
+                <DownloadOutlined className="mr-8" />
+                Tải file mẫu
+              </>
+            }
+          />
           <Upload accept=".xlsx" showUploadList={false} beforeUpload={selectUploadFile}>
-            <Button icon={<FileExcelOutlined />}>
-              {selectedFile ? selectedFile.name : 'Chọn file dữ liệu'}
-            </Button>
+            <ButtonBase
+              type="secondary"
+              customContent={
+                <>
+                  <FileExcelOutlined className="mr-8" />
+                  {selectedFile ? selectedFile.name : 'Chọn file dữ liệu'}
+                </>
+              }
+            />
           </Upload>
           {selectedFile && (
             <span className="text-color-700">{formatUploadFileSize(selectedFile.size)}</span>
@@ -584,9 +832,9 @@ const PaymentStatementScreen = () => {
           </div>
         </div>
         <div className="mt-16 overflow-hidden rounded-radius-m border border-color-300">
-          <Table
+          <AppTable
             rowKey="id"
-            columns={previewColumns}
+            columns={previewColumns as any}
             dataSource={previewRows}
             scroll={{ x: 1900, y: 360 }}
             pagination={{ pageSize: 10 }}

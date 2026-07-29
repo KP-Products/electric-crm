@@ -30,6 +30,11 @@ const getErrorMessage = (error: any, fallback: string) =>
   error?.message ||
   fallback;
 
+const toApiPeriodCode = (periodCode?: string) => {
+  const match = /^(\d{2})\/(\d{4})$/.exec(periodCode?.trim() || '');
+  return match ? `${match[2]}${match[1]}` : undefined;
+};
+
 const downloadBlob = (blob: Blob, fileName: string) => {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -53,6 +58,7 @@ export default function usePaymentStatement() {
   const request = useMemo<SearchPaymentStatementsReq>(
     () => ({
       ...filters,
+      periodCode: toApiPeriodCode(filters.periodCode),
       paymentDateFrom: filters.paymentDateFrom || undefined,
       paymentDateTo: filters.paymentDateTo || undefined,
       page: page - 1,
@@ -66,6 +72,7 @@ export default function usePaymentStatement() {
       setLoading(true);
       const response = await paymentStatementServices.search({
         ...nextFilters,
+        periodCode: toApiPeriodCode(nextFilters.periodCode),
         paymentDateFrom: nextFilters.paymentDateFrom || undefined,
         paymentDateTo: nextFilters.paymentDateTo || undefined,
         page: nextPage - 1,
