@@ -7,7 +7,6 @@ import {
   EyeOutlined,
   FilePdfOutlined,
   MoreOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   SendOutlined,
@@ -30,6 +29,7 @@ import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { EvnReadingBatch } from 'model/evn-reading-batch';
 import dayjs from 'dayjs';
 import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { displayDateFromServer } from 'utils/date';
 import { formatNumberValueWithCommas } from 'utils/number-input';
 import useEvnReadingBatch, { DEFAULT_EVN_BATCH_FORM, EvnBatchForm } from './useEvnReadingBatch';
@@ -49,6 +49,7 @@ const getStatusMeta = (status?: string) => {
     case 'SUBMITTED':
       return { label: 'Đã gửi', type: TYPE_STATUS.PENDING };
     case 'CONFIRMED':
+    case 'DA_CHOT':
       return { label: 'Đã chốt', type: TYPE_STATUS.SUCCESS };
     case 'REJECTED':
       return { label: 'Từ chối', type: TYPE_STATUS.ERROR };
@@ -61,6 +62,25 @@ const formatDate = (value?: string) => (value ? displayDateFromServer(value) : N
 const formatNumber = (value?: number) =>
   value === undefined || value === null ? NULL_VALUE : formatNumberValueWithCommas(value);
 
+const getInputStatusMeta = (batch: EvnReadingBatch) => {
+  const status = (batch.inputStatus || batch.status)?.toUpperCase();
+  if (status === 'DA_CHOT' || status === 'CONFIRMED') {
+    return { label: 'Đã chốt', type: TYPE_STATUS.SUCCESS };
+  }
+  if (status === 'COMPLETED' || status === 'ENTERED' || status === 'IMPORTED') {
+    return { label: 'Đã nhập đủ', type: TYPE_STATUS.SUCCESS };
+  }
+  if (status === 'PARTIAL') return { label: 'Nhập thiếu', type: TYPE_STATUS.ERROR };
+  if (status === 'NOT_ENTERED') return { label: 'Chưa nhập', type: TYPE_STATUS.PENDING };
+
+  if ((batch.enteredMeterCount || 0) === 0)
+    return { label: 'Chưa nhập', type: TYPE_STATUS.PENDING };
+  if (batch.totalMeterCount && (batch.enteredMeterCount || 0) < batch.totalMeterCount) {
+    return { label: 'Nhập thiếu', type: TYPE_STATUS.ERROR };
+  }
+  return { label: 'Đã nhập đủ', type: TYPE_STATUS.SUCCESS };
+};
+
 const toDatePickerValue = (value?: string) => {
   if (!value) return null;
   const parsed = dayjs(value, ['YYYY-MM-DD', 'DD-MM-YYYY'], true);
@@ -68,6 +88,7 @@ const toDatePickerValue = (value?: string) => {
 };
 
 const EvnReadingBatchScreen = () => {
+  const router = useRouter();
   const {
     filter,
     batches,
@@ -84,7 +105,6 @@ const EvnReadingBatchScreen = () => {
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
-    onLoadFeederOptions,
     onOpenDetail,
     onCloseDetail,
     onCreate,
@@ -103,12 +123,15 @@ const EvnReadingBatchScreen = () => {
   const [confirmBatch, setConfirmBatch] = useState<EvnReadingBatch>();
   const [confirmationAction, setConfirmationAction] = useState<'delete' | 'submit' | 'confirm'>();
 
-  const openCreate = useCallback(() => {
-    setEditingBatch(undefined);
-    setForm(DEFAULT_EVN_BATCH_FORM);
-    setFormOpen(true);
-    onLoadFeederOptions();
-  }, [onLoadFeederOptions]);
+  const openReadingInput = useCallback(
+    (batch?: EvnReadingBatch) => {
+      const feederId = batch?.masterMeterId;
+      router.push(
+        `${ROUTES.EVN_READING_BATCH_INPUT}${feederId ? `?feederId=${encodeURIComponent(feederId)}` : ''}`
+      );
+    },
+    [router]
+  );
 
   const openEdit = useCallback((batch: EvnReadingBatch) => {
     setEditingBatch(batch);
@@ -149,51 +172,76 @@ const EvnReadingBatchScreen = () => {
           (currentPage - K_SIZE_1) * DEFAULT_PAGE_SIZE + index + K_SIZE_1
       },
       {
-        title: 'Công tơ đầu lộ',
-        dataIndex: 'meterCode',
-        key: 'meterCode',
-        width: 170,
+        title: 'Mã lộ',
+        key: 'feederCode',
+        width: 110,
+        render: (_: unknown, batch: EvnReadingBatch) =>
+          batch.feederCode || batch.meterCode || NULL_VALUE
+      },
+      {
+        title: 'Tên lộ',
+        dataIndex: 'feederName',
+        key: 'feederName',
+        width: 165,
         render: (value: string) => value || NULL_VALUE
       },
       {
-        title: 'Ngày chốt',
-        dataIndex: 'readingDate',
-        key: 'readingDate',
-        width: 120,
-        render: formatDate
+        title: 'Địa chỉ',
+        dataIndex: 'feederAddress',
+        key: 'feederAddress',
+        width: 220,
+        render: (value: string) => value || NULL_VALUE
       },
       {
-        title: 'Tổng công tơ',
+        title: 'Tổng số công tơ',
         dataIndex: 'totalMeterCount',
         key: 'totalMeterCount',
-        width: 130,
-        align: 'right',
+        width: 105,
+        align: 'center',
         render: formatNumber
       },
       {
-        title: 'Đã nhập chỉ số',
-        dataIndex: 'enteredMeterCount',
-        key: 'enteredMeterCount',
+        title: 'Kỳ ghi chỉ số',
+        key: 'readingPeriod',
+        width: 115,
+        align: 'center',
+        render: (_: unknown, batch: EvnReadingBatch) => batch.readingPeriod || '-'
+      },
+      {
+        title: 'Từ ngày ghi chỉ số',
+        key: 'periodFrom',
+        width: 135,
+        render: (_: unknown, batch: EvnReadingBatch) => formatDate(batch.periodFrom)
+      },
+      {
+        title: 'Đến ngày ghi chỉ số',
+        key: 'periodTo',
         width: 145,
-        align: 'right',
-        render: formatNumber
+        render: (_: unknown, batch: EvnReadingBatch) =>
+          formatDate(batch.periodTo || batch.readingDate)
       },
       {
-        title: 'Trạng thái',
-        dataIndex: 'status',
-        key: 'status',
+        title: 'Trạng thái nhập',
+        key: 'inputStatus',
         width: 125,
-        render: (value: string) => {
-          const meta = getStatusMeta(value);
+        render: (_: unknown, batch: EvnReadingBatch) => {
+          const meta = getInputStatusMeta(batch);
           return <Status type={meta.type} kind={KIND_STATUS.SECONDARY} content={meta.label} />;
         }
       },
       {
-        title: 'Người gửi',
-        dataIndex: 'submittedBy',
-        key: 'submittedBy',
-        width: 150,
-        render: (value: string) => value || NULL_VALUE
+        title: 'Người nhập',
+        key: 'inputBy',
+        width: 110,
+        render: (_: unknown, batch: EvnReadingBatch) =>
+          batch.inputBy || batch.submittedBy || NULL_VALUE
+      },
+      {
+        title: 'Ngày nhập',
+        key: 'inputAt',
+        width: 145,
+        render: (_: unknown, batch: EvnReadingBatch) =>
+          formatDate(batch.inputAt || batch.submittedAt)
       },
       {
         title: 'Thao tác',
@@ -204,6 +252,13 @@ const EvnReadingBatchScreen = () => {
         render: (_: unknown, batch: EvnReadingBatch) => {
           const status = batch.status?.toUpperCase();
           const menuItems = [
+            {
+              key: 'input',
+              icon: <EditOutlined />,
+              label: 'Nhập chỉ số',
+              disabled: status === 'CONFIRMED' || status === 'DA_CHOT',
+              onClick: () => openReadingInput(batch)
+            },
             {
               key: 'detail',
               icon: <EyeOutlined />,
@@ -280,7 +335,7 @@ const EvnReadingBatchScreen = () => {
         }
       }
     ],
-    [actionLoading, currentPage, onExport, onOpenDetail, openEdit]
+    [actionLoading, currentPage, onExport, onOpenDetail, openEdit, openReadingInput]
   );
 
   const detailColumns = useMemo<any[]>(
@@ -338,35 +393,38 @@ const EvnReadingBatchScreen = () => {
     <PageWithBreadcrumb
       breadcrumbList={[
         { title: 'Chỉ số - Hoá đơn' },
-        { title: 'Chốt điện với EVN', key: ROUTES.EVN_READING_BATCH }
+        { title: 'Quản lý chỉ số thủ công theo lộ', key: ROUTES.EVN_READING_BATCH }
       ]}
     >
       <section>
         <Flex justify="space-between" align="center" gap={12} wrap="wrap">
           <div>
-            <TextBase classNames="sub-title2 !text-color-900" text="Chốt điện với EVN" />
+            <TextBase
+              classNames="sub-title2 !text-color-900"
+              text="Quản lý chỉ số thủ công theo lộ"
+            />
             <TextBase
               classNames="body2 !text-color-600"
-              text="Quản lý lô chốt chỉ số theo lộ/công tơ đầu lộ"
+              text="Theo dõi, nhập và chốt chỉ số điện theo từng lộ"
             />
           </div>
           <ButtonBase
             type="primary"
             customContent={
               <span className="flex items-center gap-8">
-                <PlusOutlined />
-                Tạo lô chốt
+                <EditOutlined />
+                Nhập chỉ số
               </span>
             }
-            onClick={openCreate}
+            onClick={() => openReadingInput()}
           />
         </Flex>
         <div className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
           <div className="grid grid-cols-4 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
             <AppTextField
               name="meterCode"
-              label="Công tơ đầu lộ"
-              placeholder="Nhập mã công tơ"
+              label="Mã lộ"
+              placeholder="Nhập mã lộ"
               value={filter.meterCode}
               onChange={(event) => onChangeFilter('meterCode', event.target.value)}
               onPressEnter={onApplyFilter}
@@ -380,7 +438,7 @@ const EvnReadingBatchScreen = () => {
             />
             <AppDatePicker
               name="from"
-              label="Từ ngày chốt"
+              label="Từ ngày ghi chỉ số"
               wrapperClassName="w-full"
               format="DD-MM-YYYY"
               allowClear
@@ -389,7 +447,7 @@ const EvnReadingBatchScreen = () => {
             />
             <AppDatePicker
               name="to"
-              label="Đến ngày chốt"
+              label="Đến ngày ghi chỉ số"
               wrapperClassName="w-full"
               format="DD-MM-YYYY"
               allowClear
@@ -403,7 +461,7 @@ const EvnReadingBatchScreen = () => {
               customContent={
                 <span className="flex items-center gap-8">
                   <ReloadOutlined />
-                  Đặt lại
+                  Làm mới
                 </span>
               }
               onClick={onResetFilter}
@@ -421,6 +479,9 @@ const EvnReadingBatchScreen = () => {
           </Flex>
         </div>
         <div className="mt-16 overflow-hidden rounded-radius-l border border-color-300">
+          <div className="border-b border-color-300 px-16 py-12">
+            <TextBase classNames="sub-title4 !text-color-900" text="Danh sách lộ" />
+          </div>
           <AppTable
             rootClassName="w-full"
             scroll={{ x: 'max-content' }}

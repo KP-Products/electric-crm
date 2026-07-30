@@ -5,9 +5,19 @@ export type EvnReadingBatchStatus = 'DRAFT' | 'SUBMITTED' | 'CONFIRMED' | 'REJEC
 
 export interface EvnReadingBatch {
   id: number;
+  /** Thông tin lộ trả về từ API danh sách (tương thích dữ liệu API cũ theo meterCode). */
+  feederCode?: string;
+  feederName?: string;
+  feederAddress?: string;
   meterCode?: string;
   masterMeterId?: string;
+  readingPeriod?: string;
+  periodFrom?: string;
+  periodTo?: string;
   readingDate?: string;
+  inputStatus?: string;
+  inputBy?: string;
+  inputAt?: string;
   status?: EvnReadingBatchStatus | string;
   totalMeterCount?: number;
   enteredMeterCount?: number;
