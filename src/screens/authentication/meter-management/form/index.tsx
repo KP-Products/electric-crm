@@ -181,7 +181,6 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             control={control}
             name="installationDate"
             label="Ngày lắp đặt"
-            labelSuffix={requiredMark}
             placeholder="Chọn ngày lắp đặt"
             isView={isView}
             wrapperClassName="w-full"

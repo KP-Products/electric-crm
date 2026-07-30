@@ -195,27 +195,6 @@ const ManageOperationUnitScreen = () => {
         render: (text: string) => renderTruncatedText(text, 'max-w-[280px]')
       },
       {
-        title: 'Ngày ký',
-        dataIndex: 'signedDate',
-        key: 'signedDate',
-        width: K_SIZE_130,
-        render: (date: string) => renderDate(date)
-      },
-      {
-        title: 'Ngày hiệu lực',
-        dataIndex: 'effectiveDate',
-        key: 'effectiveDate',
-        width: K_SIZE_130,
-        render: (date: string) => renderDate(date)
-      },
-      {
-        title: 'Ngày hết hiệu lực',
-        dataIndex: 'expiryDate',
-        key: 'expiryDate',
-        width: K_SIZE_150,
-        render: (date: string) => renderDate(date)
-      },
-      {
         title: 'Trạng thái',
         dataIndex: 'status',
         key: 'status',

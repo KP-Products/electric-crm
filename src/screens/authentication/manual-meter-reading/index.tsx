@@ -133,6 +133,7 @@ const ManualMeterReadingScreen = ({
   const isFeederScope = scope === 'feeder';
   const {
     filterDraft,
+    filterApplied,
     filteredMeters,
     selectedMeter,
     selectedMeterId,
@@ -175,6 +176,10 @@ const ManualMeterReadingScreen = ({
     ],
     [isFeederScope]
   );
+
+  const hasUnsyncedPeriodInfo =
+    filterDraft.periodCode !== filterApplied.periodCode ||
+    filterDraft.readingDate !== filterApplied.readingDate;
 
   const renderSearchLookupDropdown = useCallback(
     (menuInstance: ReactNode) => (
@@ -320,13 +325,15 @@ const ManualMeterReadingScreen = ({
               />
             </Flex>
           </div>
-          <div className="mt-12 flex min-h-32 items-center gap-8 rounded-radius-m border border-link-200 bg-link-50 px-12 py-8 text-13 text-link-700">
-            <CalendarOutlined />
-            <span>
-              Kỳ ghi chỉ số: <b>{periodInfo.label}</b> | Ngày ghi:{' '}
-              <b>{periodInfo.readingDate || NULL_VALUE}</b>
-            </span>
-          </div>
+          {!hasUnsyncedPeriodInfo && (
+            <div className="mt-12 flex min-h-32 items-center gap-8 rounded-radius-m border border-link-200 bg-link-50 px-12 py-8 text-13 text-link-700">
+              <CalendarOutlined />
+              <span>
+                Kỳ ghi chỉ số: <b>{periodInfo.label}</b> | Ngày ghi:{' '}
+                <b>{periodInfo.readingDate || NULL_VALUE}</b>
+              </span>
+            </div>
+          )}
           {hasUnsyncedFilter && (
             <div className="mt-8 rounded-radius-m border border-pending-200 bg-pending-50 px-12 py-8 text-13 font-semibold text-pending-700">
               Bộ lọc đã thay đổi. Vui lòng tìm kiếm lại trước khi lưu chỉ số.
