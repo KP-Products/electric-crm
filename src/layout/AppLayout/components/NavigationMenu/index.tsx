@@ -42,8 +42,9 @@ export const MENU_GROUP_KEYS = {
   DEVICE: K_SIZE_3.toString(),
   BILLING: '4',
   CATALOG: '5',
-  LEGAL_DOCUMENT: '6',
-  HUMAN_RESOURCE: '7'
+  DEBT: '6',
+  LEGAL_DOCUMENT: '7',
+  HUMAN_RESOURCE: '8'
 };
 
 const NavigationMenu = () => {
@@ -88,6 +89,13 @@ const NavigationMenu = () => {
             label: 'Quản lý chi nhánh',
             icon: <ApartmentOutlined />,
             type: 'item'
+          },
+          {
+            key: ROUTES.METER_VERIFICATION,
+            label: 'Kiểm định công tơ',
+            icon: <CarryOutOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
             key: ROUTES.DEFAULT_PARAMETERS,
@@ -162,46 +170,6 @@ const NavigationMenu = () => {
         ]
       },
       {
-        key: MENU_GROUP_KEYS.LEGAL_DOCUMENT,
-        label: 'Văn bản pháp lý',
-        icon: <FileTextOutlined />,
-        children: [
-          {
-            key: ROUTES.COMPANY_LEGAL_DOCUMENTS,
-            label: 'Văn bản pháp lý công ty',
-            icon: <FileTextOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
-          {
-            key: ROUTES.INCOMING_DOCUMENTS,
-            label: 'Văn bản đến',
-            icon: <FileTextOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          }
-        ]
-      },
-      {
-        key: MENU_GROUP_KEYS.HUMAN_RESOURCE,
-        label: 'Quản Lý Nhân sự',
-        icon: <IdcardOutlined />,
-        children: [
-          {
-            key: ROUTES.EMPLOYEE_LIST,
-            label: 'Danh sách nhân sự',
-            icon: <TeamOutlined />,
-            type: 'item'
-          },
-          {
-            key: ROUTES.EMPLOYEE_ADD,
-            label: 'Thêm nhân sự',
-            icon: <UsergroupAddOutlined />,
-            type: 'item'
-          }
-        ]
-      },
-      {
         key: MENU_GROUP_KEYS.DEVICE,
         label: 'Thiết bị',
         icon: <SettingOutlined />,
@@ -210,13 +178,6 @@ const NavigationMenu = () => {
             key: ROUTES.METER_MANAGEMENT,
             label: 'Quản lý công tơ',
             icon: <SettingOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
-          {
-            key: ROUTES.METER_VERIFICATION,
-            label: 'Kiểm định công tơ',
-            icon: <CarryOutOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
@@ -262,13 +223,6 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
-            key: ROUTES.EVN_READING_BATCH,
-            label: 'Chốt điện với EVN',
-            icon: <CarryOutOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
-          {
             key: ROUTES.ELECTRICITY_NOTICE_CSPK,
             label: 'Quản lý giấy báo tiền điện CSPK',
             icon: <FileTextOutlined />,
@@ -283,6 +237,20 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
+            key: ROUTES.EVN_READING_BATCH,
+            label: 'Chốt điện với EVN',
+            icon: <CarryOutOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.DEBT,
+        label: 'Công nợ',
+        icon: <FileTextOutlined />,
+        children: [
+          {
             key: ROUTES.PAYMENT_STATEMENT,
             label: 'Nhập dữ liệu sao kê',
             icon: <FileTextOutlined />,
@@ -295,6 +263,46 @@ const NavigationMenu = () => {
             icon: <HistoryOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.LEGAL_DOCUMENT,
+        label: 'Văn bản pháp lý',
+        icon: <FileTextOutlined />,
+        children: [
+          {
+            key: ROUTES.COMPANY_LEGAL_DOCUMENTS,
+            label: 'Văn bản pháp lý công ty',
+            icon: <FileTextOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.INCOMING_DOCUMENTS,
+            label: 'Văn bản đến',
+            icon: <FileTextOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.HUMAN_RESOURCE,
+        label: 'Quản Lý Nhân sự',
+        icon: <IdcardOutlined />,
+        children: [
+          {
+            key: ROUTES.EMPLOYEE_LIST,
+            label: 'Danh sách nhân sự',
+            icon: <TeamOutlined />,
+            type: 'item'
+          },
+          {
+            key: ROUTES.EMPLOYEE_ADD,
+            label: 'Thêm nhân sự',
+            icon: <UsergroupAddOutlined />,
+            type: 'item'
           }
         ]
       }
