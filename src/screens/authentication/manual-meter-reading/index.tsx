@@ -121,9 +121,19 @@ const MeterListItem = ({
   </button>
 );
 
-const ManualMeterReadingScreen = () => {
+export interface ManualMeterReadingScreenProps {
+  scope?: 'customer' | 'feeder';
+  feederId?: string;
+}
+
+const ManualMeterReadingScreen = ({
+  scope = 'customer',
+  feederId
+}: ManualMeterReadingScreenProps) => {
+  const isFeederScope = scope === 'feeder';
   const {
     filterDraft,
+    filterApplied,
     filteredMeters,
     selectedMeter,
     selectedMeterId,
@@ -154,15 +164,22 @@ const ManualMeterReadingScreen = () => {
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
     onConfirmAndSave
-  } = useManualMeterReading();
+  } = useManualMeterReading({ scope, feederId });
 
   const breadcrumbList = useMemo(
     () => [
       { title: 'Chỉ số - Hoá đơn' },
-      { title: 'Nhập chỉ số thủ công', key: ROUTES.MANUAL_METER_READING }
+      {
+        title: isFeederScope ? 'Nhập chỉ số theo lộ' : 'Nhập chỉ số thủ công',
+        key: isFeederScope ? ROUTES.EVN_READING_BATCH : ROUTES.MANUAL_METER_READING
+      }
     ],
-    []
+    [isFeederScope]
   );
+
+  const hasUnsyncedPeriodInfo =
+    filterDraft.periodCode !== filterApplied.periodCode ||
+    filterDraft.readingDate !== filterApplied.readingDate;
 
   const renderSearchLookupDropdown = useCallback(
     (menuInstance: ReactNode) => (
@@ -189,10 +206,17 @@ const ManualMeterReadingScreen = () => {
           className="mobile:flex-col mobile:items-start"
         >
           <div>
-            <TextBase classNames="title4" text="Nhập Chỉ Số Thủ Công" />
+            <TextBase
+              classNames="title4"
+              text={isFeederScope ? 'Nhập chỉ số thủ công theo lộ' : 'Nhập Chỉ Số Thủ Công'}
+            />
             <TextBase
               classNames="body3 !text-color-700"
-              text="Nhập chỉ số công tơ của khách hàng theo kỳ"
+              text={
+                isFeederScope
+                  ? 'Nhập chỉ số các công tơ thuộc lộ theo kỳ ghi chỉ số'
+                  : 'Nhập chỉ số công tơ của khách hàng theo kỳ'
+              }
             />
           </div>
           <Flex justify="end" gap={K_SIZE_8} className="mobile:w-full mobile:flex-col">
@@ -216,26 +240,34 @@ const ManualMeterReadingScreen = () => {
         <div className="mb-12 rounded-radius-l border border-color-300 bg-color-50 p-12">
           <TextBase
             classNames="sub-title4 mb-12 !text-primary-700"
-            text="1. Tìm kiếm khách hàng & kỳ ghi chỉ số"
+            text={
+              isFeederScope
+                ? '1. Tìm kiếm lộ & kỳ ghi chỉ số'
+                : '1. Tìm kiếm khách hàng & kỳ ghi chỉ số'
+            }
           />
           <div className="grid grid-cols-[minmax(220px,1.4fr)_minmax(150px,0.8fr)_minmax(150px,0.8fr)_minmax(150px,0.8fr)_minmax(150px,0.8fr)_auto] items-end gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
-            <AppTextField
-              name="keyword"
-              label="Khách hàng"
-              placeholder="Tìm theo mã KH, tên, số điện thoại..."
-              value={filterDraft.keyword}
-              prefix={<SearchOutlined className="text-color-600" />}
-              onChange={(event) => onChangeFilter('keyword', event.target.value)}
-              onPressEnter={onApplyFilter}
-            />
-            <AppSelect
-              name="searchBy"
-              label="Tìm theo"
-              placeholder="Chọn tiêu chí"
-              options={searchByOptions}
-              value={filterDraft.searchBy}
-              onSelectOption={({ key }) => onChangeFilter('searchBy', String(key))}
-            />
+            {!isFeederScope && (
+              <AppTextField
+                name="keyword"
+                label="Khách hàng"
+                placeholder="Tìm theo mã KH, tên, số điện thoại..."
+                value={filterDraft.keyword}
+                prefix={<SearchOutlined className="text-color-600" />}
+                onChange={(event) => onChangeFilter('keyword', event.target.value)}
+                onPressEnter={onApplyFilter}
+              />
+            )}
+            {!isFeederScope && (
+              <AppSelect
+                name="searchBy"
+                label="Tìm theo"
+                placeholder="Chọn tiêu chí"
+                options={searchByOptions}
+                value={filterDraft.searchBy}
+                onSelectOption={({ key }) => onChangeFilter('searchBy', String(key))}
+              />
+            )}
             <AppSelect
               name="customerCode"
               label={searchLookupField.label}
@@ -293,13 +325,15 @@ const ManualMeterReadingScreen = () => {
               />
             </Flex>
           </div>
-          <div className="mt-12 flex min-h-32 items-center gap-8 rounded-radius-m border border-link-200 bg-link-50 px-12 py-8 text-13 text-link-700">
-            <CalendarOutlined />
-            <span>
-              Kỳ ghi chỉ số: <b>{periodInfo.label}</b> | Ngày ghi:{' '}
-              <b>{periodInfo.readingDate || NULL_VALUE}</b>
-            </span>
-          </div>
+          {!hasUnsyncedPeriodInfo && (
+            <div className="mt-12 flex min-h-32 items-center gap-8 rounded-radius-m border border-link-200 bg-link-50 px-12 py-8 text-13 text-link-700">
+              <CalendarOutlined />
+              <span>
+                Kỳ ghi chỉ số: <b>{periodInfo.label}</b> | Ngày ghi:{' '}
+                <b>{periodInfo.readingDate || NULL_VALUE}</b>
+              </span>
+            </div>
+          )}
           {hasUnsyncedFilter && (
             <div className="mt-8 rounded-radius-m border border-pending-200 bg-pending-50 px-12 py-8 text-13 font-semibold text-pending-700">
               Bộ lọc đã thay đổi. Vui lòng tìm kiếm lại trước khi lưu chỉ số.
@@ -311,7 +345,11 @@ const ManualMeterReadingScreen = () => {
           <aside className="flex min-h-[520px] flex-col rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:min-h-0">
             <TextBase
               classNames="sub-title4 !text-primary-700"
-              text="2. Danh sách công tơ của khách hàng"
+              text={
+                isFeederScope
+                  ? '2. Danh sách công tơ theo lộ'
+                  : '2. Danh sách công tơ của khách hàng'
+              }
             />
             <TextBase
               classNames="caption1 mt-4 !text-color-700"
@@ -661,7 +699,9 @@ const ManualMeterReadingScreen = () => {
               </>
             ) : (
               <div className="flex min-h-[460px] items-center justify-center rounded-radius-m border border-dashed border-color-300 text-14 text-color-700">
-                Chọn hoặc tìm kiếm khách hàng để nhập chỉ số công tơ.
+                {isFeederScope
+                  ? 'Chọn hoặc tìm kiếm lộ để nhập chỉ số công tơ.'
+                  : 'Chọn hoặc tìm kiếm khách hàng để nhập chỉ số công tơ.'}
               </div>
             )}
           </div>

@@ -1,6 +1,15 @@
 'use client';
 
-import { K_SIZE_1, K_SIZE_18, K_SIZE_24, K_SIZE_8, NULL_VALUE, REQUIRED_MARK } from '@constant';
+import {
+  DEFAULT_PAGE_SIZE,
+  K_SIZE_0,
+  K_SIZE_1,
+  K_SIZE_18,
+  K_SIZE_24,
+  K_SIZE_8,
+  NULL_VALUE,
+  REQUIRED_MARK
+} from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ADD_EMPLOYEE_SALARY_HISTORY, GET_EMPLOYEE_DETAIL } from '@redux-action-type/employee';
 import { dispatch } from '@redux-common';
@@ -163,6 +172,8 @@ const ManageEmployeeDetailScreen = () => {
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
   const [openSalaryHistoryForm, setOpenSalaryHistoryForm] = useState(false);
   const [salarySubmitLocked, setSalarySubmitLocked] = useState(false);
+  const [approverOptions, setApproverOptions] = useState<{ value: string; label: string }[]>([]);
+  const [approverOptionsLoading, setApproverOptionsLoading] = useState(false);
 
   const salaryHistoryForm = useForm<SalaryHistoryForm>({
     mode: 'onTouched',
@@ -251,6 +262,33 @@ const ManageEmployeeDetailScreen = () => {
     router.push(`${ROUTES.EMPLOYEE_EDIT}?id=${employee.id}`);
   }, [employee?.id, router]);
 
+  const loadApproverOptions = useCallback(async () => {
+    setApproverOptionsLoading(true);
+    const response = await employeeServices.searchEmployees({
+      page: K_SIZE_0,
+      size: DEFAULT_PAGE_SIZE
+    });
+    setApproverOptionsLoading(false);
+
+    if (!response?.data) {
+      setApproverOptions([]);
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getEmployeeErrorContent(response, 'Tải danh sách người duyệt thất bại')
+      });
+      return;
+    }
+
+    setApproverOptions(
+      (response.data.items || [])
+        .filter((item) => item.id !== employee?.id)
+        .map((item) => ({
+          value: String(item.id),
+          label: [item.employeeCode, item.fullName].filter(Boolean).join(' - ') || String(item.id)
+        }))
+    );
+  }, [employee?.id]);
+
   const onOpenSalaryHistoryForm = useCallback(() => {
     if (!employee?.id) return;
 
@@ -270,7 +308,8 @@ const ManageEmployeeDetailScreen = () => {
       approvedBy: ''
     });
     setOpenSalaryHistoryForm(true);
-  }, [employee?.basicSalary, employee?.id, salaryHistoryForm]);
+    void loadApproverOptions();
+  }, [employee?.basicSalary, employee?.id, loadApproverOptions, salaryHistoryForm]);
 
   const onCloseSalaryHistoryForm = useCallback(() => {
     setOpenSalaryHistoryForm(false);
@@ -285,6 +324,15 @@ const ManageEmployeeDetailScreen = () => {
       const newBasicSalary = optionalNumber(data.newBasicSalary);
       if (newBasicSalary === undefined) return undefined;
 
+      const approvedBy = optionalNumber(data.approvedBy);
+      if (approvedBy === employee.id) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Người duyệt phải khác nhân sự đang được chọn'
+        });
+        return undefined;
+      }
+
       return {
         employeeId: employee.id,
         oldBasicSalary: optionalNumber(data.oldBasicSalary),
@@ -296,7 +344,7 @@ const ManageEmployeeDetailScreen = () => {
         decisionDate: optionalString(data.decisionDate),
         reason: optionalString(data.reason),
         note: optionalString(data.note),
-        approvedBy: optionalNumber(data.approvedBy)
+        approvedBy
       };
     },
     [employee?.id]
@@ -746,13 +794,14 @@ const ManageEmployeeDetailScreen = () => {
                   wrapperClassName="w-full"
                   datePickerClassName="w-full"
                 />
-                <AppTextFieldControl
+                <AppSelectControl
                   name="approvedBy"
                   label="Người duyệt"
-                  placeholder="Nhập ID người duyệt"
+                  placeholder="Chọn người duyệt"
                   control={salaryHistoryControl}
-                  inputMode="numeric"
-                  onlyNumber
+                  options={approverOptions}
+                  isLoading={approverOptionsLoading}
+                  allowClear
                 />
                 <div className="col-span-2 mobile:col-span-1">
                   <AppTextFieldControl

@@ -89,7 +89,6 @@ const meterSchema = (t: TypedT) => {
       const requiredFields: { field: keyof typeof data; label: string }[] = [
         { field: 'meterType', label: 'Loại công tơ' },
         { field: 'purchaseDate', label: 'Ngày mua' },
-        { field: 'installationDate', label: 'Ngày lắp' },
         { field: 'voltageLevel', label: 'Cấp điện áp' }
       ];
 

@@ -18,8 +18,10 @@ import { Customer } from 'model/customer';
 import { Meter, normalizeMeterSearchItem } from 'model/meter';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import customerServices from 'services/customer-services';
+import evnReadingBatchServices from 'services/evn-reading-batch-services';
 import manualMeterReadingServices from 'services/manual-meter-reading-services';
 import meterServices from 'services/meter-services';
+import { METER_TYPE } from '../meter-management/utils/constant';
 import { FORMAT_DATE_API } from 'utils/date';
 import { parseFormattedNumber } from 'utils/number-input';
 import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
@@ -510,12 +512,25 @@ export const getStatusMeta = (status: ManualReadingStatus) => {
   }
 };
 
-export default function useManualMeterReading() {
+export interface ManualMeterReadingOptions {
+  scope?: 'customer' | 'feeder';
+  feederId?: string;
+}
+
+export default function useManualMeterReading(options: ManualMeterReadingOptions = {}) {
+  const isFeederScope = options.scope === 'feeder';
   const objectUrlsRef = useRef<Set<string>>(new Set());
   const searchLookupRequestIdRef = useRef<number>(K_SIZE_0);
   const meterSearchRequestIdRef = useRef<number>(K_SIZE_0);
-  const [filterDraft, setFilterDraft] = useState<ManualReadingFilter>(DEFAULT_FILTER);
-  const [filterApplied, setFilterApplied] = useState<ManualReadingFilter>(DEFAULT_FILTER);
+  const initialFilter = useMemo<ManualReadingFilter>(
+    () =>
+      isFeederScope
+        ? { ...DEFAULT_FILTER, searchBy: 'FEEDER', customerCode: options.feederId || '' }
+        : DEFAULT_FILTER,
+    [isFeederScope, options.feederId]
+  );
+  const [filterDraft, setFilterDraft] = useState<ManualReadingFilter>(initialFilter);
+  const [filterApplied, setFilterApplied] = useState<ManualReadingFilter>(initialFilter);
   const [meters, setMeters] = useState<ManualReadingMeter[]>([]);
   const [selectedMeterId, setSelectedMeterId] = useState<string>('');
   const [loadingMeters, setLoadingMeters] = useState<boolean>(false);
@@ -537,22 +552,56 @@ export default function useManualMeterReading() {
   );
 
   const searchLookupField = useMemo(
-    () => getSearchLookupFieldMeta(filterDraft.searchBy),
-    [filterDraft.searchBy]
+    () =>
+      isFeederScope
+        ? { label: 'Lộ', placeholder: 'Chọn hoặc nhập mã lộ, tên lộ' }
+        : getSearchLookupFieldMeta(filterDraft.searchBy),
+    [filterDraft.searchBy, isFeederScope]
   );
 
-  const fetchSearchLookupOptions = useCallback(async (searchBy: string, search = '') => {
-    const requestId = searchLookupRequestIdRef.current + K_SIZE_1;
-    searchLookupRequestIdRef.current = requestId;
-    setSearchLookupLoading(true);
+  const fetchSearchLookupOptions = useCallback(
+    async (searchBy: string, search = '') => {
+      const requestId = searchLookupRequestIdRef.current + K_SIZE_1;
+      searchLookupRequestIdRef.current = requestId;
+      setSearchLookupLoading(true);
 
-    if (searchBy === 'METER_CODE') {
-      const normalizedSearch = optionalValue(search);
-      const response = await meterServices.getMeterSearchList({
+      if (isFeederScope || searchBy === 'METER_CODE') {
+        const normalizedSearch = optionalValue(search);
+        const response = await meterServices.getMeterSearchList({
+          page: K_SIZE_0,
+          size: DEFAULT_PAGE_SIZE,
+          meterCodeContains: normalizedSearch,
+          filter: normalizedSearch
+        });
+
+        if (requestId !== searchLookupRequestIdRef.current) return;
+        setSearchLookupLoading(false);
+
+        if (hasApiError(response) || !response.data) {
+          setSearchLookupOptions([]);
+          return;
+        }
+
+        const meters = (response.data.items || [])
+          .map(normalizeMeterSearchItem)
+          .filter(Boolean) as Meter[];
+        setSearchLookupOptions(
+          isFeederScope
+            ? meters.map((meter) => ({
+                value: String(meter.id || meter.meterId),
+                label: [meter.meterCode, meter.customerName].filter(Boolean).join(' - '),
+                data: meter
+              }))
+            : buildMeterLookupOptions(meters)
+        );
+        return;
+      }
+
+      const response = await customerServices.searchCustomer({
         page: K_SIZE_0,
         size: DEFAULT_PAGE_SIZE,
-        meterCodeContains: normalizedSearch,
-        filter: normalizedSearch
+        customerCodeContains: searchBy === 'CUSTOMER_CODE' ? optionalValue(search) : undefined,
+        fullNameContains: searchBy === 'CUSTOMER_NAME' ? optionalValue(search) : undefined
       });
 
       if (requestId !== searchLookupRequestIdRef.current) return;
@@ -563,30 +612,10 @@ export default function useManualMeterReading() {
         return;
       }
 
-      const meters = (response.data.items || [])
-        .map(normalizeMeterSearchItem)
-        .filter(Boolean) as Meter[];
-      setSearchLookupOptions(buildMeterLookupOptions(meters));
-      return;
-    }
-
-    const response = await customerServices.searchCustomer({
-      page: K_SIZE_0,
-      size: DEFAULT_PAGE_SIZE,
-      customerCodeContains: searchBy === 'CUSTOMER_CODE' ? optionalValue(search) : undefined,
-      fullNameContains: searchBy === 'CUSTOMER_NAME' ? optionalValue(search) : undefined
-    });
-
-    if (requestId !== searchLookupRequestIdRef.current) return;
-    setSearchLookupLoading(false);
-
-    if (hasApiError(response) || !response.data) {
-      setSearchLookupOptions([]);
-      return;
-    }
-
-    setSearchLookupOptions(buildCustomerLookupOptions(response.data.items || [], searchBy));
-  }, []);
+      setSearchLookupOptions(buildCustomerLookupOptions(response.data.items || [], searchBy));
+    },
+    [isFeederScope]
+  );
 
   const debouncedFetchSearchLookupOptions = useMemo(
     () => debounce(fetchSearchLookupOptions, CONSTANTS.TIME_DEBOUNCE),
@@ -757,11 +786,13 @@ export default function useManualMeterReading() {
       setLoadingMeters(true);
       const keyword = optionalValue(nextFilter.keyword);
       const searchValue = optionalValue(nextFilter.customerCode) || keyword;
-      const response = await manualMeterReadingServices.searchMetersForReading({
-        page: K_SIZE_0,
-        size: DEFAULT_PAGE_SIZE,
-        ...getSearchMeterParamsByField(nextFilter.searchBy, searchValue)
-      });
+      const response = isFeederScope
+        ? await evnReadingBatchServices.metersByFeeder({ masterMeterId: nextFilter.customerCode })
+        : await manualMeterReadingServices.searchMetersForReading({
+            page: K_SIZE_0,
+            size: DEFAULT_PAGE_SIZE,
+            ...getSearchMeterParamsByField(nextFilter.searchBy, searchValue)
+          });
       if (requestId !== meterSearchRequestIdRef.current) return;
       setLoadingMeters(false);
 
@@ -775,7 +806,14 @@ export default function useManualMeterReading() {
         return;
       }
 
-      const nextMeters = (response.data.items || []).map(mapMeterSearchRowToManualMeter);
+      const rows = isFeederScope
+        ? Array.isArray(response.data)
+          ? response.data
+          : []
+        : !Array.isArray(response.data)
+          ? response.data.items || []
+          : [];
+      const nextMeters = rows.map(mapMeterSearchRowToManualMeter);
       setMeters(nextMeters);
 
       const firstMeter = nextMeters[K_SIZE_0];
@@ -784,30 +822,81 @@ export default function useManualMeterReading() {
         await fetchMeterPeriod(firstMeter, nextFilter);
       }
     },
-    [fetchMeterPeriod]
+    [fetchMeterPeriod, isFeederScope]
   );
 
   useEffect(() => {
-    fetchMeters(DEFAULT_FILTER);
-  }, [fetchMeters]);
+    if (!isFeederScope || initialFilter.customerCode) {
+      fetchMeters(initialFilter);
+      return;
+    }
+
+    const loadFirstFeeder = async () => {
+      setLoadingMeters(true);
+      const response = await meterServices.getMeterSearchList({
+        page: K_SIZE_0,
+        size: DEFAULT_PAGE_SIZE,
+        meterType: METER_TYPE.FEEDER
+      });
+
+      if (hasApiError(response) || !response.data?.items?.length) {
+        setLoadingMeters(false);
+        setMeters([]);
+        setSelectedMeterId('');
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getErrorMessage(response, 'Không tìm thấy lộ để nhập chỉ số')
+        });
+        return;
+      }
+
+      const feeders = (response.data.items || [])
+        .map(normalizeMeterSearchItem)
+        .filter(Boolean) as Meter[];
+      const firstFeeder = feeders[K_SIZE_0];
+      const feederId = String(firstFeeder?.id || firstFeeder?.meterId || '');
+      if (!feederId) {
+        setLoadingMeters(false);
+        return;
+      }
+
+      const nextFilter = { ...initialFilter, customerCode: feederId };
+      setSearchLookupOptions(
+        feeders.map((meter) => ({
+          value: String(meter.id || meter.meterId),
+          label: [meter.meterCode, meter.customerName].filter(Boolean).join(' - '),
+          data: meter
+        }))
+      );
+      setFilterDraft(nextFilter);
+      setFilterApplied(nextFilter);
+      await fetchMeters(nextFilter);
+    };
+
+    void loadFirstFeeder();
+  }, [fetchMeters, initialFilter, isFeederScope]);
 
   const onSearchLookupOptions = useCallback(
     (search: string) => {
       setSearchLookupSearch(search);
-      debouncedFetchSearchLookupOptions(filterDraft.searchBy, search);
+      debouncedFetchSearchLookupOptions(isFeederScope ? 'FEEDER' : filterDraft.searchBy, search);
     },
-    [debouncedFetchSearchLookupOptions, filterDraft.searchBy]
+    [debouncedFetchSearchLookupOptions, filterDraft.searchBy, isFeederScope]
   );
 
   const onOpenSearchLookupDropdown = useCallback(
     (open?: boolean) => {
       if (open && !searchLookupOptions.length && !searchLookupLoading) {
-        fetchSearchLookupOptions(filterDraft.searchBy, searchLookupSearch);
+        fetchSearchLookupOptions(
+          isFeederScope ? 'FEEDER' : filterDraft.searchBy,
+          searchLookupSearch
+        );
       }
     },
     [
       fetchSearchLookupOptions,
       filterDraft.searchBy,
+      isFeederScope,
       searchLookupLoading,
       searchLookupOptions.length,
       searchLookupSearch
@@ -852,10 +941,10 @@ export default function useManualMeterReading() {
     setSearchLookupSearch('');
     setSearchLookupOptions([]);
     setSearchLookupLoading(false);
-    setFilterDraft(DEFAULT_FILTER);
-    setFilterApplied(DEFAULT_FILTER);
-    await fetchMeters(DEFAULT_FILTER);
-  }, [debouncedFetchSearchLookupOptions, fetchMeters]);
+    setFilterDraft(initialFilter);
+    setFilterApplied(initialFilter);
+    await fetchMeters(initialFilter);
+  }, [debouncedFetchSearchLookupOptions, fetchMeters, initialFilter]);
 
   const onSelectMeter = useCallback(
     (meterId: string) => {
@@ -1253,7 +1342,7 @@ export default function useManualMeterReading() {
     selectedMeterId,
     selectedMeterMetrics,
     periodInfo,
-    searchByOptions: SEARCH_BY_OPTIONS,
+    searchByOptions: isFeederScope ? [{ value: 'FEEDER', label: 'Lộ' }] : SEARCH_BY_OPTIONS,
     searchLookupField,
     searchLookupOptions,
     searchLookupSearch,

@@ -171,8 +171,8 @@ const ManageOperationContractScreen = () => {
       },
       {
         title: 'Người tạo',
-        dataIndex: 'createdBy',
-        key: 'createdBy',
+        dataIndex: 'createdByUsername',
+        key: 'createdByUsername',
         width: K_SIZE_180,
         render: (text: string) => renderTruncatedText(text, 'max-w-[180px]')
       },

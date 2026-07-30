@@ -122,8 +122,8 @@ const TouDetailModal = ({
           <tr className="border-b border-color-300 bg-color-100 text-left text-13 font-semibold text-color-800">
             <th className="w-[80px] px-12 py-[10px]">Dòng</th>
             <th className="w-[120px] px-12 py-[10px]">TOU</th>
-            <th className="w-[140px] px-12 py-[10px] text-right">old_index</th>
-            <th className="w-[140px] px-12 py-[10px] text-right">new_index</th>
+            <th className="w-[140px] px-12 py-[10px] text-right">Chỉ số cũ</th>
+            <th className="w-[140px] px-12 py-[10px] text-right">Chỉ số mới</th>
             <th className="w-[140px] px-12 py-[10px] text-right">Sản lượng thô</th>
             <th className="w-[170px] px-12 py-[10px] text-right">Sản lượng hiệu chỉnh</th>
           </tr>
@@ -214,7 +214,7 @@ const RemoteMeterReadingScreen = () => {
           (currentPage - K_SIZE_1) * pageSize + index + K_SIZE_1
       },
       {
-        title: 'Số công tơ (meter_number)',
+        title: 'Số công tơ',
         dataIndex: 'meterNumber',
         key: 'meterNumber',
         width: 180,
@@ -223,7 +223,7 @@ const RemoteMeterReadingScreen = () => {
         )
       },
       {
-        title: 'Mã khách hàng (customer_id)',
+        title: 'Mã khách hàng',
         dataIndex: 'customerId',
         key: 'customerId',
         width: 160,
