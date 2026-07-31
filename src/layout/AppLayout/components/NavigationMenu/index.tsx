@@ -214,6 +214,13 @@ const NavigationMenu = () => {
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
           {
+            key: ROUTES.MEASURING_DEVICE_MANAGEMENT,
+            label: 'Quản lý TU/TI',
+            icon: <SettingOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
             key: ROUTES.METER_VERIFICATION,
             label: 'Kiểm định công tơ',
             icon: <CarryOutOutlined />,
