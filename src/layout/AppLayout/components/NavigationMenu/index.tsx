@@ -12,6 +12,7 @@ import {
   IdcardOutlined,
   ProfileOutlined,
   ReconciliationOutlined,
+  SnippetsOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
   SwapOutlined,
@@ -44,7 +45,8 @@ export const MENU_GROUP_KEYS = {
   CATALOG: '5',
   DEBT: '6',
   LEGAL_DOCUMENT: '7',
-  HUMAN_RESOURCE: '8'
+  HUMAN_RESOURCE: '8',
+  REPORT: '9'
 };
 
 const NavigationMenu = () => {
@@ -290,6 +292,19 @@ const NavigationMenu = () => {
             icon: <FileTextOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          }
+        ]
+      },
+      {
+        key: MENU_GROUP_KEYS.REPORT,
+        label: 'Báo cáo',
+        icon: <SnippetsOutlined />,
+        children: [
+          {
+            key: ROUTES.REPORTS,
+            label: 'Xuất báo cáo',
+            icon: <FileTextOutlined />,
+            type: 'item'
           }
         ]
       },

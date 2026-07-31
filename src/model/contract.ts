@@ -55,6 +55,10 @@ export interface DeleteContractReq {
   id: string;
 }
 
+export interface ExportContractsPdfReq {
+  contractIds: string[];
+}
+
 export interface ContractRes extends ResultBase<Contract> {}
 
 export interface ContractListRes extends ResultBase<Contract[]> {}

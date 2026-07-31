@@ -51,6 +51,7 @@ const ApiEndPoint = {
   CONTRACT_LIST: '/contracts/list',
   CONTRACT_DETAIL: '/contracts/detail',
   CONTRACT_DELETE: '/contracts/delete',
+  CONTRACT_EXPORT_PDF: '/contracts/export-pdf',
   // CONTRACT
 
   // OPERATION CONTRACT
@@ -245,6 +246,10 @@ const ApiEndPoint = {
   // BILLING 6.2 - TINH TUOI NO
   BILLING_DEBT_AGING_CALCULATE: '/admin/billing/debt-aging/calculate',
   BILLING_DEBT_AGING_EXPORT: '/admin/billing/debt-aging/export',
+
+  // REPORT 7.4 - 7.8
+  REPORT_CATALOG: '/admin/reports/catalog',
+  REPORT_EXPORT: '/admin/reports/export',
 
   // APPROVAL MATRIX
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',

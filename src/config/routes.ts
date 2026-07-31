@@ -97,6 +97,9 @@ export const ROUTES = {
   PAYMENT_STATEMENT: '/billing/payment-statement',
   DEBT_AGING: '/billing/debt-aging',
 
+  // REPORT
+  REPORTS: '/reports',
+
   APPROVAL_MATRIX: '/approval-matrix',
   APPROVAL_MATRIX_DETAIL: '/approval-matrix/detail',
   APPROVAL_MATRIX_EDIT: '/approval-matrix/edit',

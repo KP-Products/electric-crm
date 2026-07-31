@@ -8,9 +8,11 @@ import {
   ContractSearchRes,
   CreateContractReq,
   DeleteContractReq,
+  ExportContractsPdfReq,
   GetContractReq,
   UpdateContractReq
 } from 'model/contract';
+import { BlobFileResponse, getFileNameFromDisposition } from 'utils/blob-response';
 import { ApiConstants } from './networking/app-apis';
 
 async function searchContract(params: ContractSearchReq): Promise<ApiResponse<ContractSearchRes>> {
@@ -67,13 +69,31 @@ async function deleteContract(params: DeleteContractReq): Promise<ApiResponse<Co
   }
 }
 
+async function exportContractsPdf(
+  params: ExportContractsPdfReq
+): Promise<BlobFileResponse | unknown> {
+  try {
+    const rs = await appServices.post(ApiConstants.CONTRACT_EXPORT_PDF, params, {
+      responseType: 'blob'
+    });
+    return {
+      blob: rs.data,
+      contentType: rs.headers['content-type'],
+      fileName: getFileNameFromDisposition(rs.headers['content-disposition'])
+    };
+  } catch (error: any) {
+    return error;
+  }
+}
+
 const contractServices = {
   searchContract,
   listContract,
   createContract,
   updateContract,
   getContract,
-  deleteContract
+  deleteContract,
+  exportContractsPdf
 };
 
 export default contractServices;

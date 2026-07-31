@@ -85,6 +85,7 @@ const ManageContractScreen = () => {
     filterApplied,
     selectedContractKeys,
     selectedContractCount,
+    printingContracts,
     customerOptions,
     meterOptions,
     userOptions,
@@ -365,9 +366,13 @@ const ManageContractScreen = () => {
             <ButtonBase
               type="ghost"
               leftIcon="ICON_BILL"
-              customContent={`In hợp đồng${selectedContractCount ? ` (${selectedContractCount})` : ''}`}
+              customContent={
+                printingContracts
+                  ? 'Đang tạo file hợp đồng...'
+                  : `In hợp đồng${selectedContractCount ? ` (${selectedContractCount})` : ''}`
+              }
               onClick={onPrintContracts}
-              disabled={selectedContractCount === K_SIZE_0}
+              disabled={selectedContractCount === K_SIZE_0 || printingContracts}
               classNames="mobile:flex-1 mobile:justify-center"
             />
             <ButtonBase

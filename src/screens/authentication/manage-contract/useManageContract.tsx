@@ -11,6 +11,11 @@ import { useRouter } from 'next/navigation';
 import { type Key, useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import contractServices from 'services/contract-services';
+import {
+  downloadBlobResponse,
+  getBlobResponseError,
+  isBlobFileResponse
+} from 'utils/blob-response';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 import useCustomerLookup from './hooks/useCustomerLookup';
@@ -62,6 +67,7 @@ export default function useManageContract() {
   const [filter, setFilter] = useState<ContractFilter>(DEFAULT_CONTRACT_FILTER);
   const [filterApplied, setFilterApplied] = useState<ContractFilter>(DEFAULT_CONTRACT_FILTER);
   const [selectedContractKeys, setSelectedContractKeys] = useState<Key[]>([]);
+  const [printingContracts, setPrintingContracts] = useState<boolean>(false);
   const [openExtend, setOpenExtend] = useState<boolean>(false);
   const [openStatus, setOpenStatus] = useState<boolean>(false);
   const [selectedExtendContract, setSelectedExtendContract] = useState<Contract>();
@@ -431,7 +437,7 @@ export default function useManageContract() {
     setSelectedContractKeys(selectedRowKeys);
   }, []);
 
-  const onPrintContracts = useCallback(() => {
+  const onPrintContracts = useCallback(async () => {
     if (!selectedContractKeys.length) {
       showToast({
         type: TYPE_TOAST.ERROR,
@@ -440,11 +446,27 @@ export default function useManageContract() {
       return;
     }
 
-    showToast({
-      type: TYPE_TOAST.INFO,
-      content: `Đã chọn ${selectedContractKeys.length} hợp đồng. Chức năng in hợp đồng đang được phát triển`
+    setPrintingContracts(true);
+    const response = await contractServices.exportContractsPdf({
+      contractIds: selectedContractKeys.map(String)
     });
-  }, [selectedContractKeys.length]);
+    setPrintingContracts(false);
+
+    const responseError = await getBlobResponseError(response);
+    if (!isBlobFileResponse(response) || responseError) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getContractErrorMessage(
+          responseError || (response as ErrorBase),
+          'In hợp đồng thất bại'
+        )
+      });
+      return;
+    }
+
+    downloadBlobResponse(response, 'hop-dong-de-ky.zip');
+    showToast({ type: TYPE_TOAST.SUCCESS, content: 'Đã tạo file hợp đồng để ký' });
+  }, [selectedContractKeys]);
 
   return {
     t,
@@ -459,6 +481,7 @@ export default function useManageContract() {
     contractStats,
     selectedContractKeys,
     selectedContractCount: selectedContractKeys.length,
+    printingContracts,
     customerOptions,
     meterOptions,
     userOptions,
