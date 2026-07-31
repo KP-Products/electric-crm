@@ -80,6 +80,10 @@ const ApiEndPoint = {
 
   // MEASURING DEVICE
   MEASURING_DEVICE_SEARCH: '/admin/measuring-devices/search',
+  MEASURING_DEVICE_DETAIL: '/admin/measuring-devices/detail',
+  MEASURING_DEVICE_CREATE: '/admin/measuring-devices/create',
+  MEASURING_DEVICE_UPDATE: '/admin/measuring-devices/update',
+  MEASURING_DEVICE_DELETE: '/admin/measuring-devices/delete',
   // MEASURING DEVICE
 
   // METER VERIFICATION

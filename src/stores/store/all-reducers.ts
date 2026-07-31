@@ -8,6 +8,7 @@ import { sysParameterReducer } from 'stores/action-slice/sys-parameter-slice';
 import { meterReducer } from '@redux-slice/meter';
 import { meterVerificationReducer } from '@redux-slice/meter-verification';
 import { meterChangeEventReducer } from '@redux-slice/meter-change-event';
+import { measuringDeviceReducer } from '@redux-slice/measuring-device';
 import { ppeItemReducer } from '@redux-slice/ppe-item';
 import { electricTariffReducer } from '@redux-slice/electric-tariff';
 import { operationPriceReducer } from '@redux-slice/operation-price';
@@ -33,6 +34,7 @@ export const allReducer = combineReducers({
   meter: meterReducer,
   meterVerification: meterVerificationReducer,
   meterChangeEvent: meterChangeEventReducer,
+  measuringDevice: measuringDeviceReducer,
   ppeItem: ppeItemReducer,
   electricTariff: electricTariffReducer,
   operationPrice: operationPriceReducer,

@@ -3,6 +3,7 @@ export * from './auth';
 export * from './customer-listener';
 export * from './role';
 export * from './sys-parameter-listener';
+export * from './measuring-device';
 export * from './user';
 export * from './meter';
 export * from './meter-verification';
