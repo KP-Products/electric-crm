@@ -26,7 +26,9 @@ import { TextBase } from 'components/text';
 import { AppTextField } from 'components/text-field';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { CompanyLegalDocument } from 'model/company-legal-document';
+import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
+import { ROUTES } from 'config/routes';
 import { displayDateFromServer } from 'utils/date';
 import { CompanyLegalDocumentFilterForm } from './useCompanyLegalDocuments';
 import useCompanyLegalDocuments from './useCompanyLegalDocuments';
@@ -57,6 +59,7 @@ const getFilterDisplayValue = (key: keyof CompanyLegalDocumentFilterForm, value:
 };
 
 const CompanyLegalDocumentScreen = () => {
+  const router = useRouter();
   const {
     t,
     companyLegalDocumentList,
@@ -206,6 +209,13 @@ const CompanyLegalDocumentScreen = () => {
           <div className="flex justify-center gap-8">
             <IconHover
               rootClassName="text-color-800"
+              title="Xem chi tiết"
+              icon="ICON_EYE_OPEN"
+              iconHeight={K_SIZE_18}
+              onClick={() => router.push(`${ROUTES.COMPANY_LEGAL_DOCUMENT_DETAIL}?id=${record.id}`)}
+            />
+            <IconHover
+              rootClassName="text-color-800"
               title={t('common:edit')}
               icon="ICON_EDIT"
               iconHeight={K_SIZE_18}
@@ -222,11 +232,13 @@ const CompanyLegalDocumentScreen = () => {
         )
       }
     ],
-    [currentPage, onDelete, onDownloadAttachment, onOpenUpdate, onViewAttachment, t]
+    [currentPage, onDelete, onDownloadAttachment, onOpenUpdate, onViewAttachment, router, t]
   );
 
   return (
-    <PageWithBreadcrumb>
+    <PageWithBreadcrumb
+      breadcrumbList={[{ title: 'Văn bản pháp lý' }, { title: 'Văn bản pháp lý công ty' }]}
+    >
       <section>
         <Flex
           justify="space-between"
@@ -245,7 +257,7 @@ const CompanyLegalDocumentScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-12 grid grid-cols-[minmax(200px,1.2fr)_minmax(180px,1fr)_minmax(160px,0.85fr)_minmax(160px,0.85fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-[minmax(200px,1.2fr)_minmax(180px,1fr)_minmax(160px,0.85fr)_minmax(160px,0.85fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="documentName"
             label="Tên văn bản"
@@ -266,7 +278,7 @@ const CompanyLegalDocumentScreen = () => {
             name="documentType"
             label="Loại văn bản"
             value={filter.documentType}
-            placeholder="-- Tất cả --"
+            placeholder="Tất cả"
             options={COMPANY_LEGAL_DOCUMENT_TYPE_FILTER_OPTIONS}
             onSelectOption={({ key }) => onChangeFilter('documentType', String(key))}
           />
@@ -274,14 +286,14 @@ const CompanyLegalDocumentScreen = () => {
             name="status"
             label="Trạng thái"
             value={filter.status}
-            placeholder="-- Tất cả --"
+            placeholder="Tất cả"
             options={COMPANY_LEGAL_DOCUMENT_STATUS_FILTER_OPTIONS}
             onSelectOption={({ key }) => onChangeFilter('status', String(key))}
           />
-          <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full">
             <ButtonBase
               type="ghost"
-              customContent="Làm mới"
+              customContent="Xoá bộ lọc"
               onClick={() => onResetFilter()}
               classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
             />

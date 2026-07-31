@@ -176,7 +176,7 @@ const ManageBranchScreen = () => {
             <TextBase classNames="body3 mt-4 text-color-700" text="Cấu hình đơn vị trực thuộc" />
           </div>
           <ButtonBase
-            type="ghost"
+            type="primary"
             leftIcon="IC_ADD_OUTLINE2"
             customContent="Thêm chi nhánh"
             onClick={onOpenCreate}

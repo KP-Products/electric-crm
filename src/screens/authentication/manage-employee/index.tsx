@@ -14,11 +14,12 @@ import {
   K_SIZE_220,
   K_SIZE_80,
   K_SIZE_8,
-  NULL_VALUE
+  NULL_VALUE,
+  K_SIZE_90
 } from '@constant';
-import { Avatar, Divider, Flex } from 'antd';
+import { Avatar, Divider, Dropdown, Flex } from 'antd';
 import ButtonBase from 'components/button';
-import IconHover from 'components/icon-vec-local/icon-hover';
+import { IconSvgLocal } from 'components/icon-vec-local';
 import { AppSelect } from 'components/select';
 import Status, { KIND_STATUS } from 'components/status';
 import AppTable from 'components/table';
@@ -221,39 +222,38 @@ const ManageEmployeeScreen = () => {
       {
         title: 'Thao tác',
         fixed: 'right',
-        width: K_SIZE_140,
+        width: K_SIZE_90,
         align: 'center',
         render: (_: unknown, record: Employee) => (
-          <div className="flex justify-center gap-8">
-            <IconHover
-              rootClassName="text-color-800"
-              title="Xem chi tiết"
-              icon="ICON_EYE_OPEN"
-              iconHeight={K_SIZE_18}
-              onClick={() => onOpenDetail(record)}
-            />
-            <IconHover
-              rootClassName="text-color-800"
-              title="Sửa"
-              icon="ICON_EDIT"
-              iconHeight={K_SIZE_18}
-              onClick={() => onOpenUpdate(record)}
-            />
-            <IconHover
-              rootClassName="text-color-800"
-              title="Tải hợp đồng"
-              icon="IC_DOWNLOAD_OUTLINE"
-              iconHeight={K_SIZE_18}
-              onClick={() => onDownloadContractFile(record)}
-            />
-            <IconHover
-              rootClassName="text-error-500 hover:text-error-500"
-              title="Xoá"
-              icon="IC_TRASH_OUTLINE"
-              iconHeight={K_SIZE_18}
-              onClick={() => onDelete(record)}
-            />
-          </div>
+          <Dropdown
+            trigger={['click']}
+            placement="bottomRight"
+            arrow={{ pointAtCenter: true }}
+            menu={{
+              items: [
+                { key: 'detail', label: 'Xem chi tiết' },
+                { key: 'edit', label: 'Sửa' },
+                { key: 'download', label: 'Tải hợp đồng' },
+                { key: 'delete', label: 'Xoá', danger: true }
+              ],
+              onClick: ({ key, domEvent }) => {
+                domEvent.stopPropagation();
+                if (key === 'detail') onOpenDetail(record);
+                if (key === 'edit') onOpenUpdate(record);
+                if (key === 'download') onDownloadContractFile(record);
+                if (key === 'delete') onDelete(record);
+              }
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Mở menu thao tác"
+              className="inline-flex size-28 items-center justify-center rounded-radius-s text-color-800 hover:bg-color-100"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <IconSvgLocal name="ICON_MORE" height={K_SIZE_18} />
+            </button>
+          </Dropdown>
         )
       }
     ],
@@ -261,7 +261,9 @@ const ManageEmployeeScreen = () => {
   );
 
   return (
-    <PageWithBreadcrumb>
+    <PageWithBreadcrumb
+      breadcrumbList={[{ title: 'Quản lý nhân sự' }, { title: 'Danh sách nhân sự' }]}
+    >
       <div>
         <Flex
           justify="space-between"
@@ -269,7 +271,7 @@ const ManageEmployeeScreen = () => {
           gap={K_SIZE_8}
           className="min-h-44 tablet:min-h-0 tablet:flex-col tablet:items-start"
         >
-          <TextBase classNames="title4 !uppercase !text-primary-900" text="Danh sách nhân sự" />
+          <TextBase classNames="title4 !text-primary-900" text="Danh sách nhân sự" />
           <ButtonBase
             type="primary"
             leftIcon="IC_ADD_OUTLINE2"
@@ -280,7 +282,7 @@ const ManageEmployeeScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-16 grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(150px,1fr)_auto] gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-16 grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(150px,1fr)_auto] gap-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="employeeCode"
             label="Mã nhân sự"
@@ -304,7 +306,7 @@ const ManageEmployeeScreen = () => {
             options={EMPLOYMENT_STATUS_OPTIONS}
             onSelectOption={({ key }) => onChangeFilter('employmentStatus', String(key))}
           />
-          <Flex gap={K_SIZE_8} className="self-end tablet:col-span-2 mobile:col-span-1">
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full">
             <ButtonBase
               type="ghost"
               customContent="Xoá bộ lọc"

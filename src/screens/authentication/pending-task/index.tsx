@@ -67,7 +67,7 @@ const PendingTaskScreen = () => {
         </Flex>
         <Divider className={'my-16'} />
 
-        <div className="mb-12 grid grid-cols-6 items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-6 items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppSelect
             name={'actionId'}
             label={t('approve:feature')}
@@ -131,14 +131,10 @@ const PendingTaskScreen = () => {
               setFieldFilter('status', value);
             }}
           />
-          <Flex
-            justify="end"
-            gap={K_SIZE_8}
-            className="col-start-6 tablet:col-start-2 mobile:col-start-auto mobile:w-full"
-          >
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full mobile:w-full">
             <ButtonBase
               type="ghost"
-              customContent="Làm mới"
+              customContent="Xoá bộ lọc"
               onClick={() => onResetFilter()}
               classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
             />

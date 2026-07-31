@@ -290,7 +290,7 @@ const ManageCustomerScreen = () => {
           <TextBase classNames="title4" text="Quản lý khách hàng" />
           <Flex
             flex={K_SIZE_1}
-            justify="end"
+            justify="start"
             gap={K_SIZE_16}
             className="mobile:mt-8 mobile:w-full mobile:flex-col"
           >
@@ -305,7 +305,7 @@ const ManageCustomerScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-12 grid grid-cols-6 items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-6 items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="customerCodeContains"
             label="Mã khách hàng"
@@ -354,14 +354,10 @@ const ManageCustomerScreen = () => {
             onChange={(event) => onChangeFilter('contactNameContains', event.target.value)}
             onPressEnter={onApplyFilter}
           />
-          <Flex
-            justify="end"
-            gap={K_SIZE_8}
-            className="col-start-6 tablet:col-start-2 mobile:col-start-auto mobile:w-full"
-          >
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full mobile:w-full">
             <ButtonBase
               type="ghost"
-              customContent="Làm mới"
+              customContent="Xoá bộ lọc"
               onClick={() => onResetFilter()}
               classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
             />

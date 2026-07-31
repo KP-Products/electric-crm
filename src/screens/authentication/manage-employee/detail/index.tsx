@@ -637,7 +637,13 @@ const ManageEmployeeDetailScreen = () => {
   );
 
   return (
-    <PageWithBreadcrumb>
+    <PageWithBreadcrumb
+      breadcrumbList={[
+        { title: 'Quản lý nhân sự' },
+        { title: 'Danh sách nhân sự' },
+        { title: 'Chi tiết nhân sự' }
+      ]}
+    >
       <div>
         <Flex
           justify="space-between"
@@ -653,7 +659,7 @@ const ManageEmployeeDetailScreen = () => {
               width={K_SIZE_24}
               onClick={onBack}
             />
-            <TextBase classNames="title4 !uppercase !text-primary-900" text="Chi tiết nhân sự" />
+            <TextBase classNames="title4 !text-primary-900" text="Chi tiết nhân sự" />
           </div>
           <ButtonBase
             type="ghost"

@@ -7,7 +7,6 @@ import {
   EyeOutlined,
   FilePdfOutlined,
   MoreOutlined,
-  ReloadOutlined,
   SearchOutlined,
   SendOutlined,
   StopOutlined
@@ -420,7 +419,7 @@ const EvnReadingBatchScreen = () => {
           />
         </Flex>
         <div className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
-          <div className="grid grid-cols-4 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <div className="grid grid-cols-4 gap-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
             <AppTextField
               name="meterCode"
               label="Mã lộ"
@@ -456,16 +455,7 @@ const EvnReadingBatchScreen = () => {
             />
           </div>
           <Flex justify="end" gap={8} className="mt-16">
-            <ButtonBase
-              type="ghost"
-              customContent={
-                <span className="flex items-center gap-8">
-                  <ReloadOutlined />
-                  Làm mới
-                </span>
-              }
-              onClick={onResetFilter}
-            />
+            <ButtonBase type="ghost" customContent="Xoá bộ lọc" onClick={onResetFilter} />
             <ButtonBase
               type="primary"
               customContent={

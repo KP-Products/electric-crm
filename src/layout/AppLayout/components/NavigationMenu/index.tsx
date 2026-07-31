@@ -22,11 +22,11 @@ import {
 import { Menu } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
 import type { MenuInfo } from 'rc-menu/es/interface';
-import { memo, useCallback, useEffect, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 
 import { K_SIZE_1, K_SIZE_2, K_SIZE_3 } from '@constant';
 import { dispatch } from '@redux-common';
-import { selectMenuKeys, selectOpenKeys } from '@redux-selector/app';
+import { selectOpenKeys } from '@redux-selector/app';
 import { appActions } from '@redux-slice/app';
 import { ROUTES } from 'config/routes';
 import UserMenu from 'layout/AppLayout/components/UserMenu';
@@ -52,7 +52,6 @@ const NavigationMenu = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const selectedMenuKeys = useSelector(selectMenuKeys);
   const selectedOpenKeys = useSelector(selectOpenKeys);
 
   const handleClickMenuItem = useCallback(
@@ -338,12 +337,21 @@ const NavigationMenu = () => {
     return filterMenu(rawMenuItems);
   }, [rawMenuItems, filterMenu]);
 
-  useEffect(() => {
-    const matchedRoute = Object.values(ROUTES)
-      .filter((route) => pathname.startsWith(route) && route !== ROUTES.ROOT)
+  const menuRouteKeys = useMemo(() => {
+    const collectLeafKeys = (items: ItemType[]): string[] =>
+      items.flatMap((item: any) => {
+        if (item?.children) return collectLeafKeys(item.children);
+        return typeof item?.key === 'string' && item.key.startsWith('/') ? [item.key] : [];
+      });
+
+    return collectLeafKeys(menuItems);
+  }, [menuItems]);
+
+  const selectedMenuKey = useMemo(() => {
+    return menuRouteKeys
+      .filter((route) => pathname === route || pathname.startsWith(`${route}/`))
       .sort((a, b) => b.length - a.length)?.[0];
-    dispatch(appActions.setSelectedMenuKeys([matchedRoute]));
-  }, [pathname]);
+  }, [menuRouteKeys, pathname]);
 
   return (
     <div className="flex h-full w-[254px] flex-col">
@@ -361,7 +369,7 @@ const NavigationMenu = () => {
         mode="inline"
         items={menuItems}
         onClick={handleClickMenuItem}
-        selectedKeys={selectedMenuKeys}
+        selectedKeys={selectedMenuKey ? [selectedMenuKey] : []}
         openKeys={selectedOpenKeys}
         onOpenChange={(keys) => dispatch(appActions.setSelectedOpenKeys(keys))}
         // eslint-disable-next-line tailwindcss/no-custom-classname

@@ -272,7 +272,7 @@ export default function MeasuringDeviceScreen() {
           />
         </Flex>
         <Divider className="my-16" />
-        <div className="mb-12 grid grid-cols-[repeat(4,minmax(160px,1fr))_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-[repeat(4,minmax(160px,1fr))_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="deviceCode"
             label="Mã TU/TI"
@@ -305,8 +305,8 @@ export default function MeasuringDeviceScreen() {
             options={DEVICE_STATUS_OPTIONS}
             onSelectOption={({ key }) => update('status', String(key))}
           />
-          <Flex gap={K_SIZE_8}>
-            <ButtonBase type="ghost" customContent="Làm mới" onClick={() => reset()} />
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full">
+            <ButtonBase type="ghost" customContent="Xoá bộ lọc" onClick={() => reset()} />
             <ButtonBase
               type="primary"
               leftIcon="IC_SEARCH_OUTLINE2"

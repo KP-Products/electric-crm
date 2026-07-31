@@ -11,14 +11,14 @@ import { MAX_UPLOAD_FILE_SIZE } from 'utils/upload';
 export const DATE_API_FORMAT = FORMAT_DATE_API;
 
 export const EMPLOYEE_GENDER_OPTIONS: AppSelectOption[] = [
-  { value: '', label: '-- Tất cả --' },
+  { value: '', label: 'Tất cả' },
   { value: EMPLOYEE_GENDER.MALE, label: 'Nam' },
   { value: EMPLOYEE_GENDER.FEMALE, label: 'Nữ' },
   { value: EMPLOYEE_GENDER.OTHER, label: 'Khác' }
 ];
 
 export const EMPLOYMENT_STATUS_OPTIONS: AppSelectOption[] = [
-  { value: '', label: '-- Tất cả --' },
+  { value: '', label: 'Tất cả' },
   { value: EMPLOYMENT_STATUS.ACTIVE, label: 'Đang làm việc' },
   { value: EMPLOYMENT_STATUS.PROBATION, label: 'Thử việc' },
   { value: EMPLOYMENT_STATUS.RESIGNED, label: 'Đã nghỉ việc' },
@@ -26,7 +26,7 @@ export const EMPLOYMENT_STATUS_OPTIONS: AppSelectOption[] = [
 ];
 
 export const EMPLOYMENT_TYPE_OPTIONS: AppSelectOption[] = [
-  { value: '', label: '-- Tất cả --' },
+  { value: '', label: 'Tất cả' },
   { value: EMPLOYMENT_TYPE.FULL_TIME, label: 'Full-time' },
   { value: EMPLOYMENT_TYPE.PART_TIME, label: 'Part-time' },
   { value: EMPLOYMENT_TYPE.CONTRACT, label: 'Hợp đồng' },

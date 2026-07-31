@@ -51,14 +51,14 @@ const ACCEPTED_ATTACHMENT_SIGNATURES: Record<string, number[][]> = {
 };
 
 export const URGENCY_LEVEL_OPTIONS: AppSelectOption[] = [
-  { value: '', label: '-- Tất cả --' },
+  { value: '', label: 'Tất cả' },
   { value: 'NORMAL', label: 'Thường' },
   { value: 'URGENT', label: 'Khẩn' },
   { value: 'EXPRESS', label: 'Hỏa tốc' }
 ];
 
 export const CONFIDENTIALITY_LEVEL_OPTIONS: AppSelectOption[] = [
-  { value: '', label: '-- Tất cả --' },
+  { value: '', label: 'Tất cả' },
   { value: 'NORMAL', label: 'Thường' },
   { value: 'CONFIDENTIAL', label: 'Mật' },
   { value: 'SECRET', label: 'Tối mật' }

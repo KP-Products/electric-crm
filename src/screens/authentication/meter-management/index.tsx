@@ -586,7 +586,7 @@ const MeterManagementScreen = () => {
         <Divider className={'my-16'} />
 
         <div className="mb-12 rounded-radius-l border border-color-300 bg-color-50 p-16">
-          <div className="grid grid-cols-5 gap-16 tablet:grid-cols-2 mobile:grid-cols-1">
+          <div className="grid grid-cols-5 gap-16 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
             <AppTextField
               name="meterCodeContains"
               label="Mã công tơ"
@@ -707,11 +707,10 @@ const MeterManagementScreen = () => {
                 }
               />
             </div>
-            <div className="flex items-end justify-end gap-16 tablet:col-span-2 mobile:col-span-1 mobile:flex-col">
+            <div className="col-span-full flex items-end justify-end gap-16 mobile:flex-col">
               <ButtonBase
                 type="ghost"
-                leftIcon="IC_HISTORY_OUTLINE"
-                customContent="Làm mới"
+                customContent="Xoá bộ lọc"
                 onClick={() => onResetFilter()}
                 classNames="min-w-[112px] mobile:w-full mobile:justify-center"
               />

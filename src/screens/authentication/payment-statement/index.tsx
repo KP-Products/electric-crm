@@ -7,7 +7,6 @@ import {
   FileSearchOutlined,
   FileExcelOutlined,
   PlusOutlined,
-  ReloadOutlined,
   SearchOutlined,
   UploadOutlined
 } from '@ant-design/icons';
@@ -564,7 +563,7 @@ const PaymentStatementScreen = () => {
         </div>
         <Divider />
         <div className="rounded-radius-l border border-color-300 bg-color-50 p-16">
-          <div className="grid grid-cols-4 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <div className="grid grid-cols-4 gap-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
             <AppDatePicker
               name="periodCode"
               label="Kỳ thanh toán"
@@ -624,7 +623,7 @@ const PaymentStatementScreen = () => {
               }
             />
           </div>
-          <Space className="mt-16">
+          <Space className="mt-16 flex w-full justify-end">
             <ButtonBase
               type="primary"
               disabled={state.loading}
@@ -636,16 +635,7 @@ const PaymentStatementScreen = () => {
                 </>
               }
             />
-            <ButtonBase
-              type="ghost"
-              onClick={state.reset}
-              customContent={
-                <>
-                  <ReloadOutlined className="mr-8" />
-                  Làm mới
-                </>
-              }
-            />
+            <ButtonBase type="ghost" onClick={state.reset} customContent="Xoá bộ lọc" />
           </Space>
         </div>
         <div className="mt-16 overflow-hidden rounded-radius-l border border-color-300">
@@ -665,8 +655,7 @@ const PaymentStatementScreen = () => {
             current: state.page,
             pageSize: state.size,
             total: state.total,
-            onChange: state.onPageChange,
-            showSizeChanger: true
+            onChange: state.onPageChange
           }}
         />
       </section>

@@ -1,6 +1,6 @@
 'use client';
 
-import { FileExcelOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, SearchOutlined } from '@ant-design/icons';
 import { Divider, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -233,7 +233,7 @@ const DebtAgingScreen = () => {
           {state.validationError && (
             <TextBase classNames="mt-8 body3 !text-error-600" text={state.validationError} />
           )}
-          <Space className="mt-16" wrap>
+          <Space className="mt-16 flex w-full justify-end" wrap>
             <ButtonBase
               type="primary"
               disabled={state.loading}
@@ -249,12 +249,7 @@ const DebtAgingScreen = () => {
               type="ghost"
               disabled={state.loading}
               onClick={state.reset}
-              customContent={
-                <>
-                  <ReloadOutlined className="mr-8" />
-                  Làm mới
-                </>
-              }
+              customContent="Xoá bộ lọc"
             />
             <ButtonBase
               type="secondary"

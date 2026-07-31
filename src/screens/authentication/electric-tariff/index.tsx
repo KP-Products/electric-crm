@@ -1,6 +1,6 @@
 'use client';
 
-import { CalculatorOutlined, PlusOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
+import { CalculatorOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import {
   CURRENCY_VND,
   K_SIZE_0,
@@ -383,7 +383,7 @@ const ElectricTariffScreen = () => {
             />
           </div>
           <ButtonBase
-            type="ghost"
+            type="primary"
             customContent={
               <div className="flex items-center gap-8">
                 <PlusOutlined />
@@ -397,7 +397,7 @@ const ElectricTariffScreen = () => {
 
         <Divider className="my-16" />
 
-        <div className="mb-12 grid grid-cols-[1fr_1fr_150px_150px_150px_auto_auto] gap-8 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-5 gap-8 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="tariffCode"
             value={filterDraft.tariffCode}
@@ -436,30 +436,27 @@ const ElectricTariffScreen = () => {
             size="middle"
             onSelectOption={({ key }) => onChangeFilter('status', String(key))}
           />
-          <ButtonBase
-            type="primary"
-            size={40}
-            onClick={onApplyFilter}
-            customContent={
-              <div className="flex items-center justify-center gap-8">
-                <SearchOutlined />
-                <span>Tìm</span>
-              </div>
-            }
-            classNames="justify-center"
-          />
-          <ButtonBase
-            type="ghost"
-            size={40}
-            onClick={onResetFilter}
-            customContent={
-              <div className="flex items-center justify-center gap-8">
-                <SyncOutlined />
-                <span>Đặt lại</span>
-              </div>
-            }
-            classNames="justify-center"
-          />
+          <div className="col-span-full flex justify-end gap-8">
+            <ButtonBase
+              type="ghost"
+              size={43}
+              onClick={onResetFilter}
+              customContent="Xoá bộ lọc"
+              classNames="justify-center [&>span]:!font-normal"
+            />
+            <ButtonBase
+              type="primary"
+              size={43}
+              onClick={onApplyFilter}
+              customContent={
+                <div className="flex items-center justify-center gap-8">
+                  <SearchOutlined />
+                  <span>Tìm kiếm</span>
+                </div>
+              }
+              classNames="justify-center [&>span]:!font-normal"
+            />
+          </div>
         </div>
 
         {activeFilters.length > K_SIZE_0 && (

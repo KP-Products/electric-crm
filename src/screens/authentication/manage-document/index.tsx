@@ -308,7 +308,7 @@ const ManageDocumentScreen = () => {
             className="mobile:mt-8 mobile:w-full mobile:flex-col"
           >
             <ButtonBase
-              type="ghost"
+              type="primary"
               leftIcon="IC_ADD_OUTLINE2"
               customContent="Đính kèm tài liệu"
               onClick={() => setOpenAttach(true)}
@@ -318,7 +318,7 @@ const ManageDocumentScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-12 grid grid-cols-[minmax(180px,1fr)_minmax(190px,1fr)_minmax(170px,1fr)_minmax(190px,1fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-[minmax(180px,1fr)_minmax(190px,1fr)_minmax(170px,1fr)_minmax(190px,1fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="keyword"
             label="Từ khóa"
@@ -372,10 +372,10 @@ const ManageDocumentScreen = () => {
             options={[ALL_OPTION, ...DOCUMENT_STATUS_OPTIONS]}
             onSelectOption={({ key }) => onChangeFilter('status', String(key))}
           />
-          <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full">
             <ButtonBase
               type="ghost"
-              customContent="Làm mới"
+              customContent="Xoá bộ lọc"
               onClick={() => onResetFilter()}
               classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
             />

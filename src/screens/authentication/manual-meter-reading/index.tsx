@@ -246,7 +246,11 @@ const ManualMeterReadingScreen = ({
                 : '1. Tìm kiếm khách hàng & kỳ ghi chỉ số'
             }
           />
-          <div className="grid grid-cols-[minmax(220px,1.4fr)_minmax(150px,0.8fr)_minmax(150px,0.8fr)_minmax(150px,0.8fr)_minmax(150px,0.8fr)_auto] items-end gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <div
+            className={`grid items-end gap-12 ${
+              isFeederScope ? 'grid-cols-3' : 'grid-cols-5'
+            } desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1`}
+          >
             {!isFeederScope && (
               <AppTextField
                 name="keyword"
@@ -303,7 +307,7 @@ const ManualMeterReadingScreen = ({
                 onChangeFilter('readingDate', date ? date.format(FORMAT_DATE_API) : '');
               }}
             />
-            <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1 mobile:w-full">
+            <Flex justify="end" gap={K_SIZE_8} className="col-span-full mobile:w-full">
               <ButtonBase
                 type="primary"
                 leftIcon="IC_SEARCH_OUTLINE2"
@@ -314,12 +318,7 @@ const ManualMeterReadingScreen = ({
               />
               <ButtonBase
                 type="ghost"
-                customContent={
-                  <div className="flex items-center gap-8">
-                    <ReloadOutlined />
-                    <span>Xóa lọc</span>
-                  </div>
-                }
+                customContent="Xoá bộ lọc"
                 onClick={onResetFilter}
                 classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
               />

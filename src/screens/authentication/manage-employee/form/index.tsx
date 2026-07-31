@@ -150,7 +150,9 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
   const existingContractFileName = getContractFileName(selectedEmployee);
 
   return (
-    <PageWithBreadcrumb>
+    <PageWithBreadcrumb
+      breadcrumbList={[{ title: 'Quản lý nhân sự' }, { title: 'Danh sách nhân sự' }, { title }]}
+    >
       <div className={clsx('pb-24', { 'mb-[76px]': true })}>
         <Flex
           justify="space-between"
@@ -166,7 +168,7 @@ const ManageEmployeeFormScreen = ({ isEditMode }: ManageEmployeeFormScreenProps)
               width={K_SIZE_24}
               onClick={onBack}
             />
-            <TextBase classNames="title4 !uppercase !text-primary-900" text={title} />
+            <TextBase classNames="title4 !text-primary-900" text={title} />
           </div>
         </Flex>
         <Divider className="my-16" />

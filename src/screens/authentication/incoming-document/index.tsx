@@ -26,8 +26,10 @@ import AppPagination from 'components/table/pagination';
 import TagFilter from 'components/tag-filter';
 import { TextBase } from 'components/text';
 import { AppTextField } from 'components/text-field';
+import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { IncomingDocument } from 'model/incoming-document';
+import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { displayDateFromServer } from 'utils/date';
 import useIncomingDocuments, { IncomingDocumentFilterForm } from './useIncomingDocuments';
@@ -64,6 +66,7 @@ const getFilterDisplayValue = (key: keyof IncomingDocumentFilterForm, value: str
 };
 
 const IncomingDocumentScreen = () => {
+  const router = useRouter();
   const {
     t,
     incomingDocumentList,
@@ -232,6 +235,13 @@ const IncomingDocumentScreen = () => {
           <div className="flex justify-center gap-8">
             <IconHover
               rootClassName="text-color-800"
+              title="Xem chi tiết"
+              icon="ICON_EYE_OPEN"
+              iconHeight={K_SIZE_18}
+              onClick={() => router.push(`${ROUTES.INCOMING_DOCUMENT_DETAIL}?id=${record.id}`)}
+            />
+            <IconHover
+              rootClassName="text-color-800"
               title={t('common:edit')}
               icon="ICON_EDIT"
               iconHeight={K_SIZE_18}
@@ -248,11 +258,11 @@ const IncomingDocumentScreen = () => {
         )
       }
     ],
-    [currentPage, onDelete, onDownloadAttachment, onOpenUpdate, onViewAttachment, t]
+    [currentPage, onDelete, onDownloadAttachment, onOpenUpdate, onViewAttachment, router, t]
   );
 
   return (
-    <PageWithBreadcrumb>
+    <PageWithBreadcrumb breadcrumbList={[{ title: 'Văn bản pháp lý' }, { title: 'Văn bản đến' }]}>
       <section>
         <Flex
           justify="space-between"
@@ -271,7 +281,7 @@ const IncomingDocumentScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-12 grid grid-cols-[minmax(150px,0.8fr)_minmax(220px,1.1fr)_minmax(160px,0.9fr)_minmax(140px,0.75fr)_minmax(140px,0.75fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-[minmax(150px,0.8fr)_minmax(220px,1.1fr)_minmax(160px,0.9fr)_minmax(140px,0.75fr)_minmax(140px,0.75fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="incomingNumber"
             label="Số đến"
@@ -291,7 +301,7 @@ const IncomingDocumentScreen = () => {
           <AppSelect
             name="documentType"
             label="Loại văn bản"
-            placeholder="-- Tất cả --"
+            placeholder="Tất cả"
             value={filter.documentType}
             options={INCOMING_DOCUMENT_TYPE_FILTER_OPTIONS}
             onSelectOption={({ key }) => onChangeFilter('documentType', String(key))}
@@ -310,10 +320,10 @@ const IncomingDocumentScreen = () => {
             options={CONFIDENTIALITY_LEVEL_OPTIONS}
             onSelectOption={({ key }) => onChangeFilter('confidentialityLevel', String(key))}
           />
-          <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full">
             <ButtonBase
               type="ghost"
-              customContent="Làm mới"
+              customContent="Xoá bộ lọc"
               onClick={() => onResetFilter()}
               classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
             />

@@ -382,7 +382,7 @@ const ManageContractScreen = () => {
         <Divider className="my-16" />
 
         <div className="mb-12 rounded-radius-l border border-color-300 bg-color-50 p-16">
-          <div className="grid grid-cols-5 gap-16 tablet:grid-cols-2 mobile:grid-cols-1">
+          <div className="grid grid-cols-5 gap-16 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
             <AppTextField
               name="contractNumber"
               label="Số hợp đồng"
@@ -464,10 +464,10 @@ const ManageContractScreen = () => {
               onSelectOption={({ key }) => onChangeFilter('createdBy', String(key))}
               suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
             />
-            <div className="col-start-5 flex items-end justify-end gap-8 tablet:col-span-2 tablet:col-start-auto mobile:col-span-1 mobile:flex-col">
+            <div className="col-span-full flex items-end justify-end gap-8 mobile:flex-col">
               <ButtonBase
                 type="ghost"
-                customContent="Làm mới"
+                customContent="Xoá bộ lọc"
                 onClick={() => onResetFilter()}
                 classNames="min-w-[104px] mobile:w-full mobile:justify-center"
               />

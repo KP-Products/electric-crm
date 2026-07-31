@@ -23,7 +23,7 @@ export const DOCUMENT_TYPE_OPTIONS: AppSelectOption[] = [
 ];
 
 export const DOCUMENT_TYPE_FILTER_OPTIONS: AppSelectOption[] = [
-  { value: '', label: '-- Tất cả --' },
+  { value: '', label: 'Tất cả' },
   ...DOCUMENT_TYPE_OPTIONS
 ];
 

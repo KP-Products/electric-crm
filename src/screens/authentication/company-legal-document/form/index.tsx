@@ -86,7 +86,13 @@ const CompanyLegalDocumentFormScreen = ({ isEditMode }: CompanyLegalDocumentForm
 
   const title = isEditMode ? 'Cập nhật văn bản pháp lý' : 'Thêm mới văn bản pháp lý';
   return (
-    <PageWithBreadcrumb>
+    <PageWithBreadcrumb
+      breadcrumbList={[
+        { title: 'Văn bản pháp lý' },
+        { title: 'Văn bản pháp lý công ty' },
+        { title }
+      ]}
+    >
       <div className={clsx('pb-24', { 'mb-[76px]': true })}>
         <Flex
           justify="space-between"

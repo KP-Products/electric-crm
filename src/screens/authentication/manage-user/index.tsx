@@ -305,7 +305,7 @@ const ManageUser = () => {
             className={'mobile:w-full mobile:flex-col'}
           >
             <ButtonBase
-              type={'ghost'}
+              type={'primary'}
               leftIcon={'IC_ADD_OUTLINE2'}
               customContent={t('common:add_new')}
               classNames={'mobile:flex-1 mobile:justify-center'}
@@ -319,7 +319,7 @@ const ManageUser = () => {
             <DashboardCard key={item.title} {...item} />
           ))}
         </div>
-        <div className="mb-12 grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(180px,1fr)_minmax(150px,1fr)_minmax(160px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(180px,1fr)_minmax(150px,1fr)_minmax(160px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="username"
             label={t('login_screen:username')}
@@ -360,19 +360,19 @@ const ManageUser = () => {
             options={[ALL_OPTION, ...roleOptions]}
             onSelectOption={({ key }) => onChangeFilter('roleId', String(key))}
           />
-          <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
+          <Flex justify="end" gap={K_SIZE_8} wrap className="col-span-full mobile:flex-col">
             <ButtonBase
               type="ghost"
-              customContent="Làm mới"
+              customContent="Xoá bộ lọc"
               onClick={() => onResetFilter()}
-              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+              classNames="min-w-[120px] whitespace-nowrap mobile:w-full mobile:justify-center"
             />
             <ButtonBase
               type="primary"
               leftIcon="IC_SEARCH_OUTLINE2"
               customContent="Tìm kiếm"
               onClick={onApplyFilter}
-              classNames="min-w-[112px] mobile:flex-1 mobile:justify-center"
+              classNames="min-w-[120px] whitespace-nowrap mobile:w-full mobile:justify-center"
             />
           </Flex>
         </div>

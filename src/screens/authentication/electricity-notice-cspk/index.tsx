@@ -7,7 +7,6 @@ import {
   FileExcelOutlined,
   FilePdfOutlined,
   PlusOutlined,
-  ReloadOutlined,
   SearchOutlined
 } from '@ant-design/icons';
 import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1, NULL_VALUE } from '@constant';
@@ -324,7 +323,7 @@ const ElectricityNoticeCspkScreen = () => {
         </Flex>
 
         <div className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
-          <div className="grid grid-cols-4 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
+          <div className="grid grid-cols-4 gap-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
             <AppTextField
               name="periodCode"
               label="Kỳ tính tiền"
@@ -371,12 +370,7 @@ const ElectricityNoticeCspkScreen = () => {
           <Flex justify="end" gap={8} className="mt-16 mobile:w-full">
             <ButtonBase
               type="ghost"
-              customContent={
-                <span className="flex items-center gap-8">
-                  <ReloadOutlined />
-                  Đặt lại
-                </span>
-              }
+              customContent="Xoá bộ lọc"
               onClick={onResetFilter}
               classNames="mobile:flex-1 mobile:justify-center"
             />

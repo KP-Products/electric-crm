@@ -70,7 +70,9 @@ const ManageOperationContractForm = ({ isEditMode }: ManageOperationContractForm
   );
 
   return (
-    <PageWithBreadcrumb>
+    <PageWithBreadcrumb
+      breadcrumbList={[{ title: 'Hợp đồng' }, { title: 'Quản lý hợp đồng vận hành' }, { title }]}
+    >
       <div className={clsx('pb-24', { 'mb-[76px]': true })}>
         <Flex
           justify="space-between"

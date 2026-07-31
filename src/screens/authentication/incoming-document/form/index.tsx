@@ -91,7 +91,9 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
     : 'Tự động';
 
   return (
-    <PageWithBreadcrumb>
+    <PageWithBreadcrumb
+      breadcrumbList={[{ title: 'Văn bản pháp lý' }, { title: 'Văn bản đến' }, { title }]}
+    >
       <div className={clsx('pb-24', { 'mb-[76px]': true })}>
         <Flex
           justify="space-between"

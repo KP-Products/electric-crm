@@ -68,11 +68,13 @@ export const ROUTES = {
   COMPANY_LEGAL_DOCUMENTS: '/legal-documents/company',
   COMPANY_LEGAL_DOCUMENT_ADD: '/legal-documents/company/add',
   COMPANY_LEGAL_DOCUMENT_EDIT: '/legal-documents/company/edit',
+  COMPANY_LEGAL_DOCUMENT_DETAIL: '/legal-documents/company/detail',
 
   // INCOMING DOCUMENT
   INCOMING_DOCUMENTS: '/legal-documents/incoming',
   INCOMING_DOCUMENT_ADD: '/legal-documents/incoming/add',
   INCOMING_DOCUMENT_EDIT: '/legal-documents/incoming/edit',
+  INCOMING_DOCUMENT_DETAIL: '/legal-documents/incoming/detail',
 
   // HUMAN RESOURCES
   EMPLOYEE_LIST: '/human-resources/employees',

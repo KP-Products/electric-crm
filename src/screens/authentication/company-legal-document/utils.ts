@@ -48,7 +48,7 @@ export const COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS: AppSelectOption[] = [
 ];
 
 export const COMPANY_LEGAL_DOCUMENT_STATUS_FILTER_OPTIONS: AppSelectOption[] = [
-  { value: '', label: '-- Tất cả --' },
+  { value: '', label: 'Tất cả' },
   ...COMPANY_LEGAL_DOCUMENT_STATUS_OPTIONS
 ];
 

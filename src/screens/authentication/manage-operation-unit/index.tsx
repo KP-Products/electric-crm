@@ -372,7 +372,7 @@ const ManageOperationUnitScreen = () => {
         </Flex>
         <Divider className="my-16" />
 
-        <div className="mb-12 grid grid-cols-[minmax(160px,0.8fr)_minmax(220px,1fr)_minmax(160px,0.7fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 tablet:grid-cols-2 mobile:grid-cols-1">
+        <div className="mb-12 grid grid-cols-[minmax(160px,0.8fr)_minmax(220px,1fr)_minmax(160px,0.7fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="unitCode"
             label="Mã đơn vị"
@@ -397,10 +397,10 @@ const ManageOperationUnitScreen = () => {
             options={STATUS_OPTIONS}
             onSelectOption={({ key }) => onChangeFilter('status', String(key))}
           />
-          <Flex gap={K_SIZE_8} className="tablet:col-span-2 mobile:col-span-1">
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full">
             <ButtonBase
               type="ghost"
-              customContent="Làm mới"
+              customContent="Xoá bộ lọc"
               onClick={() => onResetFilter()}
               classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
             />
