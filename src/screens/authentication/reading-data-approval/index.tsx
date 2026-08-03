@@ -11,17 +11,18 @@ import {
 import { DEFAULT_PAGE_SIZE, K_SIZE_1, NULL_VALUE } from '@constant';
 import { Flex, Input, Modal, Spin, Tooltip } from 'antd';
 import ButtonBase from 'components/button';
+import { AppDatePicker } from 'components/date-picker';
 import { AppSelect } from 'components/select';
 import Status, { KIND_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
 import { TextBase } from 'components/text';
-import { AppTextField } from 'components/text-field';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { MeterReading, ReadingReviewRow } from 'model/manual-meter-reading';
+import dayjs from 'dayjs';
 import { useCallback, useMemo, useState } from 'react';
 import { displayDateFromServer } from 'utils/date';
 import { formatNumberValueWithCommas } from 'utils/number-input';
@@ -32,20 +33,6 @@ const formatNumber = (value?: number) => {
   if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
   return formatNumberValueWithCommas(value);
 };
-
-const ApiUnavailableField = ({ label }: { label: string }) => (
-  <Tooltip title="API xác nhận số liệu hiện chưa hỗ trợ điều kiện này.">
-    <div>
-      <AppTextField
-        name={`unavailable-${label}`}
-        label={label}
-        placeholder="Chưa được API hỗ trợ"
-        disabled
-        caption="Chưa được API hỗ trợ"
-      />
-    </div>
-  </Tooltip>
-);
 
 const StatCard = ({ label, value }: { label: string; value: number }) => (
   <Tooltip title="Số liệu tính trên các bản ghi của trang hiện tại; API chưa có endpoint thống kê toàn bộ.">
@@ -289,17 +276,20 @@ const ReadingDataApprovalScreen = () => {
   return (
     <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
       <section>
-        <TextBase classNames="title4" text="Phê duyệt số liệu chỉ số & hóa đơn" />
+        <TextBase classNames="title4" text="Xác nhận số liệu" />
 
         <div className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
-          <div className="grid grid-cols-4 gap-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
-            <AppTextField
+          <div className="grid grid-cols-3 gap-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
+            <AppDatePicker
               name="periodCode"
               label="Kỳ tính toán"
-              placeholder="VD: 07/2026"
-              value={filter.periodCode}
-              onChange={(event) => onChangeFilter('periodCode', event.target.value)}
-              onPressEnter={onApplyFilter}
+              placeholder="MM/YYYY"
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+              picker="month"
+              format="MM/YYYY"
+              value={filter.periodCode ? dayjs(filter.periodCode, 'MM/YYYY') : null}
+              onChange={(value) => onChangeFilter('periodCode', value?.format('MM/YYYY') || '')}
             />
             <AppSelect
               name="customerCode"
@@ -317,10 +307,6 @@ const ReadingDataApprovalScreen = () => {
               value={filter.status}
               onSelectOption={({ key }) => onChangeFilter('status', String(key))}
             />
-            <ApiUnavailableField label="Nhóm khách hàng" />
-            <ApiUnavailableField label="Số công tơ" />
-            <ApiUnavailableField label="Địa chỉ" />
-            <ApiUnavailableField label="Đánh giá bất thường" />
           </div>
           <Flex justify="end" gap={8} className="mt-16 mobile:w-full">
             <ButtonBase

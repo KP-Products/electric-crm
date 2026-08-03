@@ -1,6 +1,6 @@
 import { PaginationReq, PaginationRes, ResultBase } from './common';
 
-export type BillStatus = 'CALCULATED' | 'CONFIRMED';
+export type BillStatus = 'CHO_DUYET' | 'CONFIRMED';
 export type BillPayStatus = 'UNPAID' | 'PAID';
 export type BillNoticeType = 'DIEN' | 'CSPK' | 'BOTH';
 

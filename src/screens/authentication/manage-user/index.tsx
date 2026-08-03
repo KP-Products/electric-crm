@@ -210,84 +210,7 @@ const ManageUser = () => {
       key: ROUTES.MANAGE_USER
     }
   ];
-  const userDashboardCards = useMemo(() => {
-    const getStatus = (status?: string) => String(status || '').toUpperCase();
 
-    const activeUsers = userPaginated.filter((user) => getStatus(user.status) === 'ACTIVE').length;
-    const inactiveUsers = userPaginated.filter(
-      (user) => getStatus(user.status) === 'INACTIVE'
-    ).length;
-
-    const lockedUsers = userPaginated.filter((user) => {
-      const status = getStatus(user.status);
-      return status === 'LOCKED';
-    }).length;
-
-    return [
-      {
-        title: 'Tổng người dùng',
-        value: pagination.total,
-        icon: '👥',
-        className: 'from-blue-50 to-white text-blue-600'
-      },
-      {
-        title: 'Đang hoạt động',
-        value: activeUsers,
-        icon: '●',
-        className: 'from-green-50 to-white text-green-600'
-      },
-      {
-        title: 'Không hoạt động',
-        value: inactiveUsers,
-        icon: '●',
-        className: 'from-green-50 to-white text-green-600'
-      },
-      {
-        title: 'Bị khóa',
-        value: lockedUsers,
-        icon: '🔒',
-        className: 'from-red-50 to-white text-red-600'
-      }
-    ];
-  }, [userPaginated, pagination.total]);
-
-  const DashboardCard = useCallback(
-    ({
-      title,
-      value,
-      icon,
-      className
-    }: {
-      title: string;
-      value: number;
-      icon: string;
-      className: string;
-    }) => {
-      return (
-        <div
-          className={clsx(
-            'rounded-radius-l border border-color-400 bg-gradient-to-br p-16 shadow-[0_8px_24px_rgba(16,36,62,0.05)]',
-            className
-          )}
-        >
-          <div className="flex items-center justify-between gap-12">
-            <div>
-              <TextBase text={title} classNames="sub-title4 !text-color-700" />
-              <TextBase
-                text={String(value)}
-                classNames="mt-8 !text-[30px] !font-bold !leading-none !text-color-900"
-              />
-            </div>
-
-            <div className="flex size-44 items-center justify-center rounded-full text-[22px]">
-              {icon}
-            </div>
-          </div>
-        </div>
-      );
-    },
-    []
-  );
   return (
     <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
       <div>
@@ -314,11 +237,6 @@ const ManageUser = () => {
           </Flex>
         </Flex>
         <Divider className={'my-16 '} />
-        <div className="mb-16 grid grid-cols-4 gap-16 tablet:grid-cols-2 mobile:grid-cols-1">
-          {userDashboardCards.map((item) => (
-            <DashboardCard key={item.title} {...item} />
-          ))}
-        </div>
         <div className="mb-12 grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(180px,1fr)_minmax(150px,1fr)_minmax(160px,1fr)_auto] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1">
           <AppTextField
             name="username"

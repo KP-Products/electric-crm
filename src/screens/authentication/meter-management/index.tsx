@@ -244,7 +244,7 @@ const MeterManagementScreen = () => {
           <Status
             type={getMeterStatusType(status)}
             kind={KIND_STATUS.SECONDARY}
-            content={status || getMeterStatusLabel(status)}
+            content={getMeterStatusLabel(status)}
           />
         )
       },
@@ -398,7 +398,7 @@ const MeterManagementScreen = () => {
           <Status
             type={getMeterStatusType(status)}
             kind={KIND_STATUS.SECONDARY}
-            content={status || getMeterStatusLabel(status)}
+            content={getMeterStatusLabel(status)}
           />
         )
       },

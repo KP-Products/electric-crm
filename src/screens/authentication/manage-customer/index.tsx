@@ -285,11 +285,10 @@ const ManageCustomerScreen = () => {
           justify="space-between"
           align="center"
           gap={K_SIZE_8}
-          className="mobile:flex-col mobile:items-start"
+          className="w-full mobile:flex-col mobile:items-start"
         >
           <TextBase classNames="title4" text="Quản lý khách hàng" />
           <Flex
-            flex={K_SIZE_1}
             justify="start"
             gap={K_SIZE_16}
             className="mobile:mt-8 mobile:w-full mobile:flex-col"

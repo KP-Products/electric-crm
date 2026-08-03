@@ -4,7 +4,6 @@ import {
   CheckCircleOutlined,
   DownloadOutlined,
   EyeOutlined,
-  FileExcelOutlined,
   FilePdfOutlined,
   PlusOutlined,
   SearchOutlined
@@ -12,6 +11,7 @@ import {
 import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1, NULL_VALUE } from '@constant';
 import { Flex, Modal, Spin, Tooltip } from 'antd';
 import ButtonBase from 'components/button';
+import { AppDatePicker } from 'components/date-picker';
 import { AppSelect } from 'components/select';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import AppTable from 'components/table';
@@ -21,6 +21,7 @@ import { AppTextField } from 'components/text-field';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
+import dayjs from 'dayjs';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { Bill, BillDetailItem, BillPayStatus, BillStatus } from 'model/bill';
 import { useCallback, useMemo, useState } from 'react';
@@ -30,8 +31,8 @@ import useElectricityNoticeCspk from './useElectricityNoticeCspk';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tất cả' },
-  { value: 'CALCULATED', label: 'Chưa xác nhận' },
-  { value: 'CONFIRMED', label: 'Đã xác nhận' }
+  { value: 'CHO_DUYET', label: 'Đã tính, chờ duyệt' },
+  { value: 'CONFIRMED', label: 'Đã chốt/duyệt' }
 ];
 
 const PAY_STATUS_OPTIONS = [
@@ -47,8 +48,8 @@ const VOLTAGE_LEVEL_OPTIONS = [
 ];
 
 const getBillStatusMeta = (status?: string) => {
-  if (status === 'CONFIRMED') return { label: 'Đã xác nhận', type: TYPE_STATUS.SUCCESS };
-  if (status === 'CALCULATED') return { label: 'Chưa xác nhận', type: TYPE_STATUS.PENDING };
+  if (status === 'CONFIRMED') return { label: 'Đã chốt/duyệt', type: TYPE_STATUS.SUCCESS };
+  if (status === 'CHO_DUYET') return { label: 'Đã tính, chờ duyệt', type: TYPE_STATUS.PENDING };
   return { label: status || NULL_VALUE, type: TYPE_STATUS.DEFAULT };
 };
 
@@ -66,20 +67,6 @@ const formatNumber = (value?: number | string) => {
 
 const formatMoney = (value?: number) =>
   value === undefined ? NULL_VALUE : `${formatNumber(value)} đ`;
-
-const ApiUnavailableField = ({ label, placeholder }: { label: string; placeholder: string }) => (
-  <Tooltip title="API hóa đơn hiện chưa hỗ trợ điều kiện này.">
-    <div>
-      <AppTextField
-        name={`unavailable-${label}`}
-        label={label}
-        placeholder={placeholder}
-        disabled
-        caption="Chưa được API hỗ trợ"
-      />
-    </div>
-  </Tooltip>
-);
 
 const ElectricityNoticeCspkScreen = () => {
   const {
@@ -236,7 +223,6 @@ const ElectricityNoticeCspkScreen = () => {
         key: 'action',
         fixed: 'right',
         align: 'center',
-        width: 185,
         render: (_: unknown, bill: Bill) => (
           <Flex justify="center" gap={8}>
             <Tooltip title="Xem chi tiết hóa đơn">
@@ -275,20 +261,6 @@ const ElectricityNoticeCspkScreen = () => {
             </Tooltip>
           </Flex>
         )
-      },
-      {
-        title: 'Export Excel',
-        key: 'excel',
-        fixed: 'right',
-        align: 'center',
-        width: 115,
-        render: () => (
-          <Tooltip title="API hiện chưa hỗ trợ xuất Excel.">
-            <span className="cursor-not-allowed text-color-400">
-              <FileExcelOutlined />
-            </span>
-          </Tooltip>
-        )
       }
     ],
     [currentPage, onConfirmBill, onExportNotice, onOpenDetail]
@@ -324,13 +296,16 @@ const ElectricityNoticeCspkScreen = () => {
 
         <div className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
           <div className="grid grid-cols-4 gap-12 desktop:grid-cols-2 tablet:grid-cols-2 mobile:grid-cols-1">
-            <AppTextField
+            <AppDatePicker
               name="periodCode"
-              label="Kỳ tính tiền"
-              placeholder="VD: 07/2026"
-              value={filter.periodCode}
-              onChange={(event) => onChangeFilter('periodCode', event.target.value)}
-              onPressEnter={onApplyFilter}
+              label="Kỳ tính toán"
+              placeholder="MM/YYYY"
+              wrapperClassName="w-full"
+              datePickerClassName="w-full"
+              picker="month"
+              format="MM/YYYY"
+              value={filter.periodCode ? dayjs(filter.periodCode, 'MM/YYYY') : null}
+              onChange={(value) => onChangeFilter('periodCode', value?.format('MM/YYYY') || '')}
             />
             <AppSelect
               name="customerId"
@@ -350,22 +325,19 @@ const ElectricityNoticeCspkScreen = () => {
               onPressEnter={onApplyFilter}
             />
             <AppSelect
-              name="status"
-              label="Trạng thái xác nhận"
-              options={STATUS_OPTIONS}
-              value={filter.status}
-              onSelectOption={({ key }) => onChangeFilter('status', String(key))}
-            />
-            <AppSelect
               name="payStatus"
               label="Trạng thái thanh toán"
               options={PAY_STATUS_OPTIONS}
               value={filter.payStatus}
               onSelectOption={({ key }) => onChangeFilter('payStatus', String(key))}
             />
-            <ApiUnavailableField label="Nhóm khách hàng" placeholder="Chưa được API hỗ trợ" />
-            <ApiUnavailableField label="Địa chỉ" placeholder="Chưa được API hỗ trợ" />
-            <ApiUnavailableField label="Trạng thái thông báo" placeholder="Chưa được API hỗ trợ" />
+            <AppSelect
+              name="status"
+              label="Trạng thái xác nhận"
+              options={STATUS_OPTIONS}
+              value={filter.status}
+              onSelectOption={({ key }) => onChangeFilter('status', String(key))}
+            />
           </div>
           <Flex justify="end" gap={8} className="mt-16 mobile:w-full">
             <ButtonBase
@@ -389,20 +361,6 @@ const ElectricityNoticeCspkScreen = () => {
         </div>
 
         <div className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
-          <div className="mb-16 grid grid-cols-2 gap-12 mobile:grid-cols-1">
-            <Tooltip title="API chưa có endpoint thống kê toàn bộ hóa đơn theo trạng thái.">
-              <div className="rounded-radius-m border border-color-300 bg-color-100 p-12">
-                <TextBase classNames="caption1 !text-color-700" text="Đã xác nhận dữ liệu" />
-                <TextBase classNames="sub-title3 !text-color-700" text="Chưa có API thống kê" />
-              </div>
-            </Tooltip>
-            <Tooltip title="API chưa có endpoint thống kê toàn bộ hóa đơn theo trạng thái.">
-              <div className="rounded-radius-m border border-color-300 bg-color-100 p-12">
-                <TextBase classNames="caption1 !text-color-700" text="Chưa xác nhận dữ liệu" />
-                <TextBase classNames="sub-title3 !text-color-700" text="Chưa có API thống kê" />
-              </div>
-            </Tooltip>
-          </div>
           <Spin spinning={loading || actionLoading}>
             <AppTable
               rootClassName="w-full"

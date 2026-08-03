@@ -7,12 +7,12 @@ export const METER_STATUS = {
 } as const;
 
 export const METER_STATUS_OPTIONS = [
-  { value: METER_STATUS.ACTIVE, label: 'Hoạt động' },
+  { value: METER_STATUS.ACTIVE, label: 'Đang hoạt động' },
   { value: METER_STATUS.INACTIVE, label: 'Không hoạt động' }
 ];
 
 export const METER_STATUS_LABEL_MAP: Record<string, string> = {
-  ACTIVE: 'Hoạt động',
+  ACTIVE: 'Đang hoạt động',
   INACTIVE: 'Không hoạt động',
   IN_STOCK: 'Lưu kho',
   STOCK: 'Lưu kho',
