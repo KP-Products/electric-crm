@@ -5,7 +5,6 @@ import {
   DownloadOutlined,
   EyeOutlined,
   FilePdfOutlined,
-  PlusOutlined,
   SearchOutlined
 } from '@ant-design/icons';
 import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1, NULL_VALUE } from '@constant';
