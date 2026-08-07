@@ -1,6 +1,6 @@
 'use client';
 
-import { K_SIZE_8, REQUIRED_MARK } from '@constant';
+import { K_SIZE_24, K_SIZE_8, REQUIRED_MARK } from '@constant';
 import { Divider, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
 import { AppDatePickerControl } from 'components/date-picker';
@@ -104,7 +104,16 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
           gap={K_SIZE_8}
           className="min-h-44 tablet:min-h-0 tablet:flex-col tablet:items-start"
         >
-          <TextBase classNames="title4" text={title} />
+          <div className="flex items-center gap-8">
+            <IconSvgLocal
+              classNames="cursor-pointer"
+              name="ICON_ARROW_LINE_LEFT"
+              height={K_SIZE_24}
+              width={K_SIZE_24}
+              onClick={onBack}
+            />
+            <TextBase classNames="title4" text={title} />
+          </div>
         </Flex>
         <Divider className="my-16" />
 

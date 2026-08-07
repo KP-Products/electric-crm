@@ -18,6 +18,8 @@ export interface MeterSearchForReadingRow {
   customerId?: number;
   customerCode?: string;
   customerName?: string;
+  status?: string;
+  inputStatus?: string;
 }
 
 export interface MeterSearchForReadingRes

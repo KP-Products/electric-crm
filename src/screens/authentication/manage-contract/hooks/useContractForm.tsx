@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import contractServices from 'services/contract-services';
 import {
   getVoltageLevelLabel,
   METER_TYPE
@@ -75,6 +76,8 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
   const detailLoading = useSelector(selectContractLoadingDetail);
 
   const [selectedContract, setSelectedContract] = useState<Contract>();
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contractsLoaded, setContractsLoaded] = useState<boolean>(false);
   const submittingRef = useRef<boolean>(false);
 
   const form = useForm<ContractForm>({
@@ -108,6 +111,17 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
     showErrorToast: true,
     meterType: METER_TYPE.CUSTOMER
   });
+  const availableMeterOptions = useMemo(() => {
+    const currentContractId = isEditMode ? getContractId(selectedContract) : '';
+    const assignedMeterIds = new Set(
+      contracts
+        .filter((contract) => getContractId(contract) !== currentContractId)
+        .map((contract) => contract.meterId)
+        .filter(Boolean)
+    );
+
+    return meterOptions.filter((option) => !assignedMeterIds.has(String(option.value)));
+  }, [contracts, isEditMode, meterOptions, selectedContract]);
   const selectedMeter = useMemo(
     () => (selectedMeterId ? getMeterById(selectedMeterId) : undefined),
     [getMeterById, selectedMeterId]
@@ -143,6 +157,32 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
     },
     [form]
   );
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadContracts = async () => {
+      const response = await contractServices.listContract();
+      if (!isActive) return;
+
+      if (!response?.data) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getContractErrorMessage(response as ErrorBase, 'Tải danh sách hợp đồng thất bại')
+        });
+        return;
+      }
+
+      setContracts(Array.isArray(response.data) ? response.data : []);
+      setContractsLoaded(true);
+    };
+
+    void loadContracts();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isEditMode && !isCopyMode) {
@@ -263,7 +303,7 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
     selectedMeterVoltageLevel,
     selectedMeterInitialReading,
     customerOptions,
-    meterOptions,
+    meterOptions: contractsLoaded ? availableMeterOptions : [],
     onOpenCustomerDropdown,
     customerDropdownRender,
     onOpenMeterDropdown,

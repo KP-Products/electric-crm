@@ -12,8 +12,10 @@ export interface OperationContract {
   status?: string;
   note?: string;
   createdBy?: string;
+  createdByUsername?: string;
   createdAt?: string;
   updatedBy?: string;
+  updatedByUsername?: string;
   updatedAt?: string;
 }
 

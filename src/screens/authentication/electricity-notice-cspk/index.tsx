@@ -281,17 +281,17 @@ const ElectricityNoticeCspkScreen = () => {
           className="mobile:flex-col mobile:items-start"
         >
           <TextBase classNames="title4" text="Quản lý Giấy báo tiền điện CSPK" />
-          <ButtonBase
-            type="primary"
-            customContent={
-              <span className="flex items-center gap-8">
-                <PlusOutlined />
-                Tạo kỳ tính tiền mới
-              </span>
-            }
-            onClick={() => setCreateOpen(true)}
-            classNames="mobile:w-full mobile:justify-center"
-          />
+          {/*<ButtonBase*/}
+          {/*  type="primary"*/}
+          {/*  customContent={*/}
+          {/*    <span className="flex items-center gap-8">*/}
+          {/*      <PlusOutlined />*/}
+          {/*      Tạo kỳ tính tiền mới*/}
+          {/*    </span>*/}
+          {/*  }*/}
+          {/*  onClick={() => setCreateOpen(true)}*/}
+          {/*  classNames="mobile:w-full mobile:justify-center"*/}
+          {/*/>*/}
         </Flex>
 
         <div className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">

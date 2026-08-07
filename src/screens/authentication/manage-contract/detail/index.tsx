@@ -1,8 +1,17 @@
 'use client';
 
-import { K_SIZE_1, K_SIZE_100, K_SIZE_120, K_SIZE_160, K_SIZE_200, K_SIZE_8 } from '@constant';
+import {
+  K_SIZE_1,
+  K_SIZE_24,
+  K_SIZE_100,
+  K_SIZE_120,
+  K_SIZE_160,
+  K_SIZE_200,
+  K_SIZE_8
+} from '@constant';
 import { Divider, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
+import { IconSvgLocal } from 'components/icon-vec-local';
 import Status, { KIND_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import { TextBase } from 'components/text';
@@ -40,6 +49,7 @@ const ManageContractDetailScreen = () => {
     documentLoading,
     getCustomerDisplay,
     getMeterDisplay,
+    onBack,
     onEdit,
     onViewDocument,
     onDownloadDocument
@@ -133,7 +143,16 @@ const ManageContractDetailScreen = () => {
           gap={K_SIZE_8}
           className="tablet:flex-col tablet:items-start"
         >
-          <TextBase classNames="title4" text="Chi tiết hợp đồng mua bán điện" />
+          <div className="flex items-center gap-8">
+            <IconSvgLocal
+              classNames="cursor-pointer"
+              name="ICON_ARROW_LINE_LEFT"
+              height={K_SIZE_24}
+              width={K_SIZE_24}
+              onClick={onBack}
+            />
+            <TextBase classNames="title4" text="Chi tiết hợp đồng mua bán điện" />
+          </div>
           <Flex gap={K_SIZE_8} className="mobile:w-full mobile:flex-col">
             <ButtonBase
               type="primary"

@@ -144,6 +144,8 @@ const ManualMeterReadingScreen = ({
     searchLookupOptions,
     searchLookupSearch,
     searchLookupLoading,
+    selectedFeederCode,
+    selectedFeederName,
     periodOptions,
     maxPhotoCount,
     hasUnsyncedFilter,
@@ -155,7 +157,7 @@ const ManualMeterReadingScreen = ({
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
-    onSelectMeter,
+    onSelectMeterWithUnsavedCheck,
     onChangeRegister,
     onChangeReactiveIndex,
     onChangeNote,
@@ -163,8 +165,10 @@ const ManualMeterReadingScreen = ({
     onRemovePendingPhoto,
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
-    onConfirmAndSave
+    onSave
   } = useManualMeterReading({ scope, feederId });
+
+  const isSelectedMeterConfirmed = selectedMeter?.status === 'CONFIRMED';
 
   const breadcrumbList = useMemo(
     () => [
@@ -225,11 +229,17 @@ const ManualMeterReadingScreen = ({
               customContent={
                 <div className="flex items-center gap-8">
                   <CheckCircleOutlined />
-                  <span>{savingConfirm ? 'Đang lưu...' : 'Xác nhận & Lưu'}</span>
+                  <span>{savingConfirm ? 'Đang lưu...' : 'Lưu chỉ số'}</span>
                 </div>
               }
-              disabled={savingConfirm || loadingMeters || loadingDetail || hasUnsyncedFilter}
-              onClick={onConfirmAndSave}
+              disabled={
+                savingConfirm ||
+                loadingMeters ||
+                loadingDetail ||
+                hasUnsyncedFilter ||
+                isSelectedMeterConfirmed
+              }
+              onClick={onSave}
               classNames="mobile:w-full mobile:justify-center"
             />
           </Flex>
@@ -369,7 +379,7 @@ const ManualMeterReadingScreen = ({
                     key={meter.id}
                     meter={meter}
                     selected={meter.id === selectedMeterId}
-                    onSelect={() => onSelectMeter(meter.id)}
+                    onSelect={() => onSelectMeterWithUnsavedCheck(meter.id)}
                   />
                 ))
               )}
@@ -403,19 +413,31 @@ const ManualMeterReadingScreen = ({
                 >
                   <TextBase
                     classNames="sub-title3 !text-color-900"
-                    text={`${selectedMeter.meterCode} | ${selectedMeter.serialNo}`}
+                    text={
+                      isFeederScope
+                        ? 'Thông tin lộ'
+                        : `${selectedMeter.meterCode} | ${selectedMeter.serialNo}`
+                    }
                   />
                   <MeterStatus status={selectedMeter.status} />
                 </Flex>
 
                 <div className="mt-12 grid grid-cols-4 gap-12 desktop:grid-cols-2 mobile:grid-cols-1">
                   <InfoBox
-                    label="Mã khách hàng"
-                    value={<span className="text-primary-700">{selectedMeter.customerCode}</span>}
+                    label={isFeederScope ? 'Mã lộ' : 'Mã khách hàng'}
+                    value={
+                      <span className="text-primary-700">
+                        {isFeederScope ? selectedFeederCode : selectedMeter.customerCode}
+                      </span>
+                    }
                   />
                   <InfoBox
-                    label="Tên khách hàng"
-                    value={<span className="text-primary-700">{selectedMeter.customerName}</span>}
+                    label={isFeederScope ? 'Tên lộ' : 'Tên khách hàng'}
+                    value={
+                      <span className="text-primary-700">
+                        {isFeederScope ? selectedFeederName : selectedMeter.customerName}
+                      </span>
+                    }
                   />
                   <InfoBox label="Địa chỉ" value={selectedMeter.address} />
                   <InfoBox label="Hệ số nhân" value={formatNumber(selectedMeter.multiplier)} />
@@ -470,6 +492,7 @@ const ManualMeterReadingScreen = ({
                                   value={formatDecimalWithCommas(register.newIndex)}
                                   inputMode="decimal"
                                   placeholder="Nhập chỉ số"
+                                  disabled={isSelectedMeterConfirmed}
                                   onChange={(event) =>
                                     onChangeRegister(
                                       selectedMeter.id,
@@ -564,6 +587,7 @@ const ManualMeterReadingScreen = ({
                       value={formatDecimalWithCommas(selectedMeter.reactiveIndex)}
                       inputMode="decimal"
                       placeholder="Nhập chỉ số"
+                      disabled={isSelectedMeterConfirmed}
                       onChange={(event) =>
                         onChangeReactiveIndex(
                           selectedMeter.id,
@@ -576,6 +600,7 @@ const ManualMeterReadingScreen = ({
                       className="mt-8"
                       value={selectedMeter.note}
                       placeholder="Nhập ghi chú..."
+                      disabled={isSelectedMeterConfirmed}
                       onChange={(event) => onChangeNote(selectedMeter.id, event.target.value)}
                     />
                   </div>
@@ -608,6 +633,7 @@ const ManualMeterReadingScreen = ({
                               <button
                                 type="button"
                                 className="absolute right-0 top-0 flex size-16 items-center justify-center rounded-[50%] bg-color-50 text-11 font-bold text-color-800 hover:text-error-600"
+                                disabled={isSelectedMeterConfirmed}
                                 onClick={() => onRemoveUploadedPhoto(selectedMeter.id, photo.id)}
                               >
                                 ×
@@ -629,6 +655,7 @@ const ManualMeterReadingScreen = ({
                               <button
                                 type="button"
                                 className="absolute right-0 top-0 flex size-16 items-center justify-center rounded-[50%] bg-color-50 text-11 font-bold text-color-800 hover:text-error-600"
+                                disabled={isSelectedMeterConfirmed}
                                 onClick={() => onRemovePendingPhoto(selectedMeter.id, photo.uid)}
                               >
                                 ×
@@ -647,9 +674,10 @@ const ManualMeterReadingScreen = ({
                         showUploadList={false}
                         accept="image/jpeg,image/png"
                         disabled={
+                          isSelectedMeterConfirmed ||
                           selectedMeter.uploadedPhotos.length +
                             selectedMeter.pendingPhotos.length >=
-                          maxPhotoCount
+                            maxPhotoCount
                         }
                         beforeUpload={(file) => {
                           onSelectPhoto(selectedMeter.id, file);
@@ -667,9 +695,10 @@ const ManualMeterReadingScreen = ({
                           }
                           classNames="mt-8 min-w-[104px] justify-center px-12"
                           disabled={
+                            isSelectedMeterConfirmed ||
                             selectedMeter.uploadedPhotos.length +
                               selectedMeter.pendingPhotos.length >=
-                            maxPhotoCount
+                              maxPhotoCount
                           }
                         />
                       </Upload>
@@ -691,7 +720,7 @@ const ManualMeterReadingScreen = ({
                       </div>
                     }
                     onClick={onClearSelectedMeter}
-                    disabled={savingConfirm}
+                    disabled={savingConfirm || isSelectedMeterConfirmed}
                     classNames="min-w-[120px] mobile:flex-1 mobile:justify-center"
                   />
                 </Flex>

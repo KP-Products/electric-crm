@@ -217,12 +217,18 @@ const ManageOperationContractDetailScreen = () => {
                   />
                 }
               />
-              <DetailItem label="Người tạo" value={displayText(selectedContract?.createdBy)} />
+              <DetailItem
+                label="Người tạo"
+                value={displayText(selectedContract?.createdByUsername)}
+              />
               <DetailItem
                 label="Ngày tạo"
                 value={displayDateTimeFromServer(selectedContract?.createdAt || '')}
               />
-              <DetailItem label="Người cập nhật" value={displayText(selectedContract?.updatedBy)} />
+              <DetailItem
+                label="Người cập nhật"
+                value={displayText(selectedContract?.updatedByUsername)}
+              />
               <DetailItem
                 label="Ngày cập nhật"
                 value={displayDateTimeFromServer(selectedContract?.updatedAt || '')}
