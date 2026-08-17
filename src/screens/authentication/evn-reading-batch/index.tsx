@@ -7,9 +7,7 @@ import {
   EyeOutlined,
   FilePdfOutlined,
   MoreOutlined,
-  SearchOutlined,
-  SendOutlined,
-  StopOutlined
+  SearchOutlined
 } from '@ant-design/icons';
 import { DEFAULT_PAGE_SIZE, K_SIZE_1, NULL_VALUE } from '@constant';
 import { Drawer, Dropdown, Flex, Input, Modal, Spin } from 'antd';
@@ -109,18 +107,14 @@ const EvnReadingBatchScreen = () => {
     onCreate,
     onUpdate,
     onDelete,
-    onSubmit,
     onConfirm,
-    onReject,
     onExport
   } = useEvnReadingBatch();
   const [formOpen, setFormOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<EvnReadingBatch>();
   const [form, setForm] = useState<EvnBatchForm>(DEFAULT_EVN_BATCH_FORM);
-  const [rejectBatch, setRejectBatch] = useState<EvnReadingBatch>();
-  const [rejectReason, setRejectReason] = useState('');
   const [confirmBatch, setConfirmBatch] = useState<EvnReadingBatch>();
-  const [confirmationAction, setConfirmationAction] = useState<'delete' | 'submit' | 'confirm'>();
+  const [confirmationAction, setConfirmationAction] = useState<'delete' | 'confirm'>();
 
   const openReadingInput = useCallback(
     (batch?: EvnReadingBatch) => {
@@ -150,15 +144,6 @@ const EvnReadingBatchScreen = () => {
     const success = editingBatch ? await onUpdate(editingBatch, form) : await onCreate(form);
     if (success) setFormOpen(false);
   }, [editingBatch, form, onCreate, onUpdate]);
-
-  const submitReject = useCallback(async () => {
-    if (!rejectBatch) return;
-    if (!rejectReason.trim()) {
-      showToast({ type: TYPE_TOAST.ERROR, content: 'Vui lòng nhập lý do từ chối' });
-      return;
-    }
-    if (await onReject(rejectBatch.id, rejectReason.trim())) setRejectBatch(undefined);
-  }, [onReject, rejectBatch, rejectReason]);
 
   const columns = useMemo<any[]>(
     () => [
@@ -280,15 +265,6 @@ const EvnReadingBatchScreen = () => {
                     onClick: () => openEdit(batch)
                   },
                   {
-                    key: 'submit',
-                    icon: <SendOutlined />,
-                    label: 'Gửi lô chốt',
-                    onClick: () => {
-                      setConfirmBatch(batch);
-                      setConfirmationAction('submit');
-                    }
-                  },
-                  {
                     key: 'delete',
                     icon: <DeleteOutlined />,
                     label: 'Xóa lô nháp',
@@ -309,16 +285,6 @@ const EvnReadingBatchScreen = () => {
                     onClick: () => {
                       setConfirmBatch(batch);
                       setConfirmationAction('confirm');
-                    }
-                  },
-                  {
-                    key: 'reject',
-                    icon: <StopOutlined />,
-                    label: 'Từ chối lô chốt',
-                    danger: true,
-                    onClick: () => {
-                      setRejectBatch(batch);
-                      setRejectReason('');
                     }
                   }
                 ]
@@ -371,22 +337,15 @@ const EvnReadingBatchScreen = () => {
   const confirmationCopy =
     confirmationAction === 'delete'
       ? 'Xóa lô chốt nháp này?'
-      : confirmationAction === 'submit'
-        ? 'Gửi lô chốt để chờ xác nhận?'
-        : 'Xác nhận chốt số điện với EVN? Sau khi chốt, lô không thể chỉnh sửa.';
+      : 'Xác nhận chốt số điện với EVN? Sau khi chốt, lô không thể chỉnh sửa.';
   const runConfirmation = useCallback(async () => {
     if (!confirmBatch) return;
-    const action =
-      confirmationAction === 'delete'
-        ? onDelete
-        : confirmationAction === 'submit'
-          ? onSubmit
-          : onConfirm;
+    const action = confirmationAction === 'delete' ? onDelete : onConfirm;
     if (await action(confirmBatch.id)) {
       setConfirmBatch(undefined);
       setConfirmationAction(undefined);
     }
-  }, [confirmBatch, confirmationAction, onConfirm, onDelete, onSubmit]);
+  }, [confirmBatch, confirmationAction, onConfirm, onDelete]);
 
   return (
     <PageWithBreadcrumb
@@ -643,40 +602,6 @@ const EvnReadingBatchScreen = () => {
         }
       >
         <p>{confirmationCopy}</p>
-      </Modal>
-      <Modal
-        title="Từ chối lô chốt"
-        open={Boolean(rejectBatch)}
-        centered
-        onCancel={() => setRejectBatch(undefined)}
-        footer={
-          <Flex justify="end" gap={8}>
-            <ButtonBase
-              type="ghost"
-              customContent="Hủy"
-              disabled={actionLoading}
-              onClick={() => setRejectBatch(undefined)}
-            />
-            <ButtonBase
-              type="primary"
-              classNames="!bg-error-600 hover:!bg-error-700"
-              customContent="Từ chối"
-              disabled={actionLoading}
-              onClick={() => void submitReject()}
-            />
-          </Flex>
-        }
-      >
-        <div className="pt-8">
-          <TextBase classNames="body2 !text-color-800 mb-4" text="Lý do từ chối" />
-          <Input.TextArea
-            value={rejectReason}
-            rows={4}
-            maxLength={250}
-            showCount
-            onChange={(event) => setRejectReason(event.target.value)}
-          />
-        </div>
       </Modal>
     </PageWithBreadcrumb>
   );

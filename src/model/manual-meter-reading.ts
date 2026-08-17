@@ -217,7 +217,12 @@ export interface ReviewReadingsReq extends PaginationReq {
 export interface ReadingReviewRow {
   periodId?: number;
   meterNumber?: string;
+  /** Mã khách hàng cũ lưu trên kỳ ghi */
   customerId?: number;
+  /** Mã / tên / địa chỉ khách hàng BE join sẵn qua công tơ */
+  customerCode?: string;
+  customerName?: string;
+  address?: string;
   periodCode?: string;
   readingDate?: string;
   status?: string;
@@ -225,6 +230,9 @@ export interface ReadingReviewRow {
   previousKwh?: number;
   deltaPercent?: number;
   abnormal?: boolean;
+  /** Chỉ có giá trị khi status = CONFIRMED / REJECTED */
+  confirmedBy?: string;
+  confirmedAt?: string;
 }
 
 export interface ReviewReadingsRes extends ResultBase<PaginationRes<ReadingReviewRow>> {}

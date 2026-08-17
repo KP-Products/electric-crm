@@ -227,9 +227,7 @@ const ApiEndPoint = {
   BILLING_READING_BATCH_DETAIL: '/admin/billing/reading-batches/detail',
   BILLING_READING_BATCH_UPDATE: '/admin/billing/reading-batches/update',
   BILLING_READING_BATCH_DELETE: '/admin/billing/reading-batches/delete',
-  BILLING_READING_BATCH_SUBMIT: '/admin/billing/reading-batches/submit',
   BILLING_READING_BATCH_CONFIRM: '/admin/billing/reading-batches/confirm',
-  BILLING_READING_BATCH_REJECT: '/admin/billing/reading-batches/reject',
   BILLING_READING_BATCH_METERS_BY_FEEDER: '/admin/billing/reading-batches/meters-by-feeder',
   BILLING_READING_BATCH_EXPORT_RECORD: '/admin/billing/reading-batches/export-record',
 

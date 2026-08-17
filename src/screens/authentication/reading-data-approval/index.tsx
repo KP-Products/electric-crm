@@ -126,30 +126,25 @@ const ReadingDataApprovalScreen = () => {
       },
       {
         title: 'Mã KH',
-        dataIndex: 'customerId',
-        key: 'customerId',
+        dataIndex: 'customerCode',
+        key: 'customerCode',
         width: 140,
-        render: (value: string) => value || NULL_VALUE
+        // customerCode = mã trong danh mục khách hàng; customerId là mã cũ lưu trên kỳ ghi
+        render: (value: string, row: ReadingReviewRow) => value || row.customerId || NULL_VALUE
       },
       {
         title: 'Tên khách hàng',
+        dataIndex: 'customerName',
         key: 'customerName',
         width: 190,
-        render: () => (
-          <Tooltip title="API review hiện chưa trả về tên khách hàng.">
-            <span className="text-color-600">{NULL_VALUE}</span>
-          </Tooltip>
-        )
+        render: (value: string) => value || NULL_VALUE
       },
       {
         title: 'Địa chỉ',
+        dataIndex: 'address',
         key: 'address',
         width: 190,
-        render: () => (
-          <Tooltip title="API review hiện chưa trả về địa chỉ khách hàng.">
-            <span className="text-color-600">{NULL_VALUE}</span>
-          </Tooltip>
-        )
+        render: (value: string) => value || NULL_VALUE
       },
       {
         title: 'Kỳ tính toán',

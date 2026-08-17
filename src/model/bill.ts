@@ -7,7 +7,12 @@ export type BillNoticeType = 'DIEN' | 'CSPK' | 'BOTH';
 export interface Bill {
   id: number;
   periodId?: number;
+  /** Mã khách hàng cũ lưu trên hóa đơn (bigint), không phải customers.customer_code */
   customerId?: number;
+  /** Mã / tên / địa chỉ khách hàng BE join sẵn qua công tơ → hợp đồng mua bán điện */
+  customerCode?: string;
+  customerName?: string;
+  address?: string;
   meterNumber?: string;
   periodCode?: string;
   totalKwh?: number;

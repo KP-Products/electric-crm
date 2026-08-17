@@ -134,7 +134,12 @@ const getMeterDisplayValue = (meter: Meter, key: string) => {
     case 'meterType':
       return normalizeMeterType(meter.meterType) === METER_TYPE.FEEDER ? 'Lộ tổng' : 'Khách hàng';
     case 'customerId':
-      return meter.customerName || meter.customerId || '-';
+      // BE join sẵn khách hàng qua hợp đồng mua bán điện; hiển thị "mã - tên" theo yêu cầu 04/08.
+      return (
+        [meter.customerCode, meter.customerName].filter(Boolean).join(' - ') ||
+        meter.customerId ||
+        '-'
+      );
     case 'multiplier':
       return meter.multiplier !== undefined && meter.multiplier !== null
         ? String(meter.multiplier)

@@ -8,7 +8,6 @@ import {
   ExportEvnReadingBatchRecordRes,
   FeederMetersReq,
   FeederMetersRes,
-  RejectEvnReadingBatchReq,
   SearchEvnReadingBatchesReq,
   SearchEvnReadingBatchesRes,
   UpdateEvnReadingBatchReq
@@ -51,17 +50,9 @@ const evnReadingBatchServices = {
     call<DeleteEvnReadingBatchRes>(() =>
       appServices.post(ApiConstants.BILLING_READING_BATCH_DELETE, params)
     ),
-  submit: (params: EvnReadingBatchIdReq) =>
-    call<EvnReadingBatchRes>(() =>
-      appServices.post(ApiConstants.BILLING_READING_BATCH_SUBMIT, params)
-    ),
   confirm: (params: EvnReadingBatchIdReq) =>
     call<EvnReadingBatchRes>(() =>
       appServices.post(ApiConstants.BILLING_READING_BATCH_CONFIRM, params)
-    ),
-  reject: (params: RejectEvnReadingBatchReq) =>
-    call<EvnReadingBatchRes>(() =>
-      appServices.post(ApiConstants.BILLING_READING_BATCH_REJECT, params)
     ),
   metersByFeeder: (params: FeederMetersReq) =>
     call<FeederMetersRes>(() =>

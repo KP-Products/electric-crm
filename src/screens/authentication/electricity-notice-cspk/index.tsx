@@ -149,21 +149,15 @@ const ElectricityNoticeCspkScreen = () => {
         title: 'Mã / Tên khách hàng',
         key: 'customer',
         width: 200,
-        render: () => (
-          <Tooltip title="API hóa đơn hiện chưa trả về mã hoặc tên khách hàng.">
-            <span className="text-color-600">{NULL_VALUE}</span>
-          </Tooltip>
-        )
+        render: (_: unknown, row: Bill) =>
+          [row.customerCode, row.customerName].filter(Boolean).join(' - ') || NULL_VALUE
       },
       {
         title: 'Địa chỉ',
+        dataIndex: 'address',
         key: 'address',
         width: 200,
-        render: () => (
-          <Tooltip title="API hóa đơn hiện chưa trả về địa chỉ khách hàng.">
-            <span className="text-color-600">{NULL_VALUE}</span>
-          </Tooltip>
-        )
+        render: (value: string) => value || NULL_VALUE
       },
       {
         title: 'Điện năng (kWh)',

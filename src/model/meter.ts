@@ -7,7 +7,11 @@ export interface Meter {
   meterType?: string;
   customerId?: number;
   locationId?: string;
+  /** Khách hàng BE join sẵn qua hợp đồng mua bán điện (nằm trong khối `meter` của response) */
+  customerCode?: string;
   customerName?: string;
+  address?: string;
+  contractNumber?: string;
   purchaseDate?: string;
   installationDate?: string;
   inspectionDate?: string;

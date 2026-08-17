@@ -253,18 +253,9 @@ export default function useEvnReadingBatch() {
     (id: number) => runAction(() => evnReadingBatchServices.delete({ id }), 'Đã xóa lô chốt'),
     [runAction]
   );
-  const onSubmit = useCallback(
-    (id: number) => runAction(() => evnReadingBatchServices.submit({ id }), 'Đã gửi lô chốt'),
-    [runAction]
-  );
   const onConfirm = useCallback(
     (id: number) =>
       runAction(() => evnReadingBatchServices.confirm({ id }), 'Đã chốt số điện với EVN'),
-    [runAction]
-  );
-  const onReject = useCallback(
-    (id: number, reason: string) =>
-      runAction(() => evnReadingBatchServices.reject({ id, reason }), 'Đã từ chối lô chốt'),
     [runAction]
   );
 
@@ -326,9 +317,7 @@ export default function useEvnReadingBatch() {
     onCreate,
     onUpdate,
     onDelete,
-    onSubmit,
     onConfirm,
-    onReject,
     onExport
   };
 }
