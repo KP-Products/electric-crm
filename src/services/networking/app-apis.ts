@@ -27,7 +27,10 @@ const ApiEndPoint = {
 
   // SYSTEM PARAMETER
   SYSTEM_PARAMETER_LIST: '/admin/system-parameters/search',
+  SYSTEM_PARAMETER_DETAIL: '/admin/system-parameters/detail',
+  SYSTEM_PARAMETER_CREATE: '/admin/system-parameters/create',
   SYSTEM_PARAMETER_UPDATE: '/admin/system-parameters/update',
+  SYSTEM_PARAMETER_DELETE: '/admin/system-parameters/delete',
   // SYSTEM PARAMETER
 
   // MANAGE CUSTOMERS

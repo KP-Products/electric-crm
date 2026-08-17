@@ -1,49 +1,77 @@
 import appServices from '@app-services';
 import { ApiResponse } from 'model/common';
-import { SystemParameter, SystemParameterResult } from 'model/system-parameter';
+import {
+  CreateSystemParameterReq,
+  DeleteSystemParameterRes,
+  SearchSystemParameterReq,
+  SearchSystemParameterRes,
+  SystemParameterIdReq,
+  SystemParameterRes,
+  UpdateSystemParameterReq
+} from 'model/system-parameter';
 import { ApiConstants } from './networking/app-apis';
 
-// BE dùng paramKey/paraType và trả khối phân trang {items,total,...}; FE giữ nguyên
-// paramCode/valueType nên dịch ngay tại service để màn hình không phải sửa.
-async function getSysParameterList(): Promise<ApiResponse<SystemParameterResult>> {
+async function searchSysParameters(
+  params: SearchSystemParameterReq
+): Promise<ApiResponse<SearchSystemParameterRes>> {
   try {
-    const rs = await appServices.post(ApiConstants.SYSTEM_PARAMETER_LIST, { page: 0, size: 100 });
-    const data = rs.data;
-    const items = data?.data?.items || [];
-    return {
-      ...data,
-      data: items.map((item: any) => ({
-        id: item.id,
-        paramCode: item.paramKey,
-        valueType: item.paraType,
-        paramValue: item.paramValue,
-        description: item.description
-      }))
-    };
+    const rs = await appServices.post(ApiConstants.SYSTEM_PARAMETER_LIST, params);
+    return rs.data;
   } catch (error: any) {
     return error;
   }
 }
 
-async function updateSysParameter(param: SystemParameter): Promise<ApiResponse<any>> {
+async function getSysParameterDetail(
+  params: SystemParameterIdReq
+): Promise<ApiResponse<SystemParameterRes>> {
   try {
-    const rs = await appServices.post(ApiConstants.SYSTEM_PARAMETER_UPDATE, {
-      id: param.id,
-      paramKey: param.paramCode,
-      paramValue: param.paramValue,
-      paraType: param.valueType,
-      description: param.description
-    });
-    const data = rs.data;
-    return data;
+    const rs = await appServices.post(ApiConstants.SYSTEM_PARAMETER_DETAIL, params);
+    return rs.data;
+  } catch (error: any) {
+    return error;
+  }
+}
+
+async function createSysParameter(
+  params: CreateSystemParameterReq
+): Promise<ApiResponse<SystemParameterRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.SYSTEM_PARAMETER_CREATE, params);
+    return rs.data;
+  } catch (error: any) {
+    return error;
+  }
+}
+
+async function updateSysParameter(
+  params: UpdateSystemParameterReq
+): Promise<ApiResponse<SystemParameterRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.SYSTEM_PARAMETER_UPDATE, params);
+    return rs.data;
+  } catch (error: any) {
+    return error;
+  }
+}
+
+async function deleteSysParameter(
+  params: SystemParameterIdReq
+): Promise<ApiResponse<DeleteSystemParameterRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.SYSTEM_PARAMETER_DELETE, params);
+    return rs.data;
   } catch (error: any) {
     return error;
   }
 }
 
 const sysParameterServices = {
-  getSysParameterList,
-  updateSysParameter
+  searchSysParameters,
+  getSysParameterDetail,
+  createSysParameter,
+  updateSysParameter,
+  deleteSysParameter
 };
 
 export default sysParameterServices;

@@ -1,276 +1,430 @@
 'use client';
 
 import {
+  DEFAULT_PAGE_SIZE,
   K_SIZE_0,
+  K_SIZE_1,
   K_SIZE_100,
-  K_SIZE_108,
-  K_SIZE_134,
-  K_SIZE_160,
+  K_SIZE_130,
+  K_SIZE_140,
   K_SIZE_18,
-  K_SIZE_200,
-  K_SIZE_467,
-  K_SIZE_8
+  K_SIZE_180,
+  K_SIZE_8,
+  K_SIZE_80,
+  NULL_VALUE
 } from '@constant';
-import { TextBase } from 'components/text';
-import React from 'react';
 import { Divider, Drawer, Flex, Spin } from 'antd';
-import AppTable from 'components/table';
-import { useResponsive } from 'utils/responsive';
 import ButtonBase from 'components/button';
-import { AppTextField, AppTextFieldControl } from 'components/text-field';
-import { AppSelect } from 'components/select';
 import IconHover from 'components/icon-vec-local/icon-hover';
-import useDefaultParameterHook from 'screens/authentication/default-parameters/useDefaultParameterHook';
-import { AppTakeNoteControl } from 'components/take-note';
+import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
-import PageWithBreadcrumb from '../../../layout/AppLayout/PageWithBreadcumb';
-import { ROUTES } from '../../../config/routes';
+import { AppTakeNoteControl } from 'components/take-note';
+import TagFilter from 'components/tag-filter';
+import { TextBase } from 'components/text';
+import { AppTextField, AppTextFieldControl } from 'components/text-field';
+import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import { SystemParameter } from 'model/system-parameter';
+import { useMemo } from 'react';
+import { ROUTES } from 'config/routes';
+import { useResponsive } from 'utils/responsive';
+import useDefaultParameterHook, {
+  SystemParameterFilterForm
+} from 'screens/authentication/default-parameters/useDefaultParameterHook';
+
+const FILTER_LABEL_MAP: Record<keyof SystemParameterFilterForm, string> = {
+  paramKey: 'Mã tham số',
+  paramValue: 'Giá trị'
+};
+
+const displayText = (value?: string | number | null) => {
+  if (value === undefined || value === null || value === '') return NULL_VALUE;
+  return String(value);
+};
 
 const DefaultParameters = () => {
   const { isMobile, isTablet } = useResponsive();
   const {
     t,
+    paramList,
+    total,
     paramListLoading,
-    pagination,
+    submitting,
     currentPage,
-    dataFilter,
+    pagination,
+    filter,
+    filterApplied,
+    onChangeFilter,
+    onApplyFilter,
+    onResetFilter,
+    drawerMode,
     selectedItem,
-    setSelectedItem,
-    openEdit,
-    setOpenEdit,
-    onCloseEdit,
-    loadingEdit,
+    onOpenCreate,
+    onOpenEdit,
+    onOpenView,
+    onCloseDrawer,
+    onDelete,
     control,
     handleSubmit,
     formState,
-    handleUpdateSubmit
+    onSubmit,
+    descriptionMaxLength,
+    paramKeyMaxLength
   } = useDefaultParameterHook();
 
-  const { isValid, errors, isDirty } = formState;
-  const breadcrumbList = [
-    {
-      title: t('menu:system_administration')
-    },
-    {
-      title: 'Quản lý tham số mặc định',
-      key: ROUTES.DEFAULT_PARAMETERS
-    }
-  ];
+  const { isValid, isDirty, errors } = formState;
+  const isView = drawerMode === 'view';
+  const isEdit = drawerMode === 'edit';
+  const isCreate = drawerMode === 'create';
+
+  const activeFilters = useMemo(
+    () =>
+      (Object.entries(filterApplied) as [keyof SystemParameterFilterForm, string][]).filter(
+        ([, value]) => Boolean(value)
+      ),
+    [filterApplied]
+  );
+
+  const columns = useMemo<any[]>(
+    () => [
+      {
+        title: 'STT',
+        key: 'index',
+        width: K_SIZE_80,
+        align: 'center',
+        render: (_: unknown, __: SystemParameter, index: number) =>
+          (currentPage - K_SIZE_1) * DEFAULT_PAGE_SIZE + index + K_SIZE_1
+      },
+      {
+        title: t('param:code'),
+        dataIndex: 'paramKey',
+        key: 'paramKey',
+        width: K_SIZE_180,
+        render: (text: string, record: SystemParameter) => (
+          <TextBase
+            text={displayText(text)}
+            classNames="sub-title4 !text-secondary-500 cursor-pointer hover:!text-secondary-700"
+            onClick={() => onOpenView(record)}
+          />
+        )
+      },
+      {
+        title: t('param:param_value'),
+        dataIndex: 'paramValue',
+        key: 'paramValue',
+        width: K_SIZE_180,
+        render: (text: string) => (
+          <div title={text} className="max-w-[220px] truncate">
+            {displayText(text)}
+          </div>
+        )
+      },
+      {
+        title: t('common:description'),
+        dataIndex: 'description',
+        key: 'description',
+        width: K_SIZE_100 * 4,
+        render: (text: string) => (
+          <div className="line-clamp-2 max-w-[460px] whitespace-normal">{displayText(text)}</div>
+        )
+      },
+      {
+        title: t('common:updated_by'),
+        dataIndex: 'updatedByName',
+        key: 'updatedByName',
+        width: K_SIZE_140,
+        render: (_: string, record: SystemParameter) =>
+          displayText(record.updatedByName || record.createdByName)
+      },
+      {
+        title: t('common:updated_at'),
+        dataIndex: 'updatedAt',
+        key: 'updatedAt',
+        width: K_SIZE_140,
+        render: (_: string, record: SystemParameter) =>
+          displayText(record.updatedAt || record.createdAt)
+      },
+      {
+        title: t('common:action'),
+        key: 'action',
+        fixed: 'right',
+        align: 'center',
+        width: K_SIZE_130,
+        render: (_: unknown, record: SystemParameter) => (
+          <div className="flex justify-center gap-8">
+            <IconHover
+              rootClassName="text-color-800"
+              title={t('common:view_detail')}
+              icon="ICON_EYE_OPEN"
+              iconHeight={K_SIZE_18}
+              onClick={() => onOpenView(record)}
+            />
+            <IconHover
+              rootClassName="text-color-800"
+              title={t('common:edit')}
+              icon="ICON_EDIT"
+              iconHeight={K_SIZE_18}
+              onClick={() => onOpenEdit(record)}
+            />
+            <IconHover
+              rootClassName="text-error-500 hover:text-error-500"
+              title={t('common:delete')}
+              icon="IC_TRASH_OUTLINE"
+              iconHeight={K_SIZE_18}
+              onClick={() => onDelete(record)}
+            />
+          </div>
+        )
+      }
+    ],
+    [currentPage, onDelete, onOpenEdit, onOpenView, t]
+  );
+
+  const drawerTitle = () => {
+    if (isCreate) return `${t('common:add_new')} ${t('param:param').toLowerCase()}`;
+    if (isEdit) return `${t('common:edit')} ${t('param:param').toLowerCase()}`;
+    return `${t('common:view_detail')} ${t('param:param').toLowerCase()}`;
+  };
+
   return (
-    <PageWithBreadcrumb breadcrumbList={breadcrumbList}>
+    <PageWithBreadcrumb
+      breadcrumbList={[
+        { title: t('menu:system_administration') },
+        { title: t('param:sys_param'), key: ROUTES.DEFAULT_PARAMETERS }
+      ]}
+    >
       <section>
         <Flex
-          justify={'space-between'}
-          align={'center'}
+          justify="space-between"
+          align="center"
           gap={K_SIZE_8}
-          className={'tablet:flex-col tablet:items-start'}
+          className="tablet:flex-col tablet:items-start"
         >
           <TextBase classNames="title4" t18n={'param:sys_param'} />
+          <ButtonBase
+            type="primary"
+            leftIcon="IC_ADD_OUTLINE2"
+            customContent="Thêm tham số"
+            onClick={onOpenCreate}
+            classNames="mobile:w-full mobile:justify-center"
+          />
         </Flex>
-        <Divider className={'my-16'} />
+        <Divider className="my-16" />
 
-        <Spin spinning={paramListLoading && dataFilter?.length > K_SIZE_0}>
-          <div
-            className={
-              'relative overflow-hidden rounded-radius-l border border-color-400 duration-500'
-            }
-          >
+        <div className="mb-12 grid grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] items-end gap-12 rounded-radius-l border border-color-300 bg-color-50 p-12 mobile:grid-cols-1">
+          <AppTextField
+            name="paramKey"
+            label={t('param:code')}
+            placeholder="Nhập mã tham số"
+            value={filter.paramKey}
+            onChange={(event) => onChangeFilter('paramKey', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <AppTextField
+            name="paramValue"
+            label={t('param:param_value')}
+            placeholder="Nhập giá trị tham số"
+            value={filter.paramValue}
+            onChange={(event) => onChangeFilter('paramValue', event.target.value)}
+            onPressEnter={onApplyFilter}
+          />
+          <Flex justify="end" gap={K_SIZE_8} className="col-span-full">
+            <ButtonBase
+              type="ghost"
+              t18n={'common:clear_filter'}
+              onClick={() => onResetFilter()}
+              classNames="min-w-[104px] mobile:flex-1 mobile:justify-center"
+            />
+            <ButtonBase
+              type="primary"
+              leftIcon="IC_SEARCH_OUTLINE2"
+              t18n={'common:search'}
+              onClick={onApplyFilter}
+              classNames="min-w-[112px] mobile:flex-1 mobile:justify-center"
+            />
+          </Flex>
+        </div>
+
+        {activeFilters.length > K_SIZE_0 && (
+          <div className="mb-8 flex w-full flex-wrap items-center gap-8">
+            {activeFilters.map(([key, value]) => (
+              <TagFilter
+                key={key}
+                content={`${FILTER_LABEL_MAP[key]}: ${value}`}
+                onClose={() => onResetFilter(key)}
+              />
+            ))}
+          </div>
+        )}
+
+        <Spin spinning={paramListLoading && paramList.length > K_SIZE_0}>
+          <div className="overflow-hidden rounded-radius-l border border-color-400 duration-500">
             <AppTable
               loading={paramListLoading}
-              rootClassName={'w-full'}
-              className={'[&_.ant-pagination]:hidden'}
+              rootClassName="w-full"
+              className="[&_.ant-pagination]:hidden"
               scroll={{ x: 'max-content', y: '75vh' }}
-              dataSource={dataFilter}
-              columns={[
-                {
-                  title: t('param:code'),
-                  key: 'paramCode',
-                  dataIndex: 'paramCode',
-                  width: K_SIZE_134,
-                  render: (text, record: any) => (
-                    <TextBase
-                      text={text}
-                      classNames={
-                        'sub-title4 !text-secondary-500 cursor-pointer hover:!text-secondary-700'
-                      }
-                      onClick={() => {
-                        setSelectedItem(record);
-                      }}
-                    />
-                  )
-                },
-                {
-                  title: t('param:value_type'),
-                  dataIndex: 'valueType',
-                  width: K_SIZE_108
-                  // sorter: true,
-                },
-                {
-                  title: t('param:param_value'),
-                  dataIndex: 'paramValue',
-                  width: K_SIZE_160
-                },
-                {
-                  title: t('common:description'),
-                  dataIndex: 'description',
-                  key: 'description',
-                  width: K_SIZE_467,
-                  render: (text) => (
-                    <div className={'line-clamp-2 max-w-[451px] whitespace-normal'}>{text}</div>
-                  )
-                },
-                {
-                  title: t('common:account'),
-                  fixed: 'right',
-                  align: 'center',
-                  width: K_SIZE_108,
-                  render: (_, record: any) => (
-                    <Flex justify={'center'}>
-                      <IconHover
-                        rootClassName={'text-color-800'}
-                        title={t('common:edit')}
-                        icon={'ICON_EDIT'}
-                        iconHeight={K_SIZE_18}
-                        onClick={() => {
-                          setSelectedItem(record);
-                          setOpenEdit(true);
-                        }}
-                      />
-                    </Flex>
-                  )
-                }
-              ]}
-              rowKey={'id'}
+              dataSource={paramList}
+              columns={columns}
+              rowKey="id"
               pagination={pagination}
             />
           </div>
-
-          <AppPagination
-            currentPage={currentPage}
-            total={dataFilter.length}
-            pagination={pagination}
-          />
+          <AppPagination currentPage={currentPage} total={total} pagination={pagination} />
         </Spin>
 
-        <form id={'update-form'} onSubmit={handleSubmit(handleUpdateSubmit)}>
+        <form id="param-form" onSubmit={handleSubmit(onSubmit)}>
           <Drawer
-            open={openEdit || !!selectedItem?.id}
+            open={Boolean(drawerMode)}
             title={
-              <Flex justify={'space-between'}>
-                <div>{`${t(openEdit ? 'common:edit' : 'common:view_detail')} ${t('param:param')}`}</div>
+              <Flex justify="space-between" align="center">
+                <div>{drawerTitle()}</div>
                 <IconHover
-                  title={!!selectedItem?.id && !openEdit ? t('common:edit') : ''}
-                  icon={!!selectedItem?.id && !openEdit ? 'ICON_EDIT' : 'IC_CLOSE_OUTLINE'}
+                  title={isView ? t('common:edit') : ''}
+                  icon={isView ? 'ICON_EDIT' : 'IC_CLOSE_OUTLINE'}
                   onClick={() => {
-                    if (!!selectedItem?.id && !openEdit) {
-                      setOpenEdit(true);
+                    if (isView && selectedItem) {
+                      onOpenEdit(selectedItem);
                       return;
                     }
-                    onCloseEdit();
+                    onCloseDrawer();
                   }}
                 />
               </Flex>
             }
             destroyOnClose
-            placement={'right'}
+            placement="right"
             closable={false}
-            maskClosable={!openEdit}
-            onClose={onCloseEdit}
+            maskClosable={isView}
+            onClose={onCloseDrawer}
             width={isTablet || isMobile ? '80vw' : '40vw'}
             footer={
-              <Flex justify={'end'}>
-                {!!selectedItem?.id && openEdit ? (
+              <Flex justify="end" gap={K_SIZE_8}>
+                {isView ? (
                   <ButtonBase
-                    form={'update-form'}
-                    htmlType={'submit'}
-                    classNames={'app-common-btn'}
-                    type={'primary'}
-                    customContent={
-                      <div className="flex flex-row items-center justify-center">
-                        <div>{t('common:confirm')}</div>
-                        {loadingEdit && (
-                          <div className="ml-8">
-                            <Spin size={'small'} />
-                          </div>
-                        )}
-                      </div>
-                    }
-                    disabled={!isValid || !isDirty || loadingEdit}
+                    classNames="app-common-btn"
+                    type="ghost"
+                    t18n={'common:close'}
+                    onClick={onCloseDrawer}
                   />
                 ) : (
-                  <ButtonBase
-                    classNames={'app-common-btn'}
-                    type={'ghost'}
-                    t18n={'common:close'}
-                    onClick={onCloseEdit}
-                  />
+                  <>
+                    <ButtonBase
+                      classNames="app-common-btn"
+                      type="ghost"
+                      t18n={'common:cancel'}
+                      onClick={onCloseDrawer}
+                    />
+                    <ButtonBase
+                      form="param-form"
+                      htmlType="submit"
+                      classNames="app-common-btn"
+                      type="primary"
+                      customContent={
+                        <div className="flex flex-row items-center justify-center">
+                          <div>{t('common:confirm')}</div>
+                          {submitting && (
+                            <div className="ml-8">
+                              <Spin size="small" />
+                            </div>
+                          )}
+                        </div>
+                      }
+                      disabled={!isValid || (isEdit && !isDirty) || submitting}
+                    />
+                  </>
                 )}
               </Flex>
             }
           >
-            <div>
-              <div
-                className={`grid gap-8 ${!!selectedItem && !openEdit ? 'grid-cols-2 gap-y-12' : ''}`}
-              >
-                <AppTextField
-                  label={'ID'}
-                  wrapperClassName={'flex-1'}
-                  isView={!openEdit}
-                  disabled
-                  value={selectedItem?.id}
-                  defaultValue={selectedItem?.id}
-                />
-                <AppTextField
-                  label={t('param:code')}
-                  wrapperClassName={'flex-1'}
-                  isView={!openEdit}
-                  disabled
-                  value={selectedItem?.paramCode}
-                  defaultValue={selectedItem?.paramCode}
-                />
-                <AppSelect
-                  name={'type'}
-                  label={t('param:value_type')}
-                  options={[
-                    { value: 'String', label: 'String' },
-                    { value: 'Number', label: 'Number' }
-                  ]}
-                  isView={!openEdit}
-                  disabled
-                  value={selectedItem?.valueType}
-                  onSelectOption={(e) => {
-                    // setLevel(e.key);
-                  }}
-                />
-
+            <div className={`grid gap-8 ${isView ? 'grid-cols-2 gap-y-12' : ''}`}>
+              {isCreate ? (
                 <AppTextFieldControl
-                  label={t('param:param_value')}
-                  placeholder={t('common:input_pla', {
-                    label: t('param:param_value').toLowerCase()
-                  })}
-                  wrapperClassName={'flex-1'}
-                  isView={!openEdit}
+                  label={t('param:code')}
+                  placeholder="Ví dụ: PAYMENT_DUE_DAYS"
+                  wrapperClassName="flex-1"
                   control={control}
-                  name={'paramValue'}
-                  type={selectedItem?.valueType?.toLowerCase() === 'number' ? 'number' : 'text'}
-                  customError={errors.paramValue?.type === 'too_small' ? null : undefined}
+                  name="paramKey"
+                  maxLength={paramKeyMaxLength}
+                  caption="Mã tham số là khoá hệ thống dùng để đọc cấu hình, không sửa được sau khi tạo."
                 />
-                <AppTakeNoteControl
-                  label={t('common:description')}
-                  placeholder={t('common:input_pla', {
-                    label: t('common:description').toLowerCase()
-                  })}
-                  wrapperClassName={!!selectedItem && !openEdit ? 'col-span-2' : 'flex-1'}
-                  isView={!openEdit}
-                  control={control}
-                  name={'description'}
-                  classNameIsView={'w-full break-words'}
-                  maxLength={K_SIZE_100 + K_SIZE_200}
-                  count={{
-                    show: true
-                  }}
+              ) : (
+                <AppTextField
+                  name="paramKeyView"
+                  label={t('param:code')}
+                  wrapperClassName="flex-1"
+                  isView={isView}
+                  disabled
+                  value={selectedItem?.paramKey}
+                  defaultValue={selectedItem?.paramKey}
                 />
-              </div>
+              )}
+
+              <AppTextFieldControl
+                label={t('param:param_value')}
+                placeholder={t('common:input_pla', {
+                  label: t('param:param_value').toLowerCase()
+                })}
+                wrapperClassName="flex-1"
+                isView={isView}
+                control={control}
+                name="paramValue"
+                customError={errors.paramValue?.type === 'too_small' ? null : undefined}
+              />
+
+              <AppTakeNoteControl
+                label={t('common:description')}
+                placeholder={t('common:input_pla', {
+                  label: t('common:description').toLowerCase()
+                })}
+                wrapperClassName={isView ? 'col-span-2' : 'flex-1'}
+                isView={isView}
+                control={control}
+                name="description"
+                classNameIsView="w-full break-words"
+                maxLength={descriptionMaxLength}
+                count={{ show: true }}
+              />
+
+              {isView && (
+                <>
+                  <AppTextField
+                    name="createdInfo"
+                    label="Người tạo"
+                    wrapperClassName="flex-1"
+                    isView
+                    disabled
+                    value={displayText(selectedItem?.createdByName)}
+                    defaultValue={displayText(selectedItem?.createdByName)}
+                  />
+                  <AppTextField
+                    name="createdAt"
+                    label="Ngày tạo"
+                    wrapperClassName="flex-1"
+                    isView
+                    disabled
+                    value={displayText(selectedItem?.createdAt)}
+                    defaultValue={displayText(selectedItem?.createdAt)}
+                  />
+                  <AppTextField
+                    name="updatedInfo"
+                    label={t('common:updated_by')}
+                    wrapperClassName="flex-1"
+                    isView
+                    disabled
+                    value={displayText(selectedItem?.updatedByName)}
+                    defaultValue={displayText(selectedItem?.updatedByName)}
+                  />
+                  <AppTextField
+                    name="updatedAt"
+                    label={t('common:updated_at')}
+                    wrapperClassName="flex-1"
+                    isView
+                    disabled
+                    value={displayText(selectedItem?.updatedAt)}
+                    defaultValue={displayText(selectedItem?.updatedAt)}
+                  />
+                </>
+              )}
             </div>
           </Drawer>
         </form>

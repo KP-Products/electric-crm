@@ -1,4 +1,6 @@
 import { SLICE_NAME } from 'stores/types';
 
 export const SYSTEM_PARAMETER_LIST = SLICE_NAME.SYSTEM_PARAMETER + '/list';
+export const SYSTEM_PARAMETER_CREATE = SLICE_NAME.SYSTEM_PARAMETER + '/create';
 export const SYSTEM_PARAMETER_UPDATE = SLICE_NAME.SYSTEM_PARAMETER + '/update';
+export const SYSTEM_PARAMETER_DELETE = SLICE_NAME.SYSTEM_PARAMETER + '/delete';
