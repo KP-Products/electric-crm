@@ -1,6 +1,6 @@
-import { fakeLogin, fakeLogout } from '@mock/data/auth';
+import { fakeLogin } from '@mock/data/auth';
 import { MockApiConfig } from '@mock/types';
-import { LoginParams, LogoutResult } from 'model/auth';
+import { LoginParams } from 'model/auth';
 import { ApiConstants } from 'services/networking/app-apis';
 
 export const mockAuthApis: MockApiConfig[] = [
@@ -27,14 +27,6 @@ export const mockAuthApis: MockApiConfig[] = [
       token: string;
     } => {
       return fakeLogin;
-    }
-  },
-  {
-    name: 'logout',
-    url: ApiConstants.LOGOUT,
-    method: 'post',
-    handler: (): LogoutResult => {
-      return fakeLogout;
     }
   }
 ];

@@ -35,20 +35,6 @@ takeLatestListeners({
   }
 });
 
-takeLatestListeners({
-  actionCreator: roleActions.downloadListRole,
-  effect: async (action, listenerApi) => {
-    const { body, onSuccess, onFailed } = action.payload;
-    listenerApi.dispatch(roleActions.setLoadingList(true));
-    const response = await roleServices.downloadListRole(body);
-    listenerApi.dispatch(roleActions.setLoadingList(false));
-    if (!response || !response?.data) {
-      onFailed?.();
-      return;
-    }
-    onSuccess?.(response);
-  }
-});
 
 takeLatestListeners({
   actionCreator: roleActions.getRoleDetail,

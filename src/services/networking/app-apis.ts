@@ -1,16 +1,12 @@
 const ApiEndPoint = {
   // AUTH
   LOGIN: '/auth/login',
-  LOGOUT: '/auth/logout',
   // AUTH
 
   // USER
   GET_LIST_USER: '/admin/users/list',
   GET_USER_SEARCH_LIST: '/admin/users/search',
-  DOWNLOAD_LIST_USER: '/admin/users/download',
   ADD_USER: '/admin/users/create',
-  ADD_LIST_USER: '/admin/users/create-list',
-  UPLOAD_USER: '/admin/users/upload',
   EDIT_USER: '/admin/users/update',
   DELETE_USER: '/admin/users/delete',
   ASSIGN_ROLE_USER: '/admin/users/roles/assign',
@@ -24,15 +20,14 @@ const ApiEndPoint = {
   ADD_ROLE: '/admin/roles/create',
   EDIT_ROLE: '/admin/roles/update',
   DELETE_ROLE: '/admin/roles/delete',
-  DOWNLOAD_LIST_ROLE: '/role/download',
   GET_LIST_PERMISSION: '/admin/permissions/list',
   ASSIGN_PERMISSION: '/admin/roles/permissions/assign',
   REMOVE_PERMISSION: '/admin/roles/permissions/remove',
   // ROLE
 
   // SYSTEM PARAMETER
-  SYSTEM_PARAMETER_LIST: '/system-parameters/get',
-  SYSTEM_PARAMETER_UPDATE: '/system-parameters/update',
+  SYSTEM_PARAMETER_LIST: '/admin/system-parameters/search',
+  SYSTEM_PARAMETER_UPDATE: '/admin/system-parameters/update',
   // SYSTEM PARAMETER
 
   // MANAGE CUSTOMERS
@@ -90,7 +85,6 @@ const ApiEndPoint = {
   // METER VERIFICATION
   METER_VERIFICATION_SEARCH: '/admin/meter-verifications/search',
   METER_VERIFICATION_LIST: '/admin/meter-verifications/list',
-  METER_VERIFICATION_DETAIL: '/admin/meter-verifications/detail',
   METER_VERIFICATION_CREATE: '/admin/meter-verifications/create',
   METER_VERIFICATION_UPDATE: '/admin/meter-verifications/update',
   METER_VERIFICATION_DELETE: '/admin/meter-verifications/delete',
@@ -256,11 +250,9 @@ const ApiEndPoint = {
 
   MY_REQUEST_LIST: '/pending-task/my-request/list',
   TASK_APPROVE_LIST: '/pending-task/approvals/list',
-  TASK_DETAIL: '/pending-task/detail',
   APPROVE_TASK: '/approval-matrix/approve',
   REJECT_TASK: '/approval-matrix/reject',
-  DELETE_TASK: '/approval-matrix/delete-bbrequest',
-  HISTORY_TASK: '/user-action-log/get-list'
+  DELETE_TASK: '/approval-matrix/delete-bbrequest'
 } as const;
 
 const configApi = () => {

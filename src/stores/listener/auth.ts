@@ -29,7 +29,7 @@ takeLatestListeners({
   actionCreator: authActions.logout,
   effect: async (action, listenerApi) => {
     const { onSuccess } = action.payload;
-    authServices.logout();
+    // BE không có endpoint /auth/logout — đăng xuất chỉ cần xoá phiên phía client.
     listenerApi.dispatch(authActions.clearStore());
     onSuccess();
   }

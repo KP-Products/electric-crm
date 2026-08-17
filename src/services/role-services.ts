@@ -7,7 +7,6 @@ import {
   AssignPermissionRes,
   DeleteRoleReq,
   DeleteRoleRes,
-  DownloadListRoleRes,
   EditRoleReq,
   EditRoleRes,
   GetListPermissionRes,
@@ -38,15 +37,6 @@ async function getListRoleSearch(params: GetListRoleReq): Promise<ApiResponse<Ge
   }
 }
 
-async function downloadListRole(params: GetListRoleReq): Promise<ApiResponse<DownloadListRoleRes>> {
-  try {
-    const rs = await appServices.post(ApiConstants.DOWNLOAD_LIST_ROLE, params);
-    const data = rs.data;
-    return data;
-  } catch (error: any) {
-    return error;
-  }
-}
 
 async function getRolDetail(params: GetRoleDetailReq): Promise<ApiResponse<GetRoleDetailRes>> {
   try {
@@ -122,7 +112,6 @@ async function removePermission(
 const roleServices = {
   getListRole,
   getListRoleSearch,
-  downloadListRole,
   getRolDetail,
   getListPermission,
   addRole,

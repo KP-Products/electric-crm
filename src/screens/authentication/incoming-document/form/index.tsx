@@ -47,7 +47,6 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
     selectedFile,
     setSelectedFile,
     submitLocked,
-    createdByDisplay,
     approverOptions,
     onOpenApproverDropdown,
     renderApproverDropdown,
@@ -331,11 +330,18 @@ const IncomingDocumentFormScreen = ({ isEditMode }: IncomingDocumentFormScreenPr
                   text="3. THÔNG TIN XỬ LÝ"
                 />
                 <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
-                  <AppTextField
+                  <AppSelectControl
                     name="createdBy"
                     label="Người tạo"
-                    value={createdByDisplay || 'Tự động'}
-                    disabled
+                    placeholder="Chọn người tạo"
+                    options={approverOptions}
+                    dropdownRender={renderApproverDropdown}
+                    onOpenChange={(open) => {
+                      if (open) onOpenApproverDropdown();
+                    }}
+                    suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
+                    required
+                    control={control}
                   />
                   <AppTextField
                     name="createdAt"

@@ -13,17 +13,9 @@ async function login(params: LoginParams): Promise<ApiResponse<LoginResult>> {
   }
 }
 
-async function logout() {
-  try {
-    const rs = await appServices.post(ApiConstants.LOGOUT);
-    const data = rs.data;
-    return data;
-  } catch (error) {}
-}
 
 const authServices = {
-  login,
-  logout
+  login
 };
 
 export default authServices;

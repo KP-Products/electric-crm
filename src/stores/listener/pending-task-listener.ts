@@ -36,18 +36,6 @@ takeLatestListeners({
   }
 });
 
-takeLatestListeners({
-  actionCreator: pendingTaskActions.getApprovalDetail,
-  effect: async (action, listenerApi) => {
-    const { body, onSuccess, onFailed } = action.payload;
-    const response = await pendingTaskServices.getTaskDetail(body);
-    if (isSuccess(response) && response.data) {
-      onSuccess?.(response.data);
-      return;
-    }
-    onFailed?.(response);
-  }
-});
 
 takeLatestListeners({
   actionCreator: pendingTaskActions.approveTask,
@@ -88,15 +76,3 @@ takeLatestListeners({
   }
 });
 
-takeLatestListeners({
-  actionCreator: pendingTaskActions.historyTask,
-  effect: async (action, listenerApi) => {
-    const { body, onSuccess, onFailed } = action.payload;
-    const response = await pendingTaskServices.historyTask(body);
-    if (isSuccess(response) && response.data) {
-      onSuccess?.(response.data?.content);
-      return;
-    }
-    onFailed?.(response);
-  }
-});

@@ -2,12 +2,8 @@ import appServices from '@app-services';
 import { ApiResponse, ResultBase } from 'model/common';
 import {
   FilterMyTask,
-  HistoryTaskData,
-  HistoryTaskReq,
-  PendingTask,
   PendingTaskListRes,
   RejectTaskReq,
-  TaskDetailReq
 } from 'model/pending-task';
 import { ApiConstants } from 'services/networking/app-apis';
 
@@ -35,15 +31,6 @@ async function getTaskPendings(
   }
 }
 
-async function getTaskDetail(param: TaskDetailReq): Promise<ApiResponse<ResultBase<PendingTask>>> {
-  try {
-    const rs = await appServices.post(ApiConstants.TASK_DETAIL, param);
-    const data = rs.data;
-    return data;
-  } catch (error: any) {
-    return error;
-  }
-}
 
 async function approveTask(id: string): Promise<
   ApiResponse<
@@ -93,26 +80,13 @@ async function deleteTask(id: string): Promise<
   }
 }
 
-async function historyTask(
-  param: HistoryTaskReq
-): Promise<ApiResponse<ResultBase<{ content: HistoryTaskData[] }>>> {
-  try {
-    const rs = await appServices.post(ApiConstants.HISTORY_TASK, param);
-    const data = rs.data;
-    return data;
-  } catch (error: any) {
-    return error;
-  }
-}
 
 const pendingTaskServices = {
   getMyRequest,
   getTaskPendings,
-  getTaskDetail,
   approveTask,
   rejectTask,
   deleteTask,
-  historyTask
 };
 
 export default pendingTaskServices;

@@ -36,20 +36,6 @@ takeLatestListeners({
     onSuccess?.(response);
   }
 });
-takeLatestListeners({
-  actionCreator: userActions.downloadListUser,
-  effect: async (action, listenerApi) => {
-    const { body, onSuccess, onFailed } = action.payload;
-    listenerApi.dispatch(userActions.setLoadingDetail(true));
-    const response = await userServices.downloadListUser(body);
-    listenerApi.dispatch(userActions.setLoadingDetail(false));
-    if (!response || !response?.data) {
-      onFailed?.();
-      return;
-    }
-    onSuccess?.(response);
-  }
-});
 
 takeLatestListeners({
   actionCreator: userActions.addUser,
@@ -66,35 +52,7 @@ takeLatestListeners({
   }
 });
 
-takeLatestListeners({
-  actionCreator: userActions.uploadUser,
-  effect: async (action, listenerApi) => {
-    const { body, onSuccess, onFailed } = action.payload;
-    listenerApi.dispatch(userActions.setLoadingList(true));
-    const response = await userServices.uploadUser(body);
-    listenerApi.dispatch(userActions.setLoadingList(false));
-    if (!response || !response?.data) {
-      onFailed?.();
-      return;
-    }
-    onSuccess?.(response);
-  }
-});
 
-takeLatestListeners({
-  actionCreator: userActions.addListUser,
-  effect: async (action, listenerApi) => {
-    const { body, onSuccess, onFailed } = action.payload;
-    listenerApi.dispatch(userActions.setLoadingDetail(true));
-    const response = await userServices.addListUser(body);
-    listenerApi.dispatch(userActions.setLoadingDetail(false));
-    if (!response || !response?.data) {
-      onFailed?.();
-      return;
-    }
-    onSuccess?.(response);
-  }
-});
 
 takeLatestListeners({
   actionCreator: userActions.editUser,

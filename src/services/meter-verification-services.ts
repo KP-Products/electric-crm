@@ -3,7 +3,6 @@ import {
   CreateMeterVerificationReq,
   DeleteMeterVerificationReq,
   DeleteMeterVerificationRes,
-  GetMeterVerificationReq,
   ListMeterVerificationRes,
   MeterVerificationFileRes,
   MeterVerificationRes,
@@ -52,16 +51,6 @@ async function listMeterVerifications(): Promise<ApiResponse<ListMeterVerificati
   }
 }
 
-async function getMeterVerification(
-  params: GetMeterVerificationReq
-): Promise<ApiResponse<MeterVerificationRes>> {
-  try {
-    const rs = await appServices.post(ApiConstants.METER_VERIFICATION_DETAIL, params);
-    return rs.data;
-  } catch (error: any) {
-    return error;
-  }
-}
 
 async function createMeterVerification(
   params: CreateMeterVerificationReq
@@ -145,7 +134,6 @@ async function downloadMeterVerificationFile(id: number): Promise<MeterVerificat
 const meterVerificationServices = {
   searchMeterVerifications,
   listMeterVerifications,
-  getMeterVerification,
   createMeterVerification,
   updateMeterVerification,
   deleteMeterVerification,

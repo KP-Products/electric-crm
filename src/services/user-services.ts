@@ -1,19 +1,13 @@
 import appServices from '@app-services';
 import { ApiResponse } from 'model/common';
 import {
-  AddListUserReq,
-  AddListUserRes,
   AddUserReq,
   AddUserRes,
   AssignUserRoleReq,
   DeleteUserReq,
-  DownloadListUserRes,
   EditUserReq,
   EditUserRes,
-  GetListUserReq,
   GetListUserRes,
-  UploadUserReq,
-  UploadUserRes,
   UserSearchReq,
   UserSearchRes
 } from 'model/user';
@@ -38,15 +32,6 @@ async function getUserSearchList(params: UserSearchReq): Promise<ApiResponse<Use
   }
 }
 
-async function downloadListUser(params: GetListUserReq): Promise<ApiResponse<DownloadListUserRes>> {
-  try {
-    const rs = await appServices.post(ApiConstants.DOWNLOAD_LIST_USER, params);
-    const data = rs.data;
-    return data;
-  } catch (error: any) {
-    return error;
-  }
-}
 
 async function addUser(params: AddUserReq): Promise<ApiResponse<AddUserRes>> {
   try {
@@ -58,25 +43,7 @@ async function addUser(params: AddUserReq): Promise<ApiResponse<AddUserRes>> {
   }
 }
 
-async function uploadUser(params: UploadUserReq): Promise<ApiResponse<UploadUserRes>> {
-  try {
-    const rs = await appServices.post(ApiConstants.UPLOAD_USER, params);
-    const data = rs.data;
-    return data;
-  } catch (error: any) {
-    return error;
-  }
-}
 
-async function addListUser(params: AddListUserReq): Promise<ApiResponse<AddListUserRes>> {
-  try {
-    const rs = await appServices.post(ApiConstants.ADD_LIST_USER, params);
-    const data = rs.data;
-    return data;
-  } catch (error: any) {
-    return error;
-  }
-}
 
 async function editUser(params: EditUserReq): Promise<ApiResponse<EditUserRes>> {
   try {
@@ -117,10 +84,7 @@ async function revokeRoleUser(params: AssignUserRoleReq): Promise<ApiResponse<Ed
 
 const userServices = {
   getListUser,
-  downloadListUser,
   addUser,
-  uploadUser,
-  addListUser,
   editUser,
   deleteUser,
   getUserSearchList,

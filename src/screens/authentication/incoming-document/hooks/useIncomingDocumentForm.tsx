@@ -78,6 +78,12 @@ const incomingDocumentSchema = z.object({
   confidentialityLevel: z.string().trim(),
   pageCount: numericStringSchema('Số trang phải là số nguyên dương'),
   dueDate: optionalDateSchema,
+  // created_by ở BE trỏ employees.id (cột NOT NULL) nên phải chọn nhân sự, không dùng uuid tài khoản
+  createdBy: z
+    .string()
+    .trim()
+    .min(K_SIZE_1, { message: 'Vui lòng chọn người tạo' })
+    .regex(/^\d+$/, { message: 'Người tạo phải là ID nhân sự dạng số' }),
   approvedBy: numericStringSchema('Người duyệt phải là ID dạng số'),
   approvalDate: optionalDateSchema,
   approvalNote: z.string().trim(),
@@ -133,6 +139,7 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
       confidentialityLevel: '',
       pageCount: '',
       dueDate: '',
+      createdBy: '',
       approvedBy: '',
       approvalDate: '',
       approvalNote: '',
@@ -307,6 +314,10 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
             ? String(document.pageCount)
             : '',
         dueDate: toDatePickerValue(document.dueDate),
+        createdBy:
+          document.createdBy !== undefined && document.createdBy !== null
+            ? String(document.createdBy)
+            : '',
         approvedBy:
           document.approvedBy !== undefined && document.approvedBy !== null
             ? String(document.approvedBy)
@@ -451,7 +462,7 @@ export default function useIncomingDocumentForm({ isEditMode }: UseIncomingDocum
 
       const createBody: CreateIncomingDocumentReq = {
         ...body,
-        ...(creatorId ? { createdBy: creatorId } : {})
+        createdBy: data.createdBy
       };
 
       dispatch({
