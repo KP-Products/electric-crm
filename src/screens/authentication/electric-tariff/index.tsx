@@ -154,6 +154,7 @@ const ElectricTariffScreen = () => {
     selectedTariffDocumentFile,
     tariffDocumentFileName,
     tariffForm,
+    tariffEditForm,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -163,7 +164,7 @@ const ElectricTariffScreen = () => {
     onOpenDetail,
     onCloseDetail,
     onChangeTouPrice,
-    handleSaveTouPrices,
+    handleSaveTariffDetail,
     onSelectTariffDocumentFile,
     onRemoveSelectedTariffDocumentFile,
     handleUploadTariffDocument,
@@ -178,6 +179,8 @@ const ElectricTariffScreen = () => {
     handleSubmit: handleTariffFormSubmit,
     formState: { isValid: isTariffValid }
   } = tariffForm;
+
+  const { control: tariffEditControl, handleSubmit: handleTariffEditSubmit } = tariffEditForm;
 
   const activeFilters = useMemo(
     () =>
@@ -574,45 +577,66 @@ const ElectricTariffScreen = () => {
               <ButtonBase
                 type="primary"
                 disabled={detailLoading}
-                customContent="Lưu bậc giá"
-                onClick={handleSaveTouPrices}
+                customContent="Lưu"
+                onClick={handleTariffEditSubmit(handleSaveTariffDetail)}
               />
             </Flex>
           }
         >
           <Spin spinning={detailLoading}>
             <div className="mb-16 grid grid-cols-2 gap-12 mobile:grid-cols-1">
-              <AppTextField
-                name="detailTariffCode"
+              <AppTextFieldControl
+                name="tariffCode"
+                control={tariffEditControl}
                 label="Mã giá"
-                value={selectedDetail?.tariff?.tariffCode || ''}
-                isView
+                labelSuffix={REQUIRED_MARK}
+                labelSuffixClassName="text-error-600"
               />
-              <AppTextField
-                name="detailTariffName"
+              <AppTextFieldControl
+                name="tariffName"
+                control={tariffEditControl}
                 label="Tên giá"
-                value={selectedDetail?.tariff?.tariffName || ''}
-                isView
+                labelSuffix={REQUIRED_MARK}
+                labelSuffixClassName="text-error-600"
               />
-              <AppTextField
-                name="detailPriceType"
+              <AppSelectControl
+                name="priceType"
+                control={tariffEditControl}
                 label="Loại đơn giá"
-                value={
-                  PRICE_TYPE_LABEL_MAP[selectedDetail?.tariff?.priceType || ''] ||
-                  selectedDetail?.tariff?.priceType ||
-                  ''
-                }
-                isView
+                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                options={PRICE_TYPE_OPTIONS}
               />
-              <AppTextField
-                name="detailVoltageLevel"
+              <AppSelectControl
+                name="voltageLevel"
+                control={tariffEditControl}
                 label="Cấp điện áp"
-                value={
-                  VOLTAGE_LEVEL_LABEL_MAP[selectedDetail?.tariff?.voltageLevel || ''] ||
-                  selectedDetail?.tariff?.voltageLevel ||
-                  ''
-                }
-                isView
+                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                options={VOLTAGE_LEVEL_OPTIONS}
+              />
+              <AppDatePickerControl
+                name="effectiveFrom"
+                control={tariffEditControl}
+                backendFormat={DATE_API_FORMAT}
+                label="Hiệu lực từ"
+                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                wrapperClassName="w-full"
+                datePickerClassName="w-full"
+              />
+              <AppDatePickerControl
+                name="effectiveTo"
+                control={tariffEditControl}
+                backendFormat={DATE_API_FORMAT}
+                label="Hiệu lực đến"
+                allowClear
+                wrapperClassName="w-full"
+                datePickerClassName="w-full"
+              />
+              <AppSelectControl
+                name="status"
+                control={tariffEditControl}
+                label="Trạng thái"
+                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
+                options={STATUS_OPTIONS}
               />
             </div>
 
