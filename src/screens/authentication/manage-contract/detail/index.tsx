@@ -17,9 +17,11 @@ import AppTable from 'components/table';
 import { TextBase } from 'components/text';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
+import { ContractMeter, ContractMeterChangeEvent } from 'model/contract';
 import { DocumentItem } from 'model/document';
 import { ReactNode, useMemo } from 'react';
 import { displayDateTimeFromServer } from 'utils/date';
+import { getVoltageLevelLabel } from 'screens/authentication/meter-management/utils/constant';
 import useContractDetail from '../hooks/useContractDetail';
 import {
   DOCUMENT_TYPE_LABEL_MAP,
@@ -27,6 +29,12 @@ import {
   getContractStatusMeta,
   renderContractDate
 } from '../utils';
+
+const METER_CHANGE_TYPE_LABEL: Record<string, string> = {
+  THAY_THE: 'Thay thế',
+  THAO_GO: 'Tháo gỡ',
+  LAP_MOI: 'Lắp mới'
+};
 
 const DetailItem = ({ label, value }: { label: string; value: ReactNode }) => (
   <div className="min-w-0">
@@ -48,12 +56,71 @@ const ManageContractDetailScreen = () => {
     documentList,
     documentLoading,
     getCustomerDisplay,
-    getMeterDisplay,
     onBack,
     onEdit,
     onViewDocument,
     onDownloadDocument
   } = useContractDetail();
+
+  const meterColumns = useMemo<any[]>(
+    () => [
+      {
+        title: 'STT',
+        key: 'stt',
+        width: 60,
+        render: (_: unknown, __: unknown, index: number) => index + 1
+      },
+      { title: 'Công tơ', dataIndex: 'meterCode', key: 'meterCode', render: displayText },
+      { title: 'Lộ', dataIndex: 'feederCode', key: 'feederCode', render: displayText },
+      {
+        title: 'Ngày lắp đặt',
+        dataIndex: 'installationDate',
+        key: 'installationDate',
+        render: (value: string) => renderContractDate(value)
+      },
+      {
+        title: 'Cấp điện áp',
+        dataIndex: 'voltageLevel',
+        key: 'voltageLevel',
+        render: (value: string) => (value ? getVoltageLevelLabel(value) : '-')
+      },
+      { title: 'Hệ số nhân', dataIndex: 'multiplier', key: 'multiplier', render: displayText }
+    ],
+    []
+  );
+
+  const changeEventColumns = useMemo<any[]>(
+    () => [
+      { title: 'Số sự kiện', dataIndex: 'eventNo', key: 'eventNo', render: displayText },
+      {
+        title: 'Loại',
+        dataIndex: 'eventType',
+        key: 'eventType',
+        render: (value: string) => METER_CHANGE_TYPE_LABEL[value] || displayText(value)
+      },
+      { title: 'Ngày', dataIndex: 'eventDate', key: 'eventDate', render: displayText },
+      {
+        title: 'Công tơ cũ → mới',
+        key: 'devices',
+        render: (_: unknown, record: ContractMeterChangeEvent) =>
+          `${record.oldDevice || '-'} → ${record.newDevice || '-'}`
+      },
+      {
+        title: 'Chỉ số tháo',
+        dataIndex: 'removeReading',
+        key: 'removeReading',
+        render: displayText
+      },
+      {
+        title: 'Chỉ số lắp',
+        dataIndex: 'installReading',
+        key: 'installReading',
+        render: displayText
+      },
+      { title: 'Trạng thái', dataIndex: 'status', key: 'status', render: displayText }
+    ],
+    []
+  );
 
   const documentColumns = useMemo<any[]>(
     () => [
@@ -204,15 +271,6 @@ const ManageContractDetailScreen = () => {
                 value={displayDateTimeFromServer(selectedContract?.updatedAt || '')}
               />
               <DetailItem
-                label="Công tơ"
-                value={
-                  <TextBase
-                    text={getMeterDisplay(selectedContract?.meterId)}
-                    classNames="sub-title4 !text-secondary-500"
-                  />
-                }
-              />
-              <DetailItem
                 label="Ngày hết hiệu lực"
                 value={renderContractDate(selectedContract?.expiryDate)}
               />
@@ -230,6 +288,39 @@ const ManageContractDetailScreen = () => {
             </div>
           </section>
         </Spin>
+
+        <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
+          <TextBase classNames="sub-title3 mb-16 !text-primary-700" text="Danh sách công tơ" />
+          <div className="overflow-hidden rounded-radius-l border border-color-400">
+            <AppTable
+              loading={detailLoading}
+              rootClassName="w-full"
+              scroll={{ x: 'max-content' }}
+              dataSource={selectedContract?.meters || []}
+              columns={meterColumns}
+              rowKey={(record: any) => (record as ContractMeter).meterId}
+              pagination={false}
+            />
+          </div>
+        </section>
+
+        <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
+          <TextBase classNames="sub-title3 mb-16 !text-primary-700" text="Biến động công tơ" />
+          <div className="overflow-hidden rounded-radius-l border border-color-400">
+            <AppTable
+              loading={detailLoading}
+              rootClassName="w-full"
+              scroll={{ x: 'max-content' }}
+              dataSource={selectedContract?.meterChangeEvents || []}
+              columns={changeEventColumns}
+              rowKey={(record: any) => {
+                const event = record as ContractMeterChangeEvent;
+                return `${event.eventId}-${event.oldDevice}-${event.newDevice}`;
+              }}
+              pagination={false}
+            />
+          </div>
+        </section>
 
         <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
           <Flex justify="space-between" align="center" className="mb-16">

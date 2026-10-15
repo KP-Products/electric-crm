@@ -2,7 +2,13 @@ import { DEFAULT_PAGE_SIZE, K_SIZE_1, NULL_VALUE } from '@constant';
 import { AppSelectOption } from 'components/select';
 import { TYPE_STATUS } from 'components/status';
 import { ErrorBase } from 'model/common';
-import { Contract, ContractSearchReq, CreateContractReq, UpdateContractReq } from 'model/contract';
+import {
+  Contract,
+  ContractMeterLine,
+  ContractSearchReq,
+  CreateContractReq,
+  UpdateContractReq
+} from 'model/contract';
 import { Customer } from 'model/customer';
 import { Meter } from 'model/meter';
 import moment from 'moment';
@@ -39,7 +45,7 @@ export interface ContractFilter {
 export interface ContractForm {
   contractNumber: string;
   customerId?: number;
-  meterId: string;
+  meters: ContractMeterLine[];
   signedDate: string;
   effectiveDate: string;
   expiryDate: string;
@@ -65,10 +71,16 @@ export const DEFAULT_CONTRACT_FILTER: ContractFilter = {
   createdBy: ''
 };
 
+export const EMPTY_CONTRACT_METER_LINE: ContractMeterLine = {
+  meterId: '',
+  feederId: '',
+  installationDate: ''
+};
+
 export const DEFAULT_CONTRACT_FORM: ContractForm = {
   contractNumber: '',
   customerId: undefined,
-  meterId: '',
+  meters: [EMPTY_CONTRACT_METER_LINE],
   signedDate: '',
   effectiveDate: '',
   expiryDate: '',
@@ -132,10 +144,18 @@ export const isContractDateBefore = (nextDate?: string, previousDate?: string) =
   return Boolean(next && previous && next.isBefore(previous, 'day'));
 };
 
-export const buildContractFormValues = (contract?: Contract): ContractForm => ({
+/** Sao chép HĐ không chép công tơ (1 công tơ chỉ thuộc 1 HĐ) → bắt đầu bằng 1 dòng trống. */
+export const buildContractFormValues = (contract?: Contract, withMeters = true): ContractForm => ({
   contractNumber: contract?.contractNumber || '',
   customerId: contract?.customerId,
-  meterId: contract?.meterId || '',
+  meters:
+    withMeters && contract?.meters?.length
+      ? contract.meters.map((meter) => ({
+          meterId: meter.meterId,
+          feederId: meter.feederId || '',
+          installationDate: formatContractDate(meter.installationDate)
+        }))
+      : [EMPTY_CONTRACT_METER_LINE],
   signedDate: formatContractDate(contract?.signedDate),
   effectiveDate: formatContractDate(contract?.effectiveDate || contract?.signedDate),
   expiryDate: formatContractDate(contract?.expiryDate),
@@ -164,7 +184,11 @@ export const buildSearchContractBody = (
 export const buildCreateContractBody = (data: ContractForm): CreateContractReq => ({
   contractNumber: data.contractNumber.trim(),
   customerId: data.customerId as number,
-  meterId: normalizeText(data.meterId),
+  meters: data.meters.map((meter) => ({
+    meterId: meter.meterId,
+    feederId: meter.feederId,
+    installationDate: formatContractDate(meter.installationDate)
+  })),
   signedDate: formatContractDate(data.signedDate),
   effectiveDate: formatContractDate(data.effectiveDate),
   expiryDate: normalizeText(formatContractDate(data.expiryDate)),
@@ -223,6 +247,7 @@ export const getContractStatusMeta = (status?: string | null) => {
     INACTIVE: 'Hết hiệu lực',
     TAM_NGUNG: 'Tạm ngưng',
     SUSPENDED: 'Tạm ngưng',
+    CHAM_DUT: 'Chấm dứt',
     'ĐANG HIỆU LỰC': 'Đang hiệu lực',
     'HIỆU LỰC': 'Đang hiệu lực',
     'SẮP HẾT HẠN': 'Sắp hết hạn',
@@ -240,7 +265,8 @@ export const getContractStatusMeta = (status?: string | null) => {
     EXPIRED: TYPE_STATUS.ERROR,
     INACTIVE: TYPE_STATUS.ERROR,
     TAM_NGUNG: TYPE_STATUS.DISABLED,
-    SUSPENDED: TYPE_STATUS.DISABLED
+    SUSPENDED: TYPE_STATUS.DISABLED,
+    CHAM_DUT: TYPE_STATUS.ERROR
   };
 
   return {
@@ -274,6 +300,14 @@ export const buildCustomerLabelMap = (customers: Customer[]) =>
 export const getMeterLabel = (meter?: Meter) => {
   if (!meter) return '';
   return meter.meterCode || meter.meterId || meter.id || '';
+};
+
+/** "CT01, CT02 +3" — cột Công tơ ở danh sách HĐ. */
+export const getContractMeterCodes = (contract?: Contract, max = 2) => {
+  const codes = (contract?.meters || []).map((meter) => meter.meterCode || meter.meterId);
+  if (!codes.length) return '';
+  const shown = codes.slice(0, max).join(', ');
+  return codes.length > max ? `${shown} +${codes.length - max}` : shown;
 };
 
 export const getMeterValue = (meter?: Meter) => meter?.meterId || meter?.id || '';

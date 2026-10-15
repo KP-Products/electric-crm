@@ -43,6 +43,7 @@ import {
   ContractFilter,
   displayText,
   getContractId,
+  getContractMeterCodes,
   getContractStatusMeta,
   renderContractDate
 } from './utils';
@@ -227,10 +228,11 @@ const ManageContractScreen = () => {
       },
       {
         title: 'Công tơ',
-        dataIndex: 'meterId',
-        key: 'meterId',
+        dataIndex: 'meters',
+        key: 'meters',
         width: K_SIZE_150,
-        render: (meterId: string) => renderTruncatedText(getMeterDisplay(meterId), 'max-w-[180px]')
+        render: (_: unknown, record: Contract) =>
+          renderTruncatedText(getContractMeterCodes(record) || '-', 'max-w-[180px]')
       },
       {
         title: 'Ngày ký',
@@ -323,7 +325,6 @@ const ManageContractScreen = () => {
     [
       currentPage,
       getCustomerDisplay,
-      getMeterDisplay,
       onDelete,
       onCopyContract,
       onOpenDetail,

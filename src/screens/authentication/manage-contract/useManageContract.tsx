@@ -104,7 +104,7 @@ export default function useManageContract() {
     () => [
       filter.meterId,
       filterApplied.meterId,
-      ...contractList.map((contract) => contract.meterId)
+      ...contractList.flatMap((contract) => (contract.meters || []).map((meter) => meter.meterId))
     ],
     [contractList, filter.meterId, filterApplied.meterId]
   );
@@ -262,7 +262,11 @@ export default function useManageContract() {
       id: getContractId(contract),
       contractNumber: contract.contractNumber,
       customerId: contract.customerId as number,
-      meterId: contract.meterId || undefined,
+      meters: (contract.meters || []).map((meter) => ({
+        meterId: meter.meterId,
+        feederId: meter.feederId || '',
+        installationDate: formatContractDate(meter.installationDate)
+      })),
       signedDate: formatContractDate(contract.signedDate),
       effectiveDate: formatContractDate(contract.effectiveDate || contract.signedDate),
       expiryDate: formatContractDate(contract.expiryDate) || undefined,
