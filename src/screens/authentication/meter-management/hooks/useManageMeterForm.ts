@@ -12,6 +12,7 @@ import {
   EditMeterReq,
   GetMeterDetailRes,
   Meter,
+  MeterMultiplierHistory,
   normalizeMeterSearchItem
 } from 'model/meter';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -19,7 +20,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { DebugUtils } from 'utils/debug-utils';
-import { normalizeDateToApi } from 'utils/date';
+import { FORMAT_DATE_API, normalizeDateToApi } from 'utils/date';
+import moment from 'moment';
+import meterServices from 'services/meter-services';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
 import { parseFormattedNumber } from 'utils/number-input';
 import { z } from 'zod';
@@ -83,7 +86,34 @@ const meterSchema = (t: TypedT) => {
           {
             message: 'Chỉ số đầu không được âm'
           }
-        )
+        ),
+      initialReadingCd: z
+        .string()
+        .trim()
+        .refine(
+          (value) => {
+            if (!value) return true;
+            const parsedValue = parseNumberInput(value);
+            return Number.isFinite(parsedValue) && parsedValue >= 0;
+          },
+          { message: 'Chỉ số đầu không được âm' }
+        ),
+      initialReadingTd: z
+        .string()
+        .trim()
+        .refine(
+          (value) => {
+            if (!value) return true;
+            const parsedValue = parseNumberInput(value);
+            return Number.isFinite(parsedValue) && parsedValue >= 0;
+          },
+          { message: 'Chỉ số đầu không được âm' }
+        ),
+      multiplierEffectiveFrom: z
+        .string()
+        .trim()
+        .min(K_SIZE_1, { message: t('validate:required', { name: 'Ngày bắt đầu' }) }),
+      multiplierNote: optionalString
     })
     .superRefine((data, ctx) => {
       const requiredFields: { field: keyof typeof data; label: string }[] = [
@@ -124,7 +154,11 @@ const defaultMeterFormValues: MeterForm = {
   installationDate: '',
   voltageLevel: '',
   multiplier: '1',
-  initialReading: '0'
+  initialReading: '0',
+  initialReadingCd: '0',
+  initialReadingTd: '0',
+  multiplierEffectiveFrom: moment().format(FORMAT_DATE_API),
+  multiplierNote: ''
 };
 
 export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFormProps) {
@@ -189,7 +223,12 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       initialReading:
         meter.initialReading !== undefined && meter.initialReading !== null
           ? String(meter.initialReading)
-          : '0'
+          : '0',
+      initialReadingCd: meter.initialReadingCd != null ? String(meter.initialReadingCd) : '0',
+      initialReadingTd: meter.initialReadingTd != null ? String(meter.initialReadingTd) : '0',
+      // Ngày bắt đầu thật lấy từ lịch sử hệ số (nạp sau) — tạm để hôm nay
+      multiplierEffectiveFrom: moment().format(FORMAT_DATE_API),
+      multiplierNote: ''
     }),
     []
   );
@@ -246,6 +285,15 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
         type: TYPE_TOAST.SUCCESS,
         content: action + ' công tơ thành công'
       });
+      // Đổi hệ số hồi tố: BE báo các kỳ đã tính lại sản lượng quy đổi.
+      const message: string = res?.message || '';
+      const recalculated = message.split('tính lại sản lượng kỳ ')[1];
+      if (recalculated) {
+        showToast({
+          type: TYPE_TOAST.INFO,
+          content: `Đã tính lại sản lượng theo hệ số mới cho kỳ ${recalculated}`
+        });
+      }
     },
     [router, action]
   );
@@ -271,7 +319,11 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       installationDate: normalizeDateToApi(data.installationDate) || undefined,
       voltageLevel: data.voltageLevel || undefined,
       multiplier: parseNumberInput(data.multiplier),
-      initialReading: parseNumberInput(data.initialReading)
+      initialReading: parseNumberInput(data.initialReading),
+      initialReadingCd: data.initialReadingCd ? parseNumberInput(data.initialReadingCd) : 0,
+      initialReadingTd: data.initialReadingTd ? parseNumberInput(data.initialReadingTd) : 0,
+      multiplierEffectiveFrom: normalizeDateToApi(data.multiplierEffectiveFrom) || undefined,
+      multiplierNote: data.multiplierNote || undefined
     };
 
     return body;
@@ -308,6 +360,37 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
     [buildSubmitBody, onSubmitSuccess, onSubmitFailed, isAddMode, id]
   );
 
+  const [multiplierHistory, setMultiplierHistory] = useState<MeterMultiplierHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
+
+  // Lịch sử hệ số nhân (sửa / xem): lấy ngày bắt đầu + ngày kết thúc của dòng đang hiệu lực.
+  useEffect(() => {
+    if (isAddMode || !id) {
+      setMultiplierHistory([]);
+      return;
+    }
+    let active = true;
+    setHistoryLoading(true);
+    meterServices.getMultiplierHistory(id).then((response: any) => {
+      if (!active) return;
+      setHistoryLoading(false);
+      const rows: MeterMultiplierHistory[] = Array.isArray(response?.data) ? response.data : [];
+      setMultiplierHistory(rows);
+      const current = rows[rows.length - 1];
+      if (current?.effectiveFrom && !userForm.formState.dirtyFields.multiplierEffectiveFrom) {
+        userForm.setValue('multiplierEffectiveFrom', current.effectiveFrom, {
+          shouldDirty: false,
+          shouldValidate: true
+        });
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [id, isAddMode, selectedMeter, userForm]);
+
+  const currentMultiplierRow = multiplierHistory[multiplierHistory.length - 1];
+
   const onBack = useCallback(() => router.back(), [router]);
 
   const onEdit = useCallback(
@@ -326,6 +409,9 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
     parentMeterDropdownRender,
     showParentMeterField,
     loading,
+    multiplierHistory,
+    historyLoading,
+    currentMultiplierRow,
     onBack,
     onEdit
   };

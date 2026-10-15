@@ -21,6 +21,8 @@ export interface Meter {
   voltageType?: string;
   parentId?: string;
   initialReading?: number;
+  initialReadingCd?: number;
+  initialReadingTd?: number;
   status: string;
   createdAt?: string;
   createdBy?: string;
@@ -92,10 +94,30 @@ export interface AddMeterReq {
   multiplier?: number;
   voltageType?: string;
   parentId?: string;
+  /** Chỉ số đầu giờ bình thường (BT) */
   initialReading?: number;
+  initialReadingCd?: number;
+  initialReadingTd?: number;
+  /** Ngày bắt đầu hiệu lực của hệ số nhân (dd-MM-yyyy) */
+  multiplierEffectiveFrom?: string;
+  multiplierNote?: string;
   status: string;
   meterType?: string;
 }
+
+/** 1 dòng lịch sử hệ số nhân (POST /admin/meters/multiplier-history/list). */
+export interface MeterMultiplierHistory {
+  id: number;
+  meterId: string;
+  multiplier: number;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  note?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+
+export interface MeterMultiplierHistoryRes extends ResultBase<MeterMultiplierHistory[]> {}
 
 export interface EditMeterReq extends AddMeterReq {
   meterId: string;

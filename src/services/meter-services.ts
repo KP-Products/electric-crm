@@ -10,7 +10,8 @@ import {
   GetMeterDetailReq,
   GetMeterDetailRes,
   GetListMeterReq,
-  GetListMeterRes
+  GetListMeterRes,
+  MeterMultiplierHistoryRes
 } from '../model/meter';
 
 async function getListMeter(): Promise<ApiResponse<GetListMeterRes>> {
@@ -67,7 +68,19 @@ async function deleteMeter(params: DeleteMeterReq): Promise<ApiResponse<DeleteMe
     return error;
   }
 }
+async function getMultiplierHistory(
+  meterId: string
+): Promise<ApiResponse<MeterMultiplierHistoryRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.METER_MULTIPLIER_HISTORY_LIST, { meterId });
+    return rs.data;
+  } catch (error: any) {
+    return error;
+  }
+}
+
 const meterServices = {
+  getMultiplierHistory,
   getListMeter,
   getMeterSearchList,
   getMeterDetail,
