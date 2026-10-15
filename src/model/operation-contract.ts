@@ -5,6 +5,12 @@ export interface OperationContract {
   contractNumber?: string;
   contractName?: string;
   operationUnitId?: string;
+  customerId?: number;
+  customerCode?: string;
+  customerName?: string;
+  contractValue?: number;
+  discountPercent?: number | null;
+  valueAfterDiscount?: number;
   contractType?: string;
   signedDate?: string;
   effectiveDate?: string;
@@ -22,6 +28,8 @@ export interface OperationContract {
 export interface SearchOperationContractsReq extends PaginationReq {
   contractNumber?: string;
   contractName?: string;
+  customerId?: number;
+  /** Màn đơn vị vận hành (đã gỡ khỏi menu) còn gửi — BE bỏ qua. */
   operationUnitId?: string;
   contractType?: string;
   status?: string;
@@ -34,7 +42,9 @@ export interface OperationContractIdReq {
 export interface CreateOperationContractReq {
   contractNumber: string;
   contractName: string;
-  operationUnitId: string;
+  customerId: number;
+  contractValue: number;
+  discountPercent?: number | null;
   contractType: string;
   signedDate: string;
   effectiveDate: string;
@@ -46,7 +56,9 @@ export interface CreateOperationContractReq {
 export interface UpdateOperationContractReq {
   id: string;
   contractName?: string;
-  operationUnitId?: string;
+  customerId?: number;
+  contractValue?: number;
+  discountPercent?: number | null;
   contractType?: string;
   signedDate?: string;
   effectiveDate?: string;

@@ -24,7 +24,8 @@ import {
   DOCUMENT_TYPE_LABEL_MAP,
   displayText,
   getOperationContractStatusMeta,
-  renderOperationContractDate
+  renderOperationContractDate,
+  formatVnd
 } from '../utils';
 import useOperationContractDetail from '../hooks/useOperationContractDetail';
 
@@ -47,7 +48,6 @@ const ManageOperationContractDetailScreen = () => {
     detailLoading,
     documentList,
     documentLoading,
-    getOperationUnitDisplay,
     onBack,
     onEdit,
     onViewDocument,
@@ -188,8 +188,28 @@ const ManageOperationContractDetailScreen = () => {
                 value={displayText(selectedContract?.contractName)}
               />
               <DetailItem
-                label="Đơn vị vận hành"
-                value={getOperationUnitDisplay(selectedContract?.operationUnitId)}
+                label="Khách hàng"
+                value={displayText(
+                  [selectedContract?.customerCode, selectedContract?.customerName]
+                    .filter(Boolean)
+                    .join(' - ')
+                )}
+              />
+              <DetailItem
+                label="Giá trị hợp đồng"
+                value={formatVnd(selectedContract?.contractValue)}
+              />
+              <DetailItem
+                label="Chiết khấu"
+                value={
+                  selectedContract?.discountPercent != null
+                    ? `${selectedContract.discountPercent}%`
+                    : '-'
+                }
+              />
+              <DetailItem
+                label="Giá trị sau chiết khấu"
+                value={formatVnd(selectedContract?.valueAfterDiscount)}
               />
               <DetailItem
                 label="Loại hợp đồng"

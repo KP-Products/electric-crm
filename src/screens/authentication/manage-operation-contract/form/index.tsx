@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import ButtonBase from 'components/button';
 import { AppDatePickerControl } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
+import DocumentDropzone from 'components/document-dropzone';
 import { AppSelectControl } from 'components/select';
 import { AppTakeNoteControl } from 'components/take-note';
 import { TextBase } from 'components/text';
@@ -25,9 +26,11 @@ const ManageOperationContractForm = ({ isEditMode }: ManageOperationContractForm
     dateApiFormat,
     form,
     detailLoading,
-    operationUnitOptions,
-    onOpenOperationUnitDropdown,
-    operationUnitDropdownRender,
+    customerOptions,
+    onOpenCustomerDropdown,
+    customerDropdownRender,
+    attachments,
+    setAttachments,
     onBack,
     onSubmit
   } = useOperationContractForm({ isEditMode });
@@ -114,13 +117,13 @@ const ManageOperationContractForm = ({ isEditMode }: ManageOperationContractForm
                   control={control}
                 />
                 <AppSelectControl
-                  name="operationUnitId"
-                  label="Đơn vị vận hành"
+                  name="customerId"
+                  label="Khách hàng"
                   labelSuffix={requiredMark}
-                  placeholder="Chọn đơn vị vận hành"
-                  options={operationUnitOptions}
-                  dropdownRender={operationUnitDropdownRender}
-                  onOpenChange={onOpenOperationUnitDropdown}
+                  placeholder="Chọn khách hàng"
+                  options={customerOptions}
+                  dropdownRender={customerDropdownRender}
+                  onOpenChange={onOpenCustomerDropdown}
                   control={control}
                 />
                 <AppSelectControl
@@ -169,6 +172,20 @@ const ManageOperationContractForm = ({ isEditMode }: ManageOperationContractForm
                   placeholder={OPERATION_CONTRACT_DEFAULT_TYPE}
                   control={control}
                 />
+                <AppTextFieldControl
+                  name="contractValue"
+                  label="Giá trị hợp đồng (VNĐ)"
+                  labelSuffix={requiredMark}
+                  placeholder="Nhập giá trị hợp đồng (VNĐ)"
+                  formatNumberWithCommas
+                  control={control}
+                />
+                <AppTextFieldControl
+                  name="discountPercent"
+                  label="Chiết khấu"
+                  placeholder="Nhập chiết khấu (%)"
+                  control={control}
+                />
                 <div className="col-span-4 tablet:col-span-2 mobile:col-span-1">
                   <AppTakeNoteControl
                     name="note"
@@ -181,6 +198,11 @@ const ManageOperationContractForm = ({ isEditMode }: ManageOperationContractForm
                   />
                 </div>
               </div>
+            </section>
+
+            <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
+              <TextBase classNames="sub-title3 mb-16 !text-primary-700" text="Tài liệu đính kèm" />
+              <DocumentDropzone value={attachments} onChange={setAttachments} />
             </section>
           </form>
         </Spin>

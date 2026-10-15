@@ -8,7 +8,7 @@ import { ErrorBase } from 'model/common';
 import { DocumentFileRes, DocumentItem } from 'model/document';
 import { OperationContract, OperationContractRes } from 'model/operation-contract';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import documentServices from 'services/document-services';
 import {
@@ -16,7 +16,6 @@ import {
   getOperationContractId,
   OPERATION_CONTRACT_DOCUMENT_OWNER_TYPE
 } from '../utils';
-import useOperationUnitLookup from './useOperationUnitLookup';
 
 const getDocumentFileContentType = (response: DocumentFileRes) =>
   (response.contentType || response.blob.type || '').toLowerCase();
@@ -86,16 +85,6 @@ export default function useOperationContractDetail() {
   const [selectedContract, setSelectedContract] = useState<OperationContract>();
   const [documentList, setDocumentList] = useState<DocumentItem[]>([]);
   const [documentLoading, setDocumentLoading] = useState<boolean>(false);
-
-  const pinnedOperationUnitIds = useMemo(
-    () => [selectedContract?.operationUnitId],
-    [selectedContract?.operationUnitId]
-  );
-
-  const { getOperationUnitDisplay } = useOperationUnitLookup({
-    autoLoad: false,
-    pinnedIds: pinnedOperationUnitIds
-  });
 
   const onBack = useCallback(() => {
     router.push(ROUTES.MANAGE_OPERATION_CONTRACT);
@@ -217,7 +206,6 @@ export default function useOperationContractDetail() {
     detailLoading,
     documentList,
     documentLoading,
-    getOperationUnitDisplay,
     onBack,
     onEdit,
     onViewDocument,
