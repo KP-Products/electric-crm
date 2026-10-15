@@ -262,11 +262,8 @@ export default function useManageContract() {
       id: getContractId(contract),
       contractNumber: contract.contractNumber,
       customerId: contract.customerId as number,
-      meters: (contract.meters || []).map((meter) => ({
-        meterId: meter.meterId,
-        feederId: meter.feederId || '',
-        installationDate: formatContractDate(meter.installationDate)
-      })),
+      // Gia hạn / đổi trạng thái: không gửi meters → BE giữ nguyên danh sách công tơ.
+      meters: undefined,
       signedDate: formatContractDate(contract.signedDate),
       effectiveDate: formatContractDate(contract.effectiveDate || contract.signedDate),
       expiryDate: formatContractDate(contract.expiryDate) || undefined,
