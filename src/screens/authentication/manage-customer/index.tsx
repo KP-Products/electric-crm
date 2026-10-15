@@ -13,7 +13,6 @@ import {
   K_SIZE_18,
   K_SIZE_180,
   K_SIZE_200,
-  K_SIZE_220,
   K_SIZE_240,
   K_SIZE_8,
   NULL_VALUE,
@@ -21,9 +20,8 @@ import {
 } from '@constant';
 import { Divider, Drawer, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
-import { AppDatePickerControl } from 'components/date-picker';
+import DocumentDropzone from 'components/document-dropzone';
 import IconHover from 'components/icon-vec-local/icon-hover';
-import { AppSelectControl } from 'components/select';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
@@ -33,8 +31,9 @@ import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { CUSTOMER_STATUS, Customer } from 'model/customer';
-import { useCallback, useMemo } from 'react';
-import { FORMAT_DATE_API, displayDateTimeFromServer } from 'utils/date';
+import { useMemo } from 'react';
+import { displayDateTimeFromServer } from 'utils/date';
+import CustomerPersonFields from './components/CustomerPersonFields';
 import { useResponsive } from 'utils/responsive';
 import useManageCustomer, { CustomerFilter } from './useManageCustomer';
 
@@ -87,8 +86,8 @@ const ManageCustomerScreen = () => {
     filter,
     filterApplied,
     openForm,
-    operationUnitLoading,
-    operationUnitOptions,
+    attachments,
+    setAttachments,
     form,
     onChangeFilter,
     onApplyFilter,
@@ -113,21 +112,6 @@ const ManageCustomerScreen = () => {
         Boolean(value)
       ),
     [filterApplied]
-  );
-
-  const operationUnitLabelMap = useMemo(
-    () =>
-      operationUnitOptions.reduce<Record<string, string>>((result, option) => {
-        result[String(option.value)] = String(option.label);
-        return result;
-      }, {}),
-    [operationUnitOptions]
-  );
-
-  const getOperationUnitLabel = useCallback(
-    (operationUnitId?: string | null) =>
-      operationUnitId ? operationUnitLabelMap[operationUnitId] || operationUnitId : NULL_VALUE,
-    [operationUnitLabelMap]
   );
 
   const columns = useMemo<any[]>(
@@ -183,17 +167,20 @@ const ManageCustomerScreen = () => {
       },
       {
         title: 'Người liên hệ',
-        dataIndex: 'contactName',
-        key: 'contactName',
-        render: (text: string) => renderTruncatedText(text, 'max-w-[180px]'),
+        key: 'contactPerson',
+        render: (_: unknown, record: Customer) =>
+          renderTruncatedText(
+            record.contactPerson?.fullName || record.contactName,
+            'max-w-[180px]'
+          ),
         width: K_SIZE_180
       },
       {
-        title: 'Đơn vị vận hành',
-        dataIndex: 'operationUnitId',
-        key: 'operationUnitId',
-        render: (text: string) => renderTruncatedText(getOperationUnitLabel(text), 'max-w-[220px]'),
-        width: K_SIZE_220
+        title: 'Người đại diện',
+        key: 'representative',
+        render: (_: unknown, record: Customer) =>
+          renderTruncatedText(record.representative?.fullName, 'max-w-[180px]'),
+        width: K_SIZE_180
       },
       {
         title: 'Địa chỉ',
@@ -262,7 +249,7 @@ const ManageCustomerScreen = () => {
         )
       }
     ],
-    [currentPage, getOperationUnitLabel, onDelete, onOpenDetail, onOpenUpdate, t]
+    [currentPage, onDelete, onOpenDetail, onOpenUpdate, t]
   );
 
   const breadcrumbList = [
@@ -418,7 +405,7 @@ const ManageCustomerScreen = () => {
             closable={false}
             maskClosable={!detailLoading}
             onClose={onCloseForm}
-            width={isTablet || isMobile ? '92vw' : '34vw'}
+            width={isTablet || isMobile ? '92vw' : '56vw'}
             footer={
               <Flex justify="end" gap={K_SIZE_8}>
                 <ButtonBase
@@ -482,36 +469,7 @@ const ManageCustomerScreen = () => {
                   placeholder="Nhập email"
                   control={control}
                 />
-                <AppTextFieldControl
-                  name="contactName"
-                  label="Người liên hệ"
-                  placeholder="Nhập người liên hệ"
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name="contactIdNo"
-                  label="CMND/CCCD người liên hệ"
-                  placeholder="Nhập CMND/CCCD"
-                  control={control}
-                />
-                <AppDatePickerControl
-                  name="contactIssueDate"
-                  control={control}
-                  backendFormat={FORMAT_DATE_API}
-                  label="Ngày cấp CMND/CCCD"
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
-                />
               </div>
-
-              <AppSelectControl
-                name="operationUnitId"
-                label="Đơn vị vận hành"
-                placeholder="Chọn đơn vị vận hành"
-                isLoading={operationUnitLoading}
-                options={operationUnitOptions}
-                control={control}
-              />
 
               <AppTextFieldControl
                 name="address"
@@ -519,6 +477,13 @@ const ManageCustomerScreen = () => {
                 placeholder="Nhập địa chỉ"
                 control={control}
               />
+
+              <CustomerPersonFields control={control} />
+
+              <div className="border-t border-color-200 pt-12">
+                <TextBase classNames="sub-title4 mb-8" text="Tài liệu đính kèm" />
+                <DocumentDropzone value={attachments} onChange={setAttachments} />
+              </div>
             </div>
           </Drawer>
         </form>

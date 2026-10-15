@@ -1,12 +1,11 @@
 'use client';
 
-import { K_SIZE_0, K_SIZE_200, K_SIZE_24, K_SIZE_8, REQUIRED_MARK } from '@constant';
+import { K_SIZE_24, K_SIZE_8, REQUIRED_MARK } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Divider, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
-import { AppDatePickerControl } from 'components/date-picker';
+import DocumentDropzone from 'components/document-dropzone';
 import { IconSvgLocal } from 'components/icon-vec-local';
-import { AppSelectControl } from 'components/select';
 import { TextBase } from 'components/text';
 import { AppTextFieldControl } from 'components/text-field';
 import { showToast } from 'components/toast';
@@ -14,13 +13,13 @@ import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { Customer } from 'model/customer';
-import { OperationUnit } from 'model/operation-unit';
+import { DOCUMENT_OWNER_TYPE } from 'model/document';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import customerServices from 'services/customer-services';
-import operationUnitServices from 'services/operation-unit-services';
-import { FORMAT_DATE_API } from 'utils/date';
+import { customerDocumentOwnerId, uploadOwnerDocuments } from 'utils/document-upload';
+import CustomerPersonFields from '../components/CustomerPersonFields';
 import {
   CustomerForm,
   buildFormValues,
@@ -43,10 +42,7 @@ const ManageCustomerEditScreen = () => {
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [detailLoadFailed, setDetailLoadFailed] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [operationUnitLoading, setOperationUnitLoading] = useState<boolean>(false);
-  const [operationUnitOptions, setOperationUnitOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   const form = useForm<CustomerForm>({
     mode: 'onTouched',
@@ -110,41 +106,6 @@ const ManageCustomerEditScreen = () => {
     fetchCustomerDetail();
   }, [fetchCustomerDetail, id, router]);
 
-  useEffect(() => {
-    const fetchOperationUnits = async () => {
-      setOperationUnitLoading(true);
-      const response = await operationUnitServices.searchOperationUnits({
-        page: K_SIZE_0,
-        size: K_SIZE_200
-      });
-      if (!mountedRef.current) return;
-
-      setOperationUnitLoading(false);
-
-      if (hasApiError(response)) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: getCustomerErrorMessage(response, 'Tải danh sách đơn vị vận hành thất bại')
-        });
-        return;
-      }
-
-      const operationUnits = Array.isArray(response.data?.items) ? response.data.items : [];
-
-      setOperationUnitOptions(
-        operationUnits
-          .filter((item: OperationUnit) => Boolean(item.operationUnitId))
-          .map((item: OperationUnit) => ({
-            value: item.operationUnitId,
-            label:
-              [item.unitCode, item.unitName].filter(Boolean).join(' - ') || item.operationUnitId
-          }))
-      );
-    };
-
-    fetchOperationUnits();
-  }, []);
-
   const onSubmit = useCallback(
     async (data: CustomerForm) => {
       if (!customer?.id || submitting) return;
@@ -162,10 +123,25 @@ const ManageCustomerEditScreen = () => {
         return;
       }
 
+      if (attachments.length) {
+        const failed = await uploadOwnerDocuments(
+          DOCUMENT_OWNER_TYPE.CUSTOMER,
+          customerDocumentOwnerId(customer.id),
+          attachments
+        );
+        if (!mountedRef.current) return;
+        if (failed.length) {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: `Đã lưu khách hàng nhưng tải lên thất bại: ${failed.join(', ')}`
+          });
+        }
+      }
+
       showToast({ type: TYPE_TOAST.SUCCESS, content: 'Cập nhật khách hàng thành công' });
       router.push(`${ROUTES.MANAGE_CUSTOMER_DETAIL}?id=${encodeURIComponent(String(customer.id))}`);
     },
-    [customer?.id, router, submitting]
+    [attachments, customer?.id, router, submitting]
   );
 
   const breadcrumbList = [
@@ -251,39 +227,18 @@ const ManageCustomerEditScreen = () => {
                   control={control}
                 />
                 <AppTextFieldControl
-                  name="contactName"
-                  label="Người liên hệ"
-                  placeholder="Nhập người liên hệ"
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name="contactIdNo"
-                  label="CMND/CCCD người liên hệ"
-                  placeholder="Nhập CMND/CCCD"
-                  control={control}
-                />
-                <AppDatePickerControl
-                  name="contactIssueDate"
-                  control={control}
-                  backendFormat={FORMAT_DATE_API}
-                  label="Ngày cấp CMND/CCCD"
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
-                />
-                <AppSelectControl
-                  name="operationUnitId"
-                  label="Đơn vị vận hành"
-                  placeholder="Chọn đơn vị vận hành"
-                  isLoading={operationUnitLoading}
-                  options={operationUnitOptions}
-                  control={control}
-                />
-                <AppTextFieldControl
                   name="address"
                   label="Địa chỉ"
                   placeholder="Nhập địa chỉ"
                   control={control}
                 />
+              </div>
+              <div className="mt-16">
+                <CustomerPersonFields control={control} />
+              </div>
+              <div className="mt-16 border-t border-color-200 pt-12">
+                <TextBase classNames="sub-title4 mb-8" text="Tài liệu đính kèm" />
+                <DocumentDropzone value={attachments} onChange={setAttachments} />
               </div>
             </section>
 
