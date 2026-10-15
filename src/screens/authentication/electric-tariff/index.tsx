@@ -2,7 +2,6 @@
 
 import { CalculatorOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import {
-  CURRENCY_VND,
   K_SIZE_0,
   K_SIZE_1,
   K_SIZE_120,
@@ -34,12 +33,10 @@ import { ElectricTariff } from 'model/electric-tariff';
 import moment from 'moment';
 import { useMemo } from 'react';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, displayDateTimeFromServer } from 'utils/date';
-import { formatCurrency as formatCurrencyBase } from 'utils/math';
 import { useResponsive } from 'utils/responsive';
 import { formatUploadFileSize, MAX_UPLOAD_FILE_SIZE_TEXT } from 'utils/upload';
 import useElectricTariff, {
   ElectricTariffFilter,
-  getPriceWithVat,
   TariffTouPriceRow,
   TARIFF_PRICE_TYPE,
   TARIFF_STATUS
@@ -122,11 +119,6 @@ const displayElectricTariffDate = (date?: string) => {
   if (!date) return NULL_VALUE;
   const parsedDate = moment(date, [...API_DATE_INPUT_FORMATS, moment.ISO_8601], true);
   return parsedDate.isValid() ? parsedDate.format(DATE_DISPLAY_FORMAT) : NULL_VALUE;
-};
-
-const formatCurrency = (value?: number) => {
-  if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
-  return formatCurrencyBase(Math.round(value), ',', CURRENCY_VND) || NULL_VALUE;
 };
 
 const formatFilterValue = (key: keyof ElectricTariffFilter, value: string) => {
@@ -335,25 +327,6 @@ const ElectricTariffScreen = () => {
             onChange={(event) => onChangeTouPrice(record.tou, event.target.value)}
           />
         )
-      },
-      {
-        title: 'VAT 10%',
-        dataIndex: 'unitPrice',
-        key: 'vat',
-        align: 'right',
-        width: K_SIZE_130,
-        render: (value: number) =>
-          formatCurrency(
-            typeof value === 'number' && Number.isFinite(value) ? value * 0.1 : undefined
-          )
-      },
-      {
-        title: 'Đơn giá sau VAT',
-        dataIndex: 'unitPrice',
-        key: 'priceWithVat',
-        align: 'right',
-        width: K_SIZE_160,
-        render: (value: number) => formatCurrency(getPriceWithVat(value))
       }
     ],
     [onChangeTouPrice]
