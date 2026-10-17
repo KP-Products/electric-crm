@@ -6,6 +6,7 @@ import { ErrorBase } from 'model/common';
 import { Customer } from 'model/customer';
 import { debounce } from 'lodash';
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { hasApiError } from 'utils/api-response';
 import customerServices from 'services/customer-services';
 import {
   buildCustomerLabelMap,
@@ -38,6 +39,9 @@ export default function useCustomerLookup({
   const [dropdownCustomers, setDropdownCustomers] = useState<Customer[]>([]);
   const [customerMap, setCustomerMap] = useState<Record<string, Customer>>({});
   const [customerLoading, setCustomerLoading] = useState<boolean>(false);
+  const [customerPage, setCustomerPage] = useState(0);
+  const [hasMoreCustomers, setHasMoreCustomers] = useState(false);
+  const loadingRef = useRef(false);
   const [customerSearch, setCustomerSearch] = useState<string>('');
   const customerMapRef = useRef<Record<string, Customer>>({});
   const mountedRef = useRef<boolean>(true);
@@ -75,61 +79,74 @@ export default function useCustomerLookup({
     customerMapRef.current = customerMap;
   }, [customerMap]);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    []
-  );
+    };
+  }, []);
 
   const searchCustomers = useCallback(
-    async (search = '') => {
+    async (search = '', page = 0) => {
       const normalizedSearch = search.trim();
       const requestId = searchRequestIdRef.current + 1;
       searchRequestIdRef.current = requestId;
       setCustomerLoading(true);
+      loadingRef.current = true;
 
       const responses = normalizedSearch
         ? await Promise.all([
             customerServices.searchCustomer({
-              page: 0,
+              page,
               size: DEFAULT_PAGE_SIZE,
               customerCodeContains: normalizedSearch
             }),
             customerServices.searchCustomer({
-              page: 0,
+              page,
               size: DEFAULT_PAGE_SIZE,
               fullNameContains: normalizedSearch
             })
           ])
         : [
             await customerServices.searchCustomer({
-              page: 0,
+              page,
               size: DEFAULT_PAGE_SIZE
             })
           ];
 
       if (!mountedRef.current || requestId !== searchRequestIdRef.current) return;
       setCustomerLoading(false);
+      loadingRef.current = false;
 
-      const hasError = responses.some((response) => !response || !response.data);
+      const hasError = responses.some((response) => hasApiError(response) || !response.data);
       const customers = mergeById(
         responses.flatMap((response) =>
           Array.isArray(response?.data?.items) ? response.data.items : []
         )
       );
 
-      if (hasError && !customers.length && showErrorToast) {
+      if (hasError && showErrorToast) {
         showToast({
           type: TYPE_TOAST.ERROR,
           content: getContractErrorMessage(
-            responses.find((response) => !response?.data) as ErrorBase,
+            responses.find((response) => hasApiError(response) || !response?.data) as ErrorBase,
             'Tải danh sách khách hàng thất bại'
           )
         });
       }
 
-      setDropdownCustomers(customers);
+      if (hasError) {
+        // Keep the current page so retrying does not skip failed results.
+        if (page === 0) setDropdownCustomers([]);
+        return;
+      }
+      setCustomerPage(page);
+      setHasMoreCustomers(
+        responses.some((response) => (response.data?.total ?? 0) > (page + 1) * DEFAULT_PAGE_SIZE)
+      );
+      setDropdownCustomers((previous) =>
+        page === 0 ? customers : mergeById([...previous, ...customers])
+      );
       mergeCustomers(customers);
     },
     [mergeCustomers, showErrorToast]
@@ -149,7 +166,13 @@ export default function useCustomerLookup({
 
   const onSearchCustomers = useCallback(
     (search: string) => {
+      searchRequestIdRef.current += 1;
       setCustomerSearch(search);
+      setCustomerPage(0);
+      setHasMoreCustomers(false);
+      setDropdownCustomers([]);
+      setCustomerLoading(true);
+      loadingRef.current = true;
       debouncedSearchCustomers(search);
     },
     [debouncedSearchCustomers]
@@ -231,13 +254,24 @@ export default function useCustomerLookup({
         menuInstance={menuInstance}
         searchValue={customerSearch}
         onChangeSearch={onSearchCustomers}
-        onMore={() => {}}
+        onMore={() => {
+          if (!loadingRef.current && hasMoreCustomers)
+            void searchCustomers(customerSearch, customerPage + 1);
+        }}
         totalList={customerOptions.length}
-        total={customerOptions.length}
+        total={customerOptions.length + (hasMoreCustomers ? 1 : 0)}
         loading={customerLoading}
       />
     ),
-    [customerLoading, customerOptions.length, customerSearch, onSearchCustomers]
+    [
+      customerLoading,
+      customerOptions.length,
+      customerSearch,
+      onSearchCustomers,
+      hasMoreCustomers,
+      customerPage,
+      searchCustomers
+    ]
   );
 
   return {

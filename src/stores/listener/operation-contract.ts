@@ -1,20 +1,7 @@
+import { hasApiError as hasError } from 'utils/api-response';
 import { takeLatestListeners } from '@listener';
 import { operationContractActions } from '@redux-slice/operation-contract';
 import operationContractServices from 'services/operation-contract-services';
-
-const hasError = (response: any) => {
-  if (!response) return true;
-  if (response instanceof Error) return true;
-
-  const status = Number(response.status ?? response.statusCode);
-  return Boolean(
-    (Number.isFinite(status) && status >= 400) ||
-      response.businessErrorMessage ||
-      response.systemErrorMessage ||
-      response.detailMessage ||
-      response.error
-  );
-};
 
 takeLatestListeners({
   actionCreator: operationContractActions.searchOperationContract,

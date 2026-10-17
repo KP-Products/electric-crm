@@ -43,7 +43,7 @@ import useManageOperationContracts from './useManageOperationContracts';
 const FILTER_LABEL_MAP: Record<keyof OperationContractFilter, string> = {
   contractNumber: 'Số hợp đồng',
   contractName: 'Tên hợp đồng',
-  operationUnitId: 'Đơn vị vận hành',
+  customerId: 'Khách hàng',
   contractType: 'Loại hợp đồng',
   status: 'Trạng thái'
 };
@@ -64,10 +64,10 @@ const ManageOperationContractScreen = () => {
     pagination,
     filter,
     filterApplied,
-    operationUnitOptions,
-    getOperationUnitDisplay,
-    onOpenOperationUnitDropdown,
-    operationUnitDropdownRender,
+    customerOptions,
+    getCustomerDisplay,
+    onOpenCustomerDropdown,
+    customerDropdownRender,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -87,11 +87,11 @@ const ManageOperationContractScreen = () => {
 
   const formatFilterValue = useCallback(
     (key: keyof OperationContractFilter, value: string) => {
-      if (key === 'operationUnitId') return getOperationUnitDisplay(value);
+      if (key === 'customerId') return getCustomerDisplay(Number(value));
       if (key === 'status') return getOperationContractStatusMeta(value).label;
       return value;
     },
-    [getOperationUnitDisplay]
+    [getCustomerDisplay]
   );
 
   const columns = useMemo<any[]>(
@@ -125,9 +125,9 @@ const ManageOperationContractScreen = () => {
         render: (text: string) => renderTruncatedText(text, 'max-w-[280px]')
       },
       {
-        title: 'Đơn vị vận hành',
-        dataIndex: 'operationUnitName',
-        key: 'operationUnitName',
+        title: 'Khách hàng',
+        dataIndex: 'customerName',
+        key: 'customerName',
         width: K_SIZE_240,
         render: (text: string) => renderTruncatedText(text, 'max-w-[280px]')
       },
@@ -215,7 +215,7 @@ const ManageOperationContractScreen = () => {
         )
       }
     ],
-    [currentPage, getOperationUnitDisplay, onDelete, onOpenDetail, onOpenUpdate, t]
+    [currentPage, onDelete, onOpenDetail, onOpenUpdate, t]
   );
 
   const breadcrumbList = [
@@ -273,14 +273,14 @@ const ManageOperationContractScreen = () => {
             onPressEnter={onApplyFilter}
           />
           <AppSelect
-            name="operationUnitId"
-            label="Đơn vị vận hành"
+            name="customerId"
+            label="Khách hàng"
             placeholder="Tất cả"
-            value={filter.operationUnitId}
-            options={operationUnitOptions}
-            dropdownRender={operationUnitDropdownRender}
-            onOpenChange={onOpenOperationUnitDropdown}
-            onSelectOption={({ key }) => onChangeFilter('operationUnitId', String(key))}
+            value={filter.customerId}
+            options={customerOptions}
+            dropdownRender={customerDropdownRender}
+            onOpenChange={onOpenCustomerDropdown}
+            onSelectOption={({ key }) => onChangeFilter('customerId', String(key))}
           />
           <AppTextField
             name="contractType"

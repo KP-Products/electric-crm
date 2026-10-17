@@ -1,10 +1,16 @@
 import { PaginationReq, PaginationRes, ResultBase } from './common';
 
 export interface OperationContract {
+  operationUnitId?: string;
   contractId: string;
   contractNumber?: string;
   contractName?: string;
-  operationUnitId?: string;
+  customerId?: number;
+  contractValue?: number;
+  discountPercent?: number;
+  customerCode?: string;
+  customerName?: string;
+  valueAfterDiscount?: number;
   contractType?: string;
   signedDate?: string;
   effectiveDate?: string;
@@ -20,9 +26,11 @@ export interface OperationContract {
 }
 
 export interface SearchOperationContractsReq extends PaginationReq {
+  // Retained for the existing operation-unit detail consumer.
+  operationUnitId?: string;
   contractNumber?: string;
   contractName?: string;
-  operationUnitId?: string;
+  customerId?: number;
   contractType?: string;
   status?: string;
 }
@@ -34,7 +42,9 @@ export interface OperationContractIdReq {
 export interface CreateOperationContractReq {
   contractNumber: string;
   contractName: string;
-  operationUnitId: string;
+  customerId: number;
+  contractValue: number;
+  discountPercent?: number;
   contractType: string;
   signedDate: string;
   effectiveDate: string;
@@ -45,8 +55,10 @@ export interface CreateOperationContractReq {
 
 export interface UpdateOperationContractReq {
   id: string;
+  contractValue?: number;
+  discountPercent?: number;
   contractName?: string;
-  operationUnitId?: string;
+  customerId?: number;
   contractType?: string;
   signedDate?: string;
   effectiveDate?: string;

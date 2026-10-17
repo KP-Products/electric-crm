@@ -47,7 +47,6 @@ const ManageOperationContractDetailScreen = () => {
     detailLoading,
     documentList,
     documentLoading,
-    getOperationUnitDisplay,
     onBack,
     onEdit,
     onViewDocument,
@@ -91,10 +90,9 @@ const ManageOperationContractDetailScreen = () => {
         align: 'center',
         render: (_: unknown, record: DocumentItem) => (
           <ButtonBase
-            type="ghost"
+            type="whiteGhost"
             size={32}
             leftIcon="ICON_EYE_OPEN"
-            customContent="Xem"
             onClick={() => onViewDocument(record)}
           />
         )
@@ -106,10 +104,9 @@ const ManageOperationContractDetailScreen = () => {
         align: 'center',
         render: (_: unknown, record: DocumentItem) => (
           <ButtonBase
-            type="ghost"
+            type="whiteGhost"
             size={32}
             leftIcon="IC_DOWNLOAD_OUTLINE"
-            customContent="Tải xuống"
             onClick={() => onDownloadDocument(record)}
           />
         )
@@ -188,8 +185,32 @@ const ManageOperationContractDetailScreen = () => {
                 value={displayText(selectedContract?.contractName)}
               />
               <DetailItem
-                label="Đơn vị vận hành"
-                value={getOperationUnitDisplay(selectedContract?.operationUnitId)}
+                label="Khách hàng"
+                value={displayText(
+                  [selectedContract?.customerCode, selectedContract?.customerName]
+                    .filter(Boolean)
+                    .join(' - ') || selectedContract?.customerId
+                )}
+              />
+              <DetailItem
+                label="Giá trị hợp đồng (VNĐ)"
+                value={
+                  selectedContract?.contractValue == null
+                    ? '-'
+                    : selectedContract.contractValue.toLocaleString('vi-VN')
+                }
+              />
+              <DetailItem
+                label="Chiết khấu (%)"
+                value={displayText(selectedContract?.discountPercent)}
+              />
+              <DetailItem
+                label="Giá trị sau chiết khấu (VNĐ)"
+                value={
+                  selectedContract?.valueAfterDiscount == null
+                    ? '-'
+                    : selectedContract.valueAfterDiscount.toLocaleString('vi-VN')
+                }
               />
               <DetailItem
                 label="Loại hợp đồng"
