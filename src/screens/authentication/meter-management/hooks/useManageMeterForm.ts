@@ -377,13 +377,6 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       const rows: MeterMultiplierHistory[] = Array.isArray(response?.data) ? response.data : [];
       setMultiplierHistory(rows);
       const current = rows[rows.length - 1];
-      if (current && !userForm.formState.dirtyFields.multiplier) {
-        // meters.multiplier là hệ số hôm nay; form hiển thị hệ số của dòng đang hiệu lực.
-        userForm.setValue('multiplier', String(current.multiplier), {
-          shouldDirty: false,
-          shouldValidate: true
-        });
-      }
       if (current?.effectiveFrom && !userForm.formState.dirtyFields.multiplierEffectiveFrom) {
         userForm.setValue('multiplierEffectiveFrom', current.effectiveFrom, {
           shouldDirty: false,
@@ -397,18 +390,6 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
   }, [id, isAddMode, selectedMeter, userForm]);
 
   const currentMultiplierRow = multiplierHistory[multiplierHistory.length - 1];
-
-  // Đổi hệ số mà chưa chọn ngày → ngày bắt đầu mặc định hôm nay (ngày cũ = ngày của dòng hiện tại
-  // sẽ bị BE từ chối vì không sau dòng đang hiệu lực).
-  const watchedMultiplier = userForm.watch('multiplier');
-  useEffect(() => {
-    if (!currentMultiplierRow || userForm.formState.dirtyFields.multiplierEffectiveFrom) return;
-    const changed = parseNumberInput(watchedMultiplier) !== Number(currentMultiplierRow.multiplier);
-    const target = changed ? moment().format(FORMAT_DATE_API) : currentMultiplierRow.effectiveFrom;
-    if (userForm.getValues('multiplierEffectiveFrom') !== target) {
-      userForm.setValue('multiplierEffectiveFrom', target, { shouldValidate: true });
-    }
-  }, [currentMultiplierRow, userForm, watchedMultiplier]);
 
   const onBack = useCallback(() => router.back(), [router]);
 

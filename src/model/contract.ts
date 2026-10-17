@@ -89,8 +89,7 @@ export interface ContractSearchReq extends PaginationReq {
 export interface CreateContractReq {
   contractNumber: string;
   customerId: number;
-  /** Bắt buộc khi tạo; khi sửa bỏ trống = giữ nguyên công tơ. */
-  meters?: ContractMeterLine[];
+  meters: ContractMeterLine[];
   signedDate: string;
   effectiveDate: string;
   expiryDate?: string;
