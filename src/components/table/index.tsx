@@ -4,9 +4,10 @@ import type { AnyObject } from 'antd/es/_util/type';
 import type { TableLocale } from 'antd/es/table/interface';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { TextBase } from 'components/text';
-import { forwardRef } from 'react';
+import { forwardRef, type ReactElement } from 'react';
 
-export interface AppTableProps extends Omit<TableProps<AnyObject>, 'bordered'> {
+export interface AppTableProps<T extends AnyObject = AnyObject>
+  extends Omit<TableProps<T>, 'bordered'> {
   rounded?: boolean;
   loading?: boolean;
   emptyText?: string;
@@ -75,5 +76,10 @@ const AppTable = forwardRef(
     );
   }
 );
+
+// Opt in to typed rows without changing inference for existing table consumers.
+export const TypedAppTable = AppTable as <T extends AnyObject = AnyObject>(
+  props: AppTableProps<T> & { ref?: Parameters<typeof Table>[0]['ref'] }
+) => ReactElement;
 
 export default AppTable;

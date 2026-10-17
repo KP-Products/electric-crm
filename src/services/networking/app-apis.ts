@@ -50,6 +50,8 @@ const ApiEndPoint = {
   CONTRACT_DETAIL: '/contracts/detail',
   CONTRACT_DELETE: '/contracts/delete',
   CONTRACT_EXPORT_PDF: '/contracts/export-pdf',
+  CONTRACT_AVAILABLE_METERS: '/contracts/available-meters',
+  CONTRACT_FEEDERS: '/contracts/feeders',
   // CONTRACT
 
   // OPERATION CONTRACT

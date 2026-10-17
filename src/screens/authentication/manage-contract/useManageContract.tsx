@@ -92,21 +92,13 @@ export default function useManageContract() {
   });
 
   const pinnedCustomerIds = useMemo(
-    () => [
-      filter.customerId,
-      filterApplied.customerId,
-      ...contractList.map((item) => item.customerId)
-    ],
-    [contractList, filter.customerId, filterApplied.customerId]
+    () => [filter.customerId, filterApplied.customerId],
+    [filter.customerId, filterApplied.customerId]
   );
 
   const pinnedMeterIds = useMemo(
-    () => [
-      filter.meterId,
-      filterApplied.meterId,
-      ...contractList.map((contract) => contract.meterId)
-    ],
-    [contractList, filter.meterId, filterApplied.meterId]
+    () => [filter.meterId, filterApplied.meterId],
+    [filter.meterId, filterApplied.meterId]
   );
 
   const { customerOptions, getCustomerDisplay, onOpenCustomerDropdown, customerDropdownRender } =
@@ -262,7 +254,6 @@ export default function useManageContract() {
       id: getContractId(contract),
       contractNumber: contract.contractNumber,
       customerId: contract.customerId as number,
-      meterId: contract.meterId || undefined,
       signedDate: formatContractDate(contract.signedDate),
       effectiveDate: formatContractDate(contract.effectiveDate || contract.signedDate),
       expiryDate: formatContractDate(contract.expiryDate) || undefined,

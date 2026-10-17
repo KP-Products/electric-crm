@@ -4,6 +4,7 @@
 export enum TYPE_STATUS {
   DEFAULT = 'default',
   SUCCESS = 'success',
+  DONE = 'done',
   PENDING = 'pending',
   ERROR = 'error',
   BRANDING = 'branding',
@@ -32,10 +33,12 @@ const Status = (props: StatusProps) => {
     wrapStyle,
     contentStyle
   } = props;
+  const displayType = type === TYPE_STATUS.DONE ? TYPE_STATUS.SUCCESS : type;
+
   return (
     <div className={`status-${kind} box-border w-fit text-10 font-medium ${wrapStyle}`}>
       <div
-        className={`status-${type} rounded-[4px] border border-solid px-8 py-[2px] ${contentStyle}`}
+        className={`status-${displayType} rounded-[4px] border border-solid px-8 py-[2px] ${contentStyle}`}
       >
         {content}
       </div>

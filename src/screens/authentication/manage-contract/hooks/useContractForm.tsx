@@ -3,42 +3,55 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CREATE_CONTRACT, GET_CONTRACT_DETAIL, UPDATE_CONTRACT } from '@redux-action-type/contract';
 import { dispatch } from '@redux-common';
 import { selectContractLoadingDetail } from '@redux-selector/contract';
+import { AppSelectOption } from 'components/select';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
 import { ErrorBase } from 'model/common';
-import { Contract, ContractRes } from 'model/contract';
+import { AvailableMeter, Contract, ContractRes } from 'model/contract';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import contractServices from 'services/contract-services';
-import {
-  getVoltageLevelLabel,
-  METER_TYPE
-} from 'screens/authentication/meter-management/utils/constant';
+import { getVoltageLevelLabel } from 'screens/authentication/meter-management/utils/constant';
 import { z } from 'zod';
 import {
   buildContractFormValues,
+  buildCopyContractFormValues,
   buildCreateContractBody,
   buildUpdateContractBody,
   CONTRACT_DATE_FORMAT,
   ContractForm,
   DEFAULT_CONTRACT_FORM,
+  EMPTY_CONTRACT_METER_LINE,
+  formatContractDate,
   getContractErrorMessage,
   getContractId,
-  isContractDateBefore
+  isContractDateBefore,
+  isValidContractDate
 } from '../utils';
 import useCustomerLookup from './useCustomerLookup';
-import useMeterLookup from './useMeterLookup';
 
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
+
+const meterLineSchema = z.object({
+  meterId: z.string().trim().min(K_SIZE_1, { message: 'Chọn công tơ' }),
+  feederId: z.string().trim().min(K_SIZE_1, { message: 'Chọn lộ' }),
+  installationDate: z
+    .string()
+    .trim()
+    .min(K_SIZE_1, { message: 'Chọn ngày lắp đặt' })
+    .refine((value) => !value || isValidContractDate(value), {
+      message: 'Ngày lắp đặt không hợp lệ'
+    })
+});
 
 const contractSchema = z
   .object({
     contractNumber: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập số hợp đồng' }),
     customerId: z.number().int().positive({ message: 'Vui lòng chọn khách hàng' }),
-    meterId: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn công tơ' }),
+    meters: z.array(meterLineSchema).min(K_SIZE_1, { message: 'Thêm ít nhất 1 công tơ' }),
     signedDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày ký kết' }),
     effectiveDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày hiệu lực' }),
     expiryDate: optionalTextSchema,
@@ -61,7 +74,28 @@ const contractSchema = z
         path: ['expiryDate']
       });
     }
+
+    const seen = new Set<string>();
+    data.meters.forEach((line, index) => {
+      if (!line.meterId) return;
+      if (seen.has(line.meterId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Công tơ đã được chọn ở dòng khác',
+          path: ['meters', index, 'meterId']
+        });
+      }
+      seen.add(line.meterId);
+    });
   });
+
+const toMeterOption = (meter: AvailableMeter): AppSelectOption => ({
+  value: meter.meterId,
+  label: [meter.meterCode, meter.voltageLevel ? getVoltageLevelLabel(meter.voltageLevel) : '']
+    .filter(Boolean)
+    .join(' - '),
+  rawData: meter
+});
 
 interface UseContractFormProps {
   isEditMode: boolean;
@@ -76,73 +110,153 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
   const detailLoading = useSelector(selectContractLoadingDetail);
 
   const [selectedContract, setSelectedContract] = useState<Contract>();
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [contractsLoaded, setContractsLoaded] = useState<boolean>(false);
+  const [availableMeters, setAvailableMeters] = useState<AvailableMeter[]>([]);
+  const [feeders, setFeeders] = useState<AvailableMeter[]>([]);
+  const [meterLoading, setMeterLoading] = useState<boolean>(false);
+  const [metersLoaded, setMetersLoaded] = useState(false);
+  const [meterError, setMeterError] = useState('');
+  const [feederError, setFeederError] = useState('');
+  const [feederLoading, setFeederLoading] = useState(true);
+  const [feedersLoaded, setFeedersLoaded] = useState(false);
+  const [meterRetry, setMeterRetry] = useState(0);
+  const [feederRetry, setFeederRetry] = useState(0);
   const submittingRef = useRef<boolean>(false);
 
   const form = useForm<ContractForm>({
-    mode: 'onTouched',
+    mode: 'onChange',
     defaultValues: DEFAULT_CONTRACT_FORM,
     resolver: zodResolver(contractSchema)
   });
+  const meterLines = useFieldArray({ control: form.control, name: 'meters' });
 
   const selectedCustomerId = form.watch('customerId');
-  const selectedMeterId = form.watch('meterId');
+  const watchedMeters = form.watch('meters');
   const pinnedCustomerIds = useMemo(
     () => [selectedContract?.customerId, selectedCustomerId],
     [selectedContract?.customerId, selectedCustomerId]
   );
-  const pinnedMeterIds = useMemo(
-    () => [selectedContract?.meterId, selectedMeterId],
-    [selectedContract?.meterId, selectedMeterId]
-  );
-  const isCopyCustomerUnchanged = useMemo(
-    () => isCopyMode && (!selectedContract || selectedCustomerId === selectedContract.customerId),
-    [isCopyMode, selectedContract, selectedCustomerId]
-  );
-
   const { customerOptions, onOpenCustomerDropdown, customerDropdownRender } = useCustomerLookup({
     pinnedIds: pinnedCustomerIds,
     showErrorToast: true
   });
 
-  const { meterOptions, getMeterById, onOpenMeterDropdown, meterDropdownRender } = useMeterLookup({
-    pinnedIds: pinnedMeterIds,
-    showErrorToast: true,
-    meterType: METER_TYPE.CUSTOMER
-  });
-  const availableMeterOptions = useMemo(() => {
-    const currentContractId = isEditMode ? getContractId(selectedContract) : '';
-    const assignedMeterIds = new Set(
-      contracts
-        .filter((contract) => getContractId(contract) !== currentContractId)
-        .map((contract) => contract.meterId)
-        .filter(Boolean)
-    );
+  useEffect(() => {
+    let isActive = true;
+    setFeederLoading(true);
+    setFeedersLoaded(false);
+    setFeederError('');
+    contractServices.getFeeders().then((response) => {
+      if (!isActive) return;
+      setFeederLoading(false);
+      if (!Array.isArray(response?.data)) {
+        setFeederError(getContractErrorMessage(response as ErrorBase, 'Tải danh sách lộ thất bại'));
+        return;
+      }
+      setFeeders(response.data);
+      setFeedersLoaded(true);
+    });
+    return () => {
+      isActive = false;
+    };
+  }, [feederRetry]);
 
-    return meterOptions.filter((option) => !assignedMeterIds.has(String(option.value)));
-  }, [contracts, isEditMode, meterOptions, selectedContract]);
-  const selectedMeter = useMemo(
-    () => (selectedMeterId ? getMeterById(selectedMeterId) : undefined),
-    [getMeterById, selectedMeterId]
+  // Công tơ còn trống của khách hàng đang chọn (kèm công tơ của chính HĐ khi sửa).
+  const editingContractId = isEditMode ? getContractId(selectedContract) : '';
+  useEffect(() => {
+    let isActive = true;
+    setMetersLoaded(false);
+    setMeterError('');
+    if (!selectedCustomerId) {
+      setMeterLoading(false);
+      return;
+    }
+    setMeterLoading(true);
+    contractServices
+      .getAvailableMeters({
+        customerId: selectedCustomerId,
+        contractId: editingContractId || undefined
+      })
+      .then((response) => {
+        if (!isActive) return;
+        setMeterLoading(false);
+        if (!Array.isArray(response?.data)) {
+          setMeterError(
+            getContractErrorMessage(response as ErrorBase, 'Tải danh sách công tơ thất bại')
+          );
+          return;
+        }
+        setAvailableMeters(response.data);
+        setMetersLoaded(true);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [editingContractId, selectedCustomerId, meterRetry]);
+
+  const feederOptions = useMemo(
+    () => feeders.map((feeder) => ({ value: feeder.meterId, label: feeder.meterCode || '' })),
+    [feeders]
   );
-  const selectedMeterMultiplier = useMemo(
-    () =>
-      selectedMeter?.multiplier !== undefined && selectedMeter.multiplier !== null
-        ? String(selectedMeter.multiplier)
-        : '',
-    [selectedMeter]
+  const meterById = useMemo(() => {
+    const map = new Map<string, AvailableMeter>();
+    availableMeters.forEach((meter) => map.set(meter.meterId, meter));
+    return map;
+  }, [availableMeters]);
+
+  /** Mỗi dòng chỉ thấy công tơ chưa được chọn ở dòng khác. */
+  const getMeterOptionsForLine = useCallback(
+    (index: number) => {
+      const usedElsewhere = new Set(
+        (watchedMeters || [])
+          .filter((_, lineIndex) => lineIndex !== index)
+          .map((line) => line.meterId)
+          .filter(Boolean)
+      );
+      return availableMeters
+        .filter((meter) => !usedElsewhere.has(meter.meterId))
+        .map(toMeterOption);
+    },
+    [availableMeters, watchedMeters]
   );
-  const selectedMeterVoltageLevel = useMemo(
-    () => (selectedMeter?.voltageLevel ? getVoltageLevelLabel(selectedMeter.voltageLevel) : ''),
-    [selectedMeter?.voltageLevel]
+
+  /** Điền lộ và ngày lắp tương ứng khi chọn hoặc đổi công tơ. */
+  const onSelectMeter = useCallback(
+    (index: number, meterId: string) => {
+      const meter = meterById.get(meterId);
+      if (!meter) return;
+      form.setValue(`meters.${index}.feederId`, meter.feederId || '', {
+        shouldValidate: true,
+        shouldDirty: true
+      });
+      const date =
+        formatContractDate(meter.installationDate) || form.getValues('effectiveDate') || '';
+      form.setValue(`meters.${index}.installationDate`, date, {
+        shouldValidate: true,
+        shouldDirty: true
+      });
+    },
+    [form, meterById]
   );
-  const selectedMeterInitialReading = useMemo(
-    () =>
-      selectedMeter?.initialReading !== undefined && selectedMeter.initialReading !== null
-        ? String(selectedMeter.initialReading)
-        : '',
-    [selectedMeter]
+
+  const onAddMeterLine = useCallback(() => {
+    meterLines.append({ ...EMPTY_CONTRACT_METER_LINE });
+  }, [meterLines]);
+
+  const onRemoveMeterLine = useCallback(
+    (index: number) => {
+      meterLines.remove(index);
+    },
+    [meterLines]
+  );
+
+  const onChangeCustomer = useCallback(
+    (customerId: number) => {
+      if (customerId === selectedCustomerId) return;
+      meterLines.replace([{ ...EMPTY_CONTRACT_METER_LINE }]);
+      setAvailableMeters([]);
+      setMetersLoaded(false);
+    },
+    [meterLines, selectedCustomerId]
   );
 
   const onBack = useCallback(() => {
@@ -152,37 +266,13 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
   const resetContractForm = useCallback(
     (contract: Contract) => {
       setSelectedContract(contract);
-      form.reset(buildContractFormValues(contract));
+      form.reset(
+        isCopyMode ? buildCopyContractFormValues(contract) : buildContractFormValues(contract)
+      );
       void form.trigger();
     },
-    [form]
+    [form, isCopyMode]
   );
-
-  useEffect(() => {
-    let isActive = true;
-
-    const loadContracts = async () => {
-      const response = await contractServices.listContract();
-      if (!isActive) return;
-
-      if (!response?.data) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: getContractErrorMessage(response as ErrorBase, 'Tải danh sách hợp đồng thất bại')
-        });
-        return;
-      }
-
-      setContracts(Array.isArray(response.data) ? response.data : []);
-      setContractsLoaded(true);
-    };
-
-    void loadContracts();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (!isEditMode && !isCopyMode) {
@@ -255,7 +345,15 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
 
   const onSubmit = useCallback(
     (data: ContractForm) => {
-      if (submittingRef.current) return;
+      if (submittingRef.current || !metersLoaded || meterLoading || !feedersLoaded || feederLoading)
+        return;
+      if (data.meters.some((line) => !meterById.has(line.meterId))) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: 'Vui lòng chọn lại công tơ hợp lệ cho khách hàng'
+        });
+        return;
+      }
       submittingRef.current = true;
 
       if (isEditMode) {
@@ -289,25 +387,44 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
         }
       });
     },
-    [isEditMode, onSubmitFailed, onSubmitSuccess, selectedContract]
+    [
+      isEditMode,
+      feedersLoaded,
+      feederLoading,
+      meterById,
+      meterLoading,
+      metersLoaded,
+      onSubmitFailed,
+      onSubmitSuccess,
+      selectedContract
+    ]
   );
 
   return {
     dateApiFormat: CONTRACT_DATE_FORMAT,
     form,
     isCopyMode,
-    isCopyCustomerUnchanged,
     detailLoading,
-    selectedMeterId,
-    selectedMeterMultiplier,
-    selectedMeterVoltageLevel,
-    selectedMeterInitialReading,
     customerOptions,
-    meterOptions: contractsLoaded ? availableMeterOptions : [],
     onOpenCustomerDropdown,
     customerDropdownRender,
-    onOpenMeterDropdown,
-    meterDropdownRender,
+    meterLineFields: meterLines.fields,
+    meterLoading,
+    meterError,
+    metersEmpty: metersLoaded && availableMeters.length === 0,
+    feederLoading,
+    feederError,
+    feedersLoaded,
+    feedersEmpty: feedersLoaded && feeders.length === 0,
+    onRetryMeters: () => setMeterRetry((value) => value + 1),
+    onRetryFeeders: () => setFeederRetry((value) => value + 1),
+    feederOptions,
+    getMeterOptionsForLine,
+    metersLoaded,
+    onChangeCustomer,
+    onSelectMeter,
+    onAddMeterLine,
+    onRemoveMeterLine,
     selectedContract,
     onBack,
     onSubmit
