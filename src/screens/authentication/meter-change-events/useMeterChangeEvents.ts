@@ -577,16 +577,11 @@ export default function useMeterChangeEvents() {
   );
 
   const onSubmitSuccess = useCallback(
-    (content: string, response?: { data?: { warnings?: string[] } }) => {
+    (content: string) => {
       submittingRef.current = false;
       onCloseForm();
       refreshFirstPage();
       showToast({ type: TYPE_TOAST.SUCCESS, content });
-      // Thay công tơ: BE cảnh báo khi công tơ cũ không thuộc hợp đồng nào đang hiệu lực.
-      const warnings = response?.data?.warnings || [];
-      if (warnings.length) {
-        showToast({ type: TYPE_TOAST.WARNING, content: warnings.join('; ') });
-      }
     },
     [onCloseForm, refreshFirstPage]
   );
@@ -602,8 +597,7 @@ export default function useMeterChangeEvents() {
           type: UPDATE_METER_CHANGE_EVENT,
           payload: {
             body: buildUpdateBody(selectedEventId, data),
-            onSuccess: (response?: { data?: { warnings?: string[] } }) =>
-              onSubmitSuccess('Cập nhật biến động thiết bị thành công', response),
+            onSuccess: () => onSubmitSuccess('Cập nhật biến động thiết bị thành công'),
             onFailed: (error?: ErrorBase) => {
               submittingRef.current = false;
               showToast({
@@ -620,8 +614,7 @@ export default function useMeterChangeEvents() {
         type: CREATE_METER_CHANGE_EVENT,
         payload: {
           body: buildCreateBody(data),
-          onSuccess: (response?: { data?: { warnings?: string[] } }) =>
-            onSubmitSuccess('Thêm mới biến động thiết bị thành công', response),
+          onSuccess: () => onSubmitSuccess('Thêm mới biến động thiết bị thành công'),
           onFailed: (error?: ErrorBase) => {
             submittingRef.current = false;
             showToast({
