@@ -1,15 +1,14 @@
 'use client';
 
-import { DeleteOutlined } from '@ant-design/icons';
 import { K_SIZE_24, K_SIZE_8, REQUIRED_MARK } from '@constant';
-import { Button, Divider, Flex, Spin, Tooltip } from 'antd';
+import { Divider, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
 import { AppDatePickerControl } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { AppSelectControl } from 'components/select';
 import { AppTakeNoteControl } from 'components/take-note';
 import { TextBase } from 'components/text';
-import { AppTextFieldControl } from 'components/text-field';
+import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { CONTRACT_STATUS_OPTIONS } from '../utils';
@@ -29,16 +28,15 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
     isCopyCustomerUnchanged,
     detailLoading,
     customerOptions,
+    meterOptions,
+    selectedMeterId,
+    selectedMeterMultiplier,
+    selectedMeterVoltageLevel,
+    selectedMeterInitialReading,
     onOpenCustomerDropdown,
     customerDropdownRender,
-    meterLineFields,
-    meterLoading,
-    feederOptions,
-    getMeterOptionsForLine,
-    getMeterInfo,
-    onSelectMeter,
-    onAddMeterLine,
-    onRemoveMeterLine,
+    onOpenMeterDropdown,
+    meterDropdownRender,
     onBack,
     onSubmit
   } = useContractForm({ isEditMode });
@@ -46,11 +44,8 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
   const {
     control,
     handleSubmit,
-    watch,
-    formState: { isDirty, isValid, errors }
+    formState: { isDirty, isValid }
   } = form;
-  const watchedMeterLines = watch('meters');
-  const selectedCustomerId = watch('customerId');
 
   const title = isEditMode ? 'Cập nhật hợp đồng mua bán điện' : 'Thêm mới hợp đồng mua bán điện';
   const isCopiedFieldDisabled = isCopyMode;
@@ -147,6 +142,43 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
                   control={control}
                 />
                 <AppSelectControl
+                  name="meterId"
+                  label="Công tơ"
+                  labelSuffix={requiredMark}
+                  placeholder="Chọn công tơ"
+                  options={meterOptions}
+                  dropdownRender={meterDropdownRender}
+                  onOpenChange={onOpenMeterDropdown}
+                  suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
+                  control={control}
+                  disabled={isCopiedFieldDisabled}
+                />
+                {selectedMeterId && (
+                  <>
+                    <AppTextField
+                      name="meterVoltageLevel"
+                      label="Cấp điện áp"
+                      placeholder="-"
+                      value={selectedMeterVoltageLevel}
+                      disabled
+                    />
+                    <AppTextField
+                      name="meterInitialReading"
+                      label="Chỉ số đầu"
+                      placeholder="-"
+                      value={selectedMeterInitialReading}
+                      disabled
+                    />
+                    <AppTextField
+                      name="meterMultiplier"
+                      label="Hệ số nhân"
+                      placeholder="-"
+                      value={selectedMeterMultiplier}
+                      disabled
+                    />
+                  </>
+                )}
+                <AppSelectControl
                   name="status"
                   label="Trạng thái"
                   labelSuffix={requiredMark}
@@ -203,89 +235,6 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
                   />
                 </div>
               </div>
-            </section>
-
-            <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
-              <TextBase classNames="sub-title3 mb-16 !text-primary-700" text="Danh sách công tơ" />
-              {!selectedCustomerId && (
-                <TextBase
-                  classNames="mb-12 text-14 text-color-600"
-                  text="Chọn khách hàng trước để hiện danh sách công tơ của khách hàng."
-                />
-              )}
-              <div className="overflow-x-auto">
-                <div className="min-w-[760px]">
-                  <div className="grid grid-cols-[56px_1.4fr_1fr_1fr_56px] gap-12 rounded-t-radius-m bg-color-100 p-12 text-14 font-semibold text-color-700">
-                    <div>STT</div>
-                    <div>Công tơ {requiredMark}</div>
-                    <div>Lộ {requiredMark}</div>
-                    <div>Ngày lắp đặt {requiredMark}</div>
-                    <div />
-                  </div>
-                  {meterLineFields.map((field, index) => {
-                    const info = getMeterInfo(watchedMeterLines?.[index]?.meterId);
-                    return (
-                      <div
-                        key={field.id}
-                        className="grid grid-cols-[56px_1.4fr_1fr_1fr_56px] items-start gap-12 border-b border-color-200 p-12"
-                      >
-                        <div className="pt-12 text-14">{index + 1}</div>
-                        <div>
-                          <AppSelectControl
-                            name={`meters.${index}.meterId`}
-                            placeholder={meterLoading ? 'Đang tải...' : 'Chọn công tơ'}
-                            options={getMeterOptionsForLine(index)}
-                            control={control}
-                            disabled={!selectedCustomerId}
-                            isLoading={meterLoading}
-                            onChange={(value: string) => onSelectMeter(index, String(value))}
-                          />
-                          {info && (
-                            <div className="mt-4 text-12 text-color-600">
-                              Hệ số nhân: {info.multiplier ?? '-'}
-                            </div>
-                          )}
-                        </div>
-                        <AppSelectControl
-                          name={`meters.${index}.feederId`}
-                          placeholder="Chọn lộ"
-                          options={feederOptions}
-                          control={control}
-                        />
-                        <AppDatePickerControl
-                          name={`meters.${index}.installationDate`}
-                          placeholder="dd/mm/yyyy"
-                          backendFormat={dateApiFormat}
-                          wrapperClassName="w-full"
-                          datePickerClassName="w-full"
-                          control={control}
-                        />
-                        <div className="pt-8">
-                          <Tooltip title="Xoá dòng">
-                            <Button
-                              type="text"
-                              danger
-                              icon={<DeleteOutlined />}
-                              disabled={meterLineFields.length <= 1}
-                              onClick={() => onRemoveMeterLine(index)}
-                            />
-                          </Tooltip>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              {typeof errors.meters?.message === 'string' && (
-                <div className="mt-8 text-14 text-error-600">{errors.meters.message}</div>
-              )}
-              <ButtonBase
-                type="ghost"
-                leftIcon="IC_ADD_OUTLINE2"
-                customContent="Thêm dòng"
-                onClick={onAddMeterLine}
-                classNames="app-common-btn mt-12"
-              />
             </section>
           </form>
         </Spin>

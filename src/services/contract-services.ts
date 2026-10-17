@@ -1,8 +1,6 @@
 import appServices from '@app-services';
 import { ApiResponse } from 'model/common';
 import {
-  AvailableMeterListRes,
-  AvailableMetersReq,
   ContractDeleteRes,
   ContractListRes,
   ContractRes,
@@ -88,28 +86,6 @@ async function exportContractsPdf(
   }
 }
 
-async function getAvailableMeters(
-  params: AvailableMetersReq
-): Promise<ApiResponse<AvailableMeterListRes>> {
-  try {
-    const rs = await appServices.post(ApiConstants.CONTRACT_AVAILABLE_METERS, params);
-    return rs.data;
-  } catch (error: any) {
-    return error;
-  }
-}
-
-async function getFeeders(
-  params: AvailableMetersReq = {}
-): Promise<ApiResponse<AvailableMeterListRes>> {
-  try {
-    const rs = await appServices.post(ApiConstants.CONTRACT_FEEDERS, params);
-    return rs.data;
-  } catch (error: any) {
-    return error;
-  }
-}
-
 const contractServices = {
   searchContract,
   listContract,
@@ -117,9 +93,7 @@ const contractServices = {
   updateContract,
   getContract,
   deleteContract,
-  exportContractsPdf,
-  getAvailableMeters,
-  getFeeders
+  exportContractsPdf
 };
 
 export default contractServices;

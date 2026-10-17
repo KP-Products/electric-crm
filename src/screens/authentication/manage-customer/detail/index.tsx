@@ -29,7 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import contractServices from 'services/contract-services';
 import customerServices from 'services/customer-services';
 import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
-import { getContractMeterCodes, getContractStatusMeta } from '../../manage-contract/utils';
+import { getContractStatusMeta } from '../../manage-contract/utils';
 
 const SUCCESS_MESSAGES = ['success', 'ok'];
 const SUCCESS_CODE_STATUSES = [
@@ -227,28 +227,7 @@ const ManageCustomerDetailScreen = () => {
         dataIndex: 'contractNumber',
         key: 'contractNumber',
         width: K_SIZE_180,
-        render: (text: string, record: Contract) =>
-          record.id ? (
-            <button
-              type="button"
-              className="text-left text-primary-600 underline"
-              onClick={() =>
-                router.push(
-                  `${ROUTES.MANAGE_CONTRACT_DETAIL}?id=${encodeURIComponent(String(record.id))}`
-                )
-              }
-            >
-              {displayText(text)}
-            </button>
-          ) : (
-            displayText(text)
-          )
-      },
-      {
-        title: 'Công tơ',
-        key: 'meters',
-        width: K_SIZE_180,
-        render: (_: unknown, record: Contract) => getContractMeterCodes(record, 3) || '-'
+        render: (text: string) => displayText(text)
       },
       {
         title: 'Ngày ký',
@@ -282,7 +261,7 @@ const ManageCustomerDetailScreen = () => {
         }
       }
     ],
-    [router]
+    []
   );
 
   const breadcrumbList = [

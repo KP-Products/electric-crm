@@ -13,6 +13,7 @@ import { useSelector } from 'react-redux';
 import documentServices from 'services/document-services';
 import { CONTRACT_DOCUMENT_OWNER_TYPE, getContractErrorMessage, getContractId } from '../utils';
 import useCustomerLookup from './useCustomerLookup';
+import useMeterLookup from './useMeterLookup';
 
 const getDocumentFileContentType = (response: DocumentFileRes) =>
   (response.contentType || response.blob.type || '').toLowerCase();
@@ -87,10 +88,16 @@ export default function useContractDetail() {
     () => [selectedContract?.customerId],
     [selectedContract?.customerId]
   );
+  const pinnedMeterIds = useMemo(() => [selectedContract?.meterId], [selectedContract?.meterId]);
 
   const { getCustomerDisplay } = useCustomerLookup({
     autoLoad: false,
     pinnedIds: pinnedCustomerIds
+  });
+
+  const { getMeterDisplay } = useMeterLookup({
+    autoLoad: false,
+    pinnedIds: pinnedMeterIds
   });
 
   const onBack = useCallback(() => {
@@ -211,6 +218,7 @@ export default function useContractDetail() {
     documentList,
     documentLoading,
     getCustomerDisplay,
+    getMeterDisplay,
     onBack,
     onEdit,
     onViewDocument,
