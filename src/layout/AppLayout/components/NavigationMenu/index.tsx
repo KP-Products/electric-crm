@@ -16,7 +16,6 @@ import {
   SafetyCertificateOutlined,
   SettingOutlined,
   SwapOutlined,
-  TagsOutlined,
   TeamOutlined,
   UsergroupAddOutlined
 } from '@ant-design/icons';
@@ -118,14 +117,14 @@ const NavigationMenu = () => {
             icon: <DollarCircleOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
-          {
-            key: ROUTES.OPERATION_PRICE,
-            label: 'Đơn giá vận hành',
-            icon: <TagsOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           }
+          // {
+          //   key: ROUTES.OPERATION_PRICE,
+          //   label: 'Đơn giá vận hành',
+          //   icon: <TagsOutlined />,
+          //   type: 'item',
+          //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          // }
         ]
       },
       {
@@ -147,20 +146,20 @@ const NavigationMenu = () => {
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },
-          {
-            key: ROUTES.MANAGE_OPERATION_UNIT,
-            label: 'Quản lý đơn vị vận hành',
-            icon: <ApartmentOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
-          {
-            key: ROUTES.MANAGE_DOCUMENT,
-            label: 'Quản lý hồ sơ giấy tờ',
-            icon: <FileTextOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
+          // {
+          //   key: ROUTES.MANAGE_OPERATION_UNIT,
+          //   label: 'Quản lý đơn vị vận hành',
+          //   icon: <ApartmentOutlined />,
+          //   type: 'item',
+          //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          // },
+          // {
+          //   key: ROUTES.MANAGE_DOCUMENT,
+          //   label: 'Quản lý hồ sơ giấy tờ',
+          //   icon: <FileTextOutlined />,
+          //   type: 'item',
+          //   permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          // },
           {
             key: ROUTES.MANAGE_OPERATION_CONTRACT,
             label: 'Quản lý hợp đồng vận hành',
