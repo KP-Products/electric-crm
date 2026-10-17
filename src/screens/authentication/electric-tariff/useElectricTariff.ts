@@ -79,6 +79,7 @@ export const DEFAULT_TARIFF_FILTER: ElectricTariffFilter = {
 };
 
 const DATE_API_FORMAT = FORMAT_DATE_API;
+const VAT_RATE = 0.1;
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 const INLINE_TARIFF_DOCUMENT_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
 
@@ -160,6 +161,11 @@ export interface TariffTouPriceRow {
 type RawTouPrice = Partial<ElectricTariffTouPrice> & {
   draftUnitPrice?: string;
 };
+
+export const getPriceWithVat = (unitPrice?: number) =>
+  typeof unitPrice === 'number' && Number.isFinite(unitPrice)
+    ? Math.round(unitPrice * (K_SIZE_1 + VAT_RATE))
+    : undefined;
 
 const getDetailPrices = (detail?: TariffDetail) => detail?.prices || detail?.touPrices || [];
 
