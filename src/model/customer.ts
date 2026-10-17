@@ -5,21 +5,7 @@ export enum CUSTOMER_STATUS {
   DELETED = 'DELETED'
 }
 
-/** Người đại diện / kế toán trưởng / người liên hệ (mỗi vai trò 1 người). */
-export interface CustomerPerson {
-  fullName?: string | null;
-  idNo?: string | null;
-  phone?: string | null;
-  email?: string | null;
-}
-
-export interface CustomerPersons {
-  representative?: CustomerPerson | null;
-  chiefAccountant?: CustomerPerson | null;
-  contactPerson?: CustomerPerson | null;
-}
-
-export interface Customer extends CustomerPersons {
+export interface Customer {
   id: number;
   customerCode?: string;
   fullName?: string;
@@ -48,7 +34,7 @@ export interface CustomerSearchReq extends PaginationReq {
   addressContains?: string;
 }
 
-export interface CreateCustomerReq extends CustomerPersons {
+export interface CreateCustomerReq {
   customerCode: string;
   fullName?: string;
   taxNo?: string;

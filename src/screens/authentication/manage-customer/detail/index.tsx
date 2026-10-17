@@ -27,10 +27,6 @@ import { CustomerDetail } from 'model/customer';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import contractServices from 'services/contract-services';
-import documentServices from 'services/document-services';
-import { DOCUMENT_OWNER_TYPE, DocumentItem } from 'model/document';
-import { customerDocumentOwnerId } from 'utils/document-upload';
-import { CUSTOMER_PERSON_ROLES } from '../components/CustomerPersonFields';
 import customerServices from 'services/customer-services';
 import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
 import { getContractMeterCodes, getContractStatusMeta } from '../../manage-contract/utils';
@@ -125,12 +121,11 @@ const ManageCustomerDetailScreen = () => {
   const [detailLoading, setDetailLoading] = useState<boolean>(false);
   const [detailLoadFailed, setDetailLoadFailed] = useState<boolean>(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [documentsLoading, setDocumentsLoading] = useState<boolean>(false);
   const [contractsLoading, setContractsLoading] = useState<boolean>(false);
   const [contractsLoadFailed, setContractsLoadFailed] = useState<boolean>(false);
 
   const customer = detail?.customer;
+  const operationUnit = detail?.operationUnit;
 
   const onBack = useCallback(() => {
     router.push(ROUTES.MANAGE_CUSTOMER);
@@ -159,97 +154,6 @@ const ManageCustomerDetailScreen = () => {
 
     setDetail(response.data);
   }, [customerId]);
-
-  const fetchDocuments = useCallback(async () => {
-    if (!customerId) return;
-    setDocumentsLoading(true);
-    const response: any = await documentServices.listDocuments({
-      ownerType: DOCUMENT_OWNER_TYPE.CUSTOMER,
-      ownerId: customerDocumentOwnerId(customerId)
-    });
-    setDocumentsLoading(false);
-    setDocuments(Array.isArray(response?.data) ? response.data : []);
-  }, [customerId]);
-
-  useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
-
-  const openFile = useCallback(async (document: DocumentItem, download: boolean) => {
-    const response: any = download
-      ? await documentServices.downloadDocumentFile(document.id)
-      : await documentServices.viewDocumentFile(document.id);
-    if (!response?.blob) {
-      showToast({ type: TYPE_TOAST.ERROR, content: 'Không mở được tài liệu' });
-      return;
-    }
-    const url = URL.createObjectURL(response.blob);
-    if (download) {
-      const link = window.document.createElement('a');
-      link.href = url;
-      link.download = response.fileName || document.originalFileName || 'tai-lieu';
-      link.click();
-    } else {
-      window.open(url, '_blank');
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-  }, []);
-
-  const onDeleteDocument = useCallback(
-    async (document: DocumentItem) => {
-      const response: any = await documentServices.deleteDocument({ id: document.id });
-      if (hasApiError(response)) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: getCustomerErrorMessage(response, 'Xoá tài liệu thất bại')
-        });
-        return;
-      }
-      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Đã xoá tài liệu' });
-      fetchDocuments();
-    },
-    [fetchDocuments]
-  );
-
-  const documentColumns = useMemo<any[]>(
-    () => [
-      {
-        title: 'STT',
-        key: 'index',
-        width: 60,
-        render: (_: unknown, __: DocumentItem, index: number) => index + K_SIZE_1
-      },
-      {
-        title: 'Tên file',
-        dataIndex: 'originalFileName',
-        key: 'originalFileName',
-        render: (text: string) => displayText(text)
-      },
-      { title: 'Định dạng', dataIndex: 'format', key: 'format' },
-      {
-        title: 'Ngày tải lên',
-        dataIndex: 'uploadedAt',
-        key: 'uploadedAt',
-        render: (value: string) => renderDateTime(value)
-      },
-      {
-        title: 'Thao tác',
-        key: 'actions',
-        render: (_: unknown, record: DocumentItem) => (
-          <Flex gap={K_SIZE_8}>
-            <ButtonBase type="ghost" customContent="Xem" onClick={() => openFile(record, false)} />
-            <ButtonBase
-              type="ghost"
-              customContent="Tải về"
-              onClick={() => openFile(record, true)}
-            />
-            <ButtonBase type="ghost" customContent="Xoá" onClick={() => onDeleteDocument(record)} />
-          </Flex>
-        )
-      }
-    ],
-    [onDeleteDocument, openFile]
-  );
 
   const fetchContracts = useCallback(async () => {
     if (!customerId || !Number.isInteger(customerId)) return;
@@ -305,6 +209,9 @@ const ManageCustomerDetailScreen = () => {
 
     router.push(`${ROUTES.MANAGE_CUSTOMER_EDIT}?id=${encodeURIComponent(String(customer.id))}`);
   }, [customer?.id, router]);
+
+  const operationUnitLabel =
+    operationUnit && [operationUnit.unitCode, operationUnit.unitName].filter(Boolean).join(' - ');
 
   const contractColumns = useMemo<any[]>(
     () => [
@@ -438,50 +345,25 @@ const ManageCustomerDetailScreen = () => {
               <DetailItem label="Mã số thuế" value={displayText(customer?.taxNo)} />
               <DetailItem label="Số điện thoại" value={displayText(customer?.phone)} />
               <DetailItem label="Email" value={displayText(customer?.email)} />
+              <DetailItem label="Người liên hệ" value={displayText(customer?.contactName)} />
+              <DetailItem
+                label="CMND/CCCD người liên hệ"
+                value={displayText(customer?.contactIdNo)}
+              />
+              <DetailItem
+                label="Ngày cấp CMND/CCCD"
+                value={renderDate(customer?.contactIssueDate)}
+              />
               <DetailItem label="Địa chỉ" value={displayText(customer?.address)} />
+              <DetailItem
+                label="Đơn vị vận hành"
+                value={operationUnitLabel || displayText(customer?.operationUnitId)}
+              />
               <DetailItem label="Ngày tạo" value={renderDateTime(customer?.createdAt)} />
               <DetailItem label="Ngày cập nhật" value={renderDateTime(customer?.updatedAt)} />
             </div>
-            {CUSTOMER_PERSON_ROLES.map((role) => {
-              const person =
-                role.key === 'contactPerson'
-                  ? customer?.contactPerson || {
-                      fullName: customer?.contactName,
-                      idNo: customer?.contactIdNo
-                    }
-                  : customer?.[role.key];
-              return (
-                <div key={role.key} className="mt-24 border-t border-color-200 pt-16">
-                  <TextBase classNames="sub-title4 mb-12" text={role.title} />
-                  <div className="grid grid-cols-4 gap-x-32 gap-y-16 tablet:grid-cols-2 mobile:grid-cols-1">
-                    <DetailItem label="Tên" value={displayText(person?.fullName)} />
-                    <DetailItem label="CCCD" value={displayText(person?.idNo)} />
-                    <DetailItem label="SĐT" value={displayText(person?.phone)} />
-                    <DetailItem label="Email" value={displayText(person?.email)} />
-                  </div>
-                </div>
-              );
-            })}
           </section>
         </Spin>
-
-        <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
-          <Flex justify="space-between" align="center" className="mb-16">
-            <TextBase classNames="sub-title3 !text-primary-700" text="Tài liệu đính kèm" />
-            {documentsLoading && <Spin size="small" />}
-          </Flex>
-          <div className="overflow-hidden rounded-radius-l border border-color-400">
-            <AppTable
-              loading={documentsLoading}
-              rootClassName="w-full"
-              scroll={{ x: 'max-content' }}
-              dataSource={documents}
-              columns={documentColumns}
-              rowKey={(record: any) => String(record.id)}
-              pagination={false}
-            />
-          </div>
-        </section>
 
         <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
           <Flex justify="space-between" align="center" className="mb-16">

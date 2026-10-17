@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE, K_SIZE_1 } from '@constant';
+import { DEFAULT_PAGE_SIZE, K_SIZE_1, K_SIZE_200 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   CUSTOMER_CREATE,
@@ -17,20 +17,15 @@ import { TYPE_ACTION, TYPE_MESSAGE } from 'components/dialog/type';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ErrorBase } from 'model/common';
-import {
-  CreateCustomerReq,
-  Customer,
-  CustomerPerson,
-  CustomerSearchReq,
-  UpdateCustomerReq
-} from 'model/customer';
-import { DOCUMENT_OWNER_TYPE } from 'model/document';
+import { CreateCustomerReq, Customer, CustomerSearchReq, UpdateCustomerReq } from 'model/customer';
+import { OperationUnit } from 'model/operation-unit';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
+import operationUnitServices from 'services/operation-unit-services';
 import { ROUTES } from 'config/routes';
-import { customerDocumentOwnerId, uploadOwnerDocuments } from 'utils/document-upload';
+import { normalizeDateToApi } from 'utils/date';
 import { useAppTranslation } from 'utils/i18n';
 import { z } from 'zod';
 
@@ -78,19 +73,6 @@ const isSuccessMessage = (message?: unknown) =>
 
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 
-const personSchema = z.object({
-  fullName: optionalTextSchema,
-  idNo: optionalTextSchema.refine((value) => !value || /^([0-9]{9}|[0-9]{12})$/.test(value), {
-    message: 'CCCD gồm 9 hoặc 12 chữ số'
-  }),
-  phone: optionalTextSchema.refine((value) => !value || /^\+?[0-9]{8,15}$/.test(value), {
-    message: 'Số điện thoại không hợp lệ'
-  }),
-  email: optionalTextSchema.refine((value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), {
-    message: 'Email không hợp lệ'
-  })
-});
-
 export const customerSchema = z.object({
   customerCode: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập mã khách hàng' }),
   fullName: optionalTextSchema,
@@ -103,10 +85,11 @@ export const customerSchema = z.object({
   email: optionalTextSchema.refine((value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), {
     message: 'Email không hợp lệ'
   }),
+  contactName: optionalTextSchema,
+  contactIdNo: optionalTextSchema,
+  contactIssueDate: optionalTextSchema,
   address: optionalTextSchema,
-  representative: personSchema,
-  chiefAccountant: personSchema,
-  contactPerson: personSchema
+  operationUnitId: optionalTextSchema
 });
 
 export type CustomerForm = z.infer<typeof customerSchema>;
@@ -161,43 +144,17 @@ const optionalValue = (value?: string) => {
 
 const updateTextValue = (value?: string) => value?.trim() || '';
 
-const toPersonForm = (person?: CustomerPerson | null) => ({
-  fullName: person?.fullName || '',
-  idNo: person?.idNo || '',
-  phone: person?.phone || '',
-  email: person?.email || ''
-});
-
-/** Người để trống cả 4 ô → null (BE xoá vai trò). */
-const toPersonBody = (person?: CustomerForm['representative']): CustomerPerson | null => {
-  const value = {
-    fullName: optionalValue(person?.fullName),
-    idNo: optionalValue(person?.idNo),
-    phone: optionalValue(person?.phone),
-    email: optionalValue(person?.email)
-  };
-  return Object.values(value).some(Boolean) ? value : null;
-};
-
-const buildPersonsBody = (data: CustomerForm) => ({
-  representative: toPersonBody(data.representative),
-  chiefAccountant: toPersonBody(data.chiefAccountant),
-  contactPerson: toPersonBody(data.contactPerson)
-});
-
 export const buildFormValues = (customer?: Customer): CustomerForm => ({
   customerCode: customer?.customerCode || '',
   fullName: customer?.fullName || '',
   taxNo: customer?.taxNo || '',
   phone: customer?.phone || '',
   email: customer?.email || '',
+  contactName: customer?.contactName || '',
+  contactIdNo: customer?.contactIdNo || '',
+  contactIssueDate: normalizeDateToApi(customer?.contactIssueDate),
   address: customer?.address || '',
-  representative: toPersonForm(customer?.representative),
-  chiefAccountant: toPersonForm(customer?.chiefAccountant),
-  // KH cũ chỉ có contact_name/contact_id_no → điền sẵn vào khối người liên hệ
-  contactPerson: toPersonForm(
-    customer?.contactPerson || { fullName: customer?.contactName, idNo: customer?.contactIdNo }
-  )
+  operationUnitId: customer?.operationUnitId || ''
 });
 
 export const buildUpdateBody = (id: number, data: CustomerForm): UpdateCustomerReq => ({
@@ -207,8 +164,11 @@ export const buildUpdateBody = (id: number, data: CustomerForm): UpdateCustomerR
   taxNo: updateTextValue(data.taxNo),
   phone: updateTextValue(data.phone),
   email: updateTextValue(data.email),
+  contactName: updateTextValue(data.contactName),
+  contactIdNo: updateTextValue(data.contactIdNo),
+  contactIssueDate: updateTextValue(normalizeDateToApi(data.contactIssueDate)),
   address: updateTextValue(data.address),
-  ...buildPersonsBody(data)
+  operationUnitId: optionalValue(data.operationUnitId)
 });
 
 export default function useManageCustomer() {
@@ -223,7 +183,10 @@ export default function useManageCustomer() {
   const [filter, setFilter] = useState<CustomerFilter>(DEFAULT_CUSTOMER_FILTER);
   const [filterApplied, setFilterApplied] = useState<CustomerFilter>(DEFAULT_CUSTOMER_FILTER);
   const [openForm, setOpenForm] = useState<boolean>(false);
-  const [attachments, setAttachments] = useState<File[]>([]);
+  const [operationUnitLoading, setOperationUnitLoading] = useState<boolean>(false);
+  const [operationUnitOptions, setOperationUnitOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
   const submittingRef = useRef<boolean>(false);
 
   const form = useForm<CustomerForm>({
@@ -268,6 +231,48 @@ export default function useManageCustomer() {
   useEffect(() => {
     fetchList(currentPage);
   }, [currentPage, fetchList]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchOperationUnits = async () => {
+      setOperationUnitLoading(true);
+      const response = await operationUnitServices.searchOperationUnits({
+        page: 0,
+        size: K_SIZE_200
+      });
+      if (!isMounted) return;
+
+      setOperationUnitLoading(false);
+
+      if (hasApiError(response)) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getCustomerErrorMessage(response, 'Tải danh sách đơn vị vận hành thất bại')
+        });
+        return;
+      }
+
+      const operationUnits = Array.isArray(response.data?.items) ? response.data.items : [];
+
+      setOperationUnitOptions(
+        operationUnits
+          .filter((operationUnit: OperationUnit) => Boolean(operationUnit.operationUnitId))
+          .map((operationUnit: OperationUnit) => ({
+            value: operationUnit.operationUnitId,
+            label:
+              [operationUnit.unitCode, operationUnit.unitName].filter(Boolean).join(' - ') ||
+              operationUnit.operationUnitId
+          }))
+      );
+    };
+
+    fetchOperationUnits();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const pagination = useMemo(
     () => ({
@@ -323,7 +328,6 @@ export default function useManageCustomer() {
 
   const onOpenCreate = useCallback(() => {
     form.reset(buildFormValues());
-    setAttachments([]);
     setOpenForm(true);
   }, [form]);
 
@@ -343,7 +347,6 @@ export default function useManageCustomer() {
     setOpenForm(false);
     submittingRef.current = false;
     form.reset(buildFormValues());
-    setAttachments([]);
   }, [form]);
 
   const onSubmitSuccess = useCallback(
@@ -363,8 +366,11 @@ export default function useManageCustomer() {
       taxNo: optionalValue(data.taxNo),
       phone: optionalValue(data.phone),
       email: optionalValue(data.email),
+      contactName: optionalValue(data.contactName),
+      contactIdNo: optionalValue(data.contactIdNo),
+      contactIssueDate: optionalValue(normalizeDateToApi(data.contactIssueDate)),
       address: optionalValue(data.address),
-      ...buildPersonsBody(data)
+      operationUnitId: optionalValue(data.operationUnitId)
     }),
     []
   );
@@ -378,23 +384,7 @@ export default function useManageCustomer() {
         type: CUSTOMER_CREATE,
         payload: {
           body: buildCreateBody(data),
-          onSuccess: async (response?: { data?: Customer }) => {
-            const createdId = response?.data?.id;
-            if (createdId && attachments.length) {
-              const failed = await uploadOwnerDocuments(
-                DOCUMENT_OWNER_TYPE.CUSTOMER,
-                customerDocumentOwnerId(createdId),
-                attachments
-              );
-              if (failed.length) {
-                showToast({
-                  type: TYPE_TOAST.ERROR,
-                  content: `Đã tạo khách hàng nhưng tải lên thất bại: ${failed.join(', ')}`
-                });
-              }
-            }
-            onSubmitSuccess('Thêm mới khách hàng thành công');
-          },
+          onSuccess: () => onSubmitSuccess('Thêm mới khách hàng thành công'),
           onFailed: (error?: ErrorBase) => {
             submittingRef.current = false;
             showToast({
@@ -405,7 +395,7 @@ export default function useManageCustomer() {
         }
       });
     },
-    [attachments, buildCreateBody, onSubmitSuccess]
+    [buildCreateBody, onSubmitSuccess]
   );
 
   const onOpenDetail = useCallback(
@@ -482,8 +472,8 @@ export default function useManageCustomer() {
     filter,
     filterApplied,
     openForm,
-    attachments,
-    setAttachments,
+    operationUnitLoading,
+    operationUnitOptions,
     form,
     onChangeFilter,
     onApplyFilter,
