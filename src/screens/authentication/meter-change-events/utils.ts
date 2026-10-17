@@ -2,12 +2,13 @@ import { FILE_EXT, NULL_VALUE } from '@constant';
 import { TYPE_STATUS } from 'components/status';
 import { MeterChangeEventWithDetails } from 'model/meter-change-event';
 import moment from 'moment';
-import { FORMAT_DATE_API, FORMAT_DATE_PARAMS, FORMAT_DATE_TIME_PARAMS } from 'utils/date';
+import { FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
 
-export const DATE_API_FORMAT = FORMAT_DATE_API;
+export const EVENT_DATE_FORM_FORMAT = FORMAT_DATE_API;
+export const DATE_API_FORMAT = `${FORMAT_DATE_API} HH:mm:ss`;
+export const EVENT_DATE_DISPLAY_FORMAT = 'DD/MM/YYYY HH:mm:ss';
 const DATE_SERVER_INPUT_FORMATS = [
   DATE_API_FORMAT,
-  'DD-MM-YYYY HH:mm:ss',
   'DD/MM/YYYY HH:mm:ss',
   'DD-MM-YYYY HH:mm',
   'DD/MM/YYYY HH:mm',
@@ -58,6 +59,7 @@ export const EVENT_STATUS_OPTIONS = [
 ];
 
 export const EVENT_STATUS_LABEL_MAP: Record<string, string> = {
+  DONE: 'Hoàn thành',
   MOI_TAO: 'Nháp',
   NHAP: 'Nháp',
   DRAFT: 'Nháp',
@@ -73,6 +75,7 @@ export const EVENT_STATUS_LABEL_MAP: Record<string, string> = {
 };
 
 export const EVENT_STATUS_TYPE_MAP: Record<string, TYPE_STATUS> = {
+  DONE: TYPE_STATUS.DONE,
   MOI_TAO: TYPE_STATUS.DEFAULT,
   NHAP: TYPE_STATUS.DEFAULT,
   DRAFT: TYPE_STATUS.DEFAULT,
@@ -91,10 +94,12 @@ export const getEventTypeLabel = (eventType?: string) =>
   eventType ? EVENT_TYPE_LABEL_MAP[eventType] || eventType : NULL_VALUE;
 
 export const getEventStatusLabel = (status?: string) =>
-  status ? EVENT_STATUS_LABEL_MAP[status] || status : NULL_VALUE;
+  status ? EVENT_STATUS_LABEL_MAP[status.trim().toUpperCase()] || status : NULL_VALUE;
 
 export const getEventStatusType = (status?: string) =>
-  status ? EVENT_STATUS_TYPE_MAP[status] || TYPE_STATUS.DEFAULT : TYPE_STATUS.DEFAULT;
+  status
+    ? EVENT_STATUS_TYPE_MAP[status.trim().toUpperCase()] || TYPE_STATUS.DEFAULT
+    : TYPE_STATUS.DEFAULT;
 
 export const getEventRecordId = (record?: MeterChangeEventWithDetails) =>
   record?.event?.id ? String(record.event.id) : '';
@@ -118,12 +123,22 @@ export const displayEventDate = (date?: string) =>
   date ? displayMeterChangeDate(date, FORMAT_DATE_PARAMS) : NULL_VALUE;
 
 export const displayEventDateTime = (date?: string) =>
-  date ? displayMeterChangeDate(date, FORMAT_DATE_TIME_PARAMS) : NULL_VALUE;
+  date ? displayMeterChangeDate(date, EVENT_DATE_DISPLAY_FORMAT) : NULL_VALUE;
 
 export const normalizeEventDateForForm = (date?: string) => {
   if (!date) return '';
   const parsedDate = parseMeterChangeDate(date);
-  return parsedDate.isValid() ? parsedDate.format(DATE_API_FORMAT) : '';
+  return parsedDate.isValid() ? parsedDate.format(EVENT_DATE_FORM_FORMAT) : '';
+};
+
+export const buildEventDateForSubmit = (date: string, timeSource: string) => {
+  const selectedDate = moment(date, EVENT_DATE_FORM_FORMAT, true);
+  const time = parseMeterChangeDate(timeSource);
+  return selectedDate
+    .hour(time.hour())
+    .minute(time.minute())
+    .second(time.second())
+    .format(DATE_API_FORMAT);
 };
 
 export const getStatusGroup = (status?: string) => {

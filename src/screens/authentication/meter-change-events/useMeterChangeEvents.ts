@@ -41,9 +41,11 @@ import { useAppTranslation } from 'utils/i18n';
 import { parseFormattedNumber } from 'utils/number-input';
 import { z } from 'zod';
 import useCustomerLookup from '../manage-contract/hooks/useCustomerLookup';
+import { buildReplacementDetails } from './replacement';
 import {
   DATE_API_FORMAT,
-  displayEventDate,
+  EVENT_DATE_FORM_FORMAT,
+  buildEventDateForSubmit,
   displayEventDateTime,
   escapeHtml,
   EVENT_STATUS_LABEL_MAP,
@@ -81,11 +83,6 @@ const parseNumberInput = (value?: string) => {
   return parsed !== undefined && parsed >= K_SIZE_0 ? parsed : undefined;
 };
 
-const toOptionalCustomerId = (value?: string | number) => {
-  const customerId = Number(value);
-  return Number.isInteger(customerId) && customerId > K_SIZE_0 ? customerId : undefined;
-};
-
 const isValidNonNegativeNumber = (value: string) => {
   if (!value) return true;
   const parsedValue = parseNumberInput(value);
@@ -118,14 +115,14 @@ const detailSchema = z
   });
 
 const meterChangeEventSchema = z.object({
-  eventNo: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập mã sự kiện' }),
+  eventNo: optionalTextSchema,
   eventType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn loại sự kiện' }),
   customerId: optionalTextSchema,
   eventDate: z
     .string()
     .trim()
     .min(K_SIZE_1, { message: 'Vui lòng chọn thời gian sự kiện' })
-    .refine((value) => moment(value, DATE_API_FORMAT, true).isValid(), {
+    .refine((value) => moment(value, EVENT_DATE_FORM_FORMAT, true).isValid(), {
       message: 'Thời gian sự kiện không hợp lệ'
     }),
   reason: optionalTextSchema,
@@ -172,7 +169,8 @@ const buildFormValues = (record?: MeterChangeEventWithDetails): MeterChangeEvent
     eventNo: event?.eventNo || '',
     eventType: event?.eventType || METER_CHANGE_EVENT_TYPE.REPLACE,
     customerId: event?.customerId !== undefined ? String(event.customerId) : '',
-    eventDate: normalizeEventDateForForm(event?.eventDate) || moment().format(DATE_API_FORMAT),
+    eventDate:
+      normalizeEventDateForForm(event?.eventDate) || moment().format(EVENT_DATE_FORM_FORMAT),
     reason: event?.reason || '',
     status: event?.status || METER_CHANGE_STATUS.DRAFT,
     note: event?.note || '',
@@ -209,6 +207,7 @@ interface DeviceOption {
   value: string;
   label: string;
   source: DeviceSource;
+  meterCode?: string;
 }
 
 const normalizeText = (value?: string) => {
@@ -237,7 +236,7 @@ const getEventDisplayValue = (record: MeterChangeEventWithDetails, key: string) 
     case 'customerId':
       return event?.customerId || NULL_VALUE;
     case 'eventDate':
-      return displayEventDate(event?.eventDate);
+      return displayEventDateTime(event?.eventDate);
     case 'status':
       return getEventStatusLabel(event?.status);
     case 'performedBy':
@@ -270,6 +269,7 @@ export default function useMeterChangeEvents() {
   const [oldDeviceLoading, setOldDeviceLoading] = useState<boolean>(false);
   const [hasLoadedOldDevices, setHasLoadedOldDevices] = useState<boolean>(false);
   const submittingRef = useRef<boolean>(false);
+  const submissionVersionRef = useRef(0);
   const oldDeviceRequestIdRef = useRef<number>(K_SIZE_0);
 
   const form = useForm<MeterChangeEventForm>({
@@ -279,22 +279,31 @@ export default function useMeterChangeEvents() {
   });
   const selectedCustomerId = form.watch('customerId');
   const detailForms = useWatch({ control: form.control, name: 'details' });
-  const pinnedCustomerIds = useMemo(
-    () => [selectedEvent?.event?.customerId, toOptionalCustomerId(selectedCustomerId)],
-    [selectedCustomerId, selectedEvent?.event?.customerId]
-  );
-
   const detailFieldArray = useFieldArray({
     control: form.control,
     name: 'details'
   });
-  const { customerOptions, onOpenCustomerDropdown, customerDropdownRender } = useCustomerLookup({
-    pinnedIds: pinnedCustomerIds,
+  const {
+    customerOptions: customerLookupOptions,
+    onOpenCustomerDropdown,
+    customerDropdownRender
+  } = useCustomerLookup({
     showErrorToast: true
   });
 
+  const customerOptions = useMemo(() => {
+    const options = customerLookupOptions
+      .filter((option) => Boolean(option.data?.customerCode))
+      .map((option) => ({ ...option, value: String(option.data.customerCode) }));
+    if (selectedCustomerId && !options.some((option) => option.value === selectedCustomerId)) {
+      options.push({ value: selectedCustomerId, label: selectedCustomerId, data: undefined });
+    }
+    return options;
+  }, [customerLookupOptions, selectedCustomerId]);
+
   const loadOldDeviceOptions = useCallback(async () => {
-    if (hasLoadedOldDevices || oldDeviceLoading) return;
+    if (hasLoadedOldDevices) return oldDeviceOptions;
+    if (oldDeviceLoading) return [];
 
     const requestId = oldDeviceRequestIdRef.current + K_SIZE_1;
     oldDeviceRequestIdRef.current = requestId;
@@ -305,10 +314,10 @@ export default function useMeterChangeEvents() {
       measuringDeviceServices.searchMeasuringDevices({ page: K_SIZE_0, size: MAX_PAGE_SIZE })
     ]);
 
-    if (requestId !== oldDeviceRequestIdRef.current) return;
+    if (requestId !== oldDeviceRequestIdRef.current) return [];
 
     setOldDeviceLoading(false);
-    setHasLoadedOldDevices(true);
+    setHasLoadedOldDevices(Boolean(metersResponse?.data && measuringDevicesResponse?.data));
 
     const optionsByValue = new Map<string, DeviceOption>();
     (metersResponse?.data?.items || []).forEach((item) => {
@@ -320,7 +329,8 @@ export default function useMeterChangeEvents() {
       optionsByValue.set(value, {
         value,
         label: `Công tơ · ${meter.meterCode || value}`,
-        source: 'METER'
+        source: 'METER',
+        meterCode: meter.meterCode
       });
     });
     (measuringDevicesResponse?.data?.items || []).forEach((device) => {
@@ -340,7 +350,8 @@ export default function useMeterChangeEvents() {
         content: 'Tải danh sách thiết bị cũ thất bại'
       });
     }
-  }, [hasLoadedOldDevices, oldDeviceLoading]);
+    return Array.from(optionsByValue.values());
+  }, [hasLoadedOldDevices, oldDeviceLoading, oldDeviceOptions]);
 
   const onOpenOldDeviceDropdown = useCallback(
     (open?: boolean) => {
@@ -353,11 +364,13 @@ export default function useMeterChangeEvents() {
     () =>
       (detailForms || []).map((detail) => {
         const oldDeviceId = String(detail?.oldDeviceId || '');
-        const oldDevice = oldDeviceOptions.find((option) => option.value === oldDeviceId);
+        const oldDevice = oldDeviceOptions.find(
+          (option) => option.value === oldDeviceId || option.meterCode === oldDeviceId
+        );
         if (!oldDevice) return [];
 
         return oldDeviceOptions.filter(
-          (option) => option.source === oldDevice.source && option.value !== oldDeviceId
+          (option) => option.source === oldDevice.source && option.value !== oldDevice.value
         );
       }),
     [detailForms, oldDeviceOptions]
@@ -385,7 +398,7 @@ export default function useMeterChangeEvents() {
       size,
       eventNo: normalizeText(appliedFilter.eventNo),
       eventType: normalizeText(appliedFilter.eventType),
-      customerId: toOptionalCustomerId(appliedFilter.customerId),
+      customerId: normalizeText(appliedFilter.customerId),
       status: normalizeText(appliedFilter.status)
     }),
     []
@@ -522,6 +535,7 @@ export default function useMeterChangeEvents() {
   );
 
   const onCloseForm = useCallback(() => {
+    submissionVersionRef.current += 1;
     setOpenForm(false);
     setSelectedEvent(undefined);
     submittingRef.current = false;
@@ -550,9 +564,8 @@ export default function useMeterChangeEvents() {
 
   const buildCreateBody = useCallback(
     (data: MeterChangeEventForm): CreateMeterChangeEventReq => ({
-      eventNo: data.eventNo.trim(),
       eventType: data.eventType,
-      customerId: toOptionalCustomerId(data.customerId),
+      customerId: normalizeText(data.customerId),
       eventDate: data.eventDate,
       reason: normalizeText(data.reason),
       status: normalizeText(data.status),
@@ -566,7 +579,7 @@ export default function useMeterChangeEvents() {
     (id: number, data: MeterChangeEventForm): UpdateMeterChangeEventReq => ({
       id,
       eventType: data.eventType,
-      customerId: toOptionalCustomerId(data.customerId),
+      customerId: normalizeText(data.customerId),
       eventDate: data.eventDate,
       reason: normalizeText(data.reason),
       status: normalizeText(data.status),
@@ -577,27 +590,60 @@ export default function useMeterChangeEvents() {
   );
 
   const onSubmitSuccess = useCallback(
-    (content: string) => {
+    (content: string, response?: MeterChangeEventRes) => {
       submittingRef.current = false;
       onCloseForm();
       refreshFirstPage();
+      const message = response?.message?.trim();
       showToast({ type: TYPE_TOAST.SUCCESS, content });
+      if (message && !['success', 'ok'].includes(message.toLowerCase())) {
+        showToast({ type: TYPE_TOAST.INFO, content: message, timeShow: 10 });
+      }
+      setHasLoadedOldDevices(false);
     },
     [onCloseForm, refreshFirstPage]
   );
 
   const onSubmit = useCallback(
-    (data: MeterChangeEventForm) => {
+    async (data: MeterChangeEventForm) => {
       if (submittingRef.current) return;
       submittingRef.current = true;
+      const submissionVersion = ++submissionVersionRef.current;
+      // Capture the click time before any async device lookup.
+      const submittedData = {
+        ...data,
+        eventDate: buildEventDateForSubmit(
+          data.eventDate,
+          selectedEvent?.event?.eventDate || moment().format(DATE_API_FORMAT)
+        )
+      };
 
+      let replacementDetails: MeterChangeDetailInput[] | undefined;
+      if (data.eventType === METER_CHANGE_EVENT_TYPE.REPLACE) {
+        try {
+          const devices = await loadOldDeviceOptions();
+          if (submissionVersion !== submissionVersionRef.current) return;
+          replacementDetails = buildReplacementDetails(buildDetailRequests(data.details), devices);
+        } catch (error) {
+          submittingRef.current = false;
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: error instanceof Error ? error.message : 'Không thể xác định công tơ thay thế'
+          });
+          return;
+        }
+      }
       const selectedEventId = getRecordId(selectedEvent);
       if (selectedEventId) {
         dispatch({
           type: UPDATE_METER_CHANGE_EVENT,
           payload: {
-            body: buildUpdateBody(selectedEventId, data),
-            onSuccess: () => onSubmitSuccess('Cập nhật biến động thiết bị thành công'),
+            body: {
+              ...buildUpdateBody(selectedEventId, submittedData),
+              ...(replacementDetails ? { details: replacementDetails } : {})
+            },
+            onSuccess: (response: MeterChangeEventRes) =>
+              onSubmitSuccess('Cập nhật biến động thiết bị thành công', response),
             onFailed: (error?: ErrorBase) => {
               submittingRef.current = false;
               showToast({
@@ -613,8 +659,12 @@ export default function useMeterChangeEvents() {
       dispatch({
         type: CREATE_METER_CHANGE_EVENT,
         payload: {
-          body: buildCreateBody(data),
-          onSuccess: () => onSubmitSuccess('Thêm mới biến động thiết bị thành công'),
+          body: {
+            ...buildCreateBody(submittedData),
+            ...(replacementDetails ? { details: replacementDetails } : {})
+          },
+          onSuccess: (response: MeterChangeEventRes) =>
+            onSubmitSuccess('Thêm mới biến động thiết bị thành công', response),
           onFailed: (error?: ErrorBase) => {
             submittingRef.current = false;
             showToast({
@@ -625,7 +675,7 @@ export default function useMeterChangeEvents() {
         }
       });
     },
-    [buildCreateBody, buildUpdateBody, onSubmitSuccess, selectedEvent]
+    [buildCreateBody, buildUpdateBody, loadOldDeviceOptions, onSubmitSuccess, selectedEvent]
   );
 
   const onDelete = useCallback(

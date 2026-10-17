@@ -45,8 +45,7 @@ import { formatNumberValueWithCommas } from 'utils/number-input';
 import { useResponsive } from 'utils/responsive';
 import useMeterChangeEvents, { MeterChangeEventFilter } from './useMeterChangeEvents';
 import {
-  DATE_API_FORMAT,
-  displayEventDate,
+  EVENT_DATE_FORM_FORMAT,
   displayEventDateTime,
   displayText,
   EVENT_STATUS_OPTIONS,
@@ -215,7 +214,7 @@ const MeterChangeEventsScreen = () => {
         key: 'eventDate',
         width: K_SIZE_150,
         render: (_: unknown, record: MeterChangeEventWithDetails) =>
-          displayEventDate(record.event?.eventDate)
+          displayEventDateTime(record.event?.eventDate)
       },
       {
         title: 'Trạng thái',
@@ -498,14 +497,14 @@ const MeterChangeEventsScreen = () => {
                       options={EVENT_TYPE_OPTIONS}
                       control={control}
                     />
-                    <AppTextFieldControl
-                      name="eventNo"
-                      label="Mã sự kiện"
-                      labelSuffix={requiredMark}
-                      placeholder="Nhập mã sự kiện"
-                      control={control}
-                      disabled={Boolean(selectedFormEventId)}
-                    />
+                    {Boolean(selectedFormEventId) && (
+                      <AppTextFieldControl
+                        name="eventNo"
+                        label="Mã sự kiện"
+                        control={control}
+                        disabled
+                      />
+                    )}
                     <AppSelectControl
                       name="customerId"
                       label="Khách hàng"
@@ -521,7 +520,8 @@ const MeterChangeEventsScreen = () => {
                       name="eventDate"
                       label="Thời gian sự kiện"
                       labelSuffix={requiredMark}
-                      backendFormat={DATE_API_FORMAT}
+                      backendFormat={EVENT_DATE_FORM_FORMAT}
+                      placeholder="dd/mm/yyyy"
                       wrapperClassName="w-full"
                       datePickerClassName="w-full"
                     />
@@ -713,7 +713,7 @@ const MeterChangeEventsScreen = () => {
                   />
                   <DetailItem
                     label="Thời gian sự kiện"
-                    value={displayEventDate(selectedDetailEvent?.eventDate)}
+                    value={displayEventDateTime(selectedDetailEvent?.eventDate)}
                   />
                   <DetailItem
                     label="Trạng thái"

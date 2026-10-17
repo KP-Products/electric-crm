@@ -18,7 +18,7 @@ export interface MeterChangeEvent {
   id: number;
   eventNo?: string;
   eventType?: string;
-  customerId?: number;
+  customerId?: string;
   eventDate?: string;
   reason?: string;
   status?: string;
@@ -39,14 +39,13 @@ export interface MeterChangeEventWithDetails {
 export interface SearchMeterChangeEventsReq extends PaginationReq {
   eventNo?: string;
   eventType?: string;
-  customerId?: number;
+  customerId?: string;
   status?: string;
 }
 
 export interface CreateMeterChangeEventReq {
-  eventNo: string;
   eventType: string;
-  customerId?: number;
+  customerId?: string;
   eventDate: string;
   reason?: string;
   status?: string;
@@ -57,7 +56,7 @@ export interface CreateMeterChangeEventReq {
 export interface UpdateMeterChangeEventReq {
   id: number;
   eventType?: string;
-  customerId?: number;
+  customerId?: string;
   eventDate?: string;
   reason?: string;
   status?: string;
