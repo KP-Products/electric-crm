@@ -36,7 +36,6 @@ import {
   getOperationContractStatusMeta,
   OperationContractFilter,
   OPERATION_CONTRACT_STATUS_OPTIONS,
-  formatVnd,
   renderOperationContractDate
 } from './utils';
 import useManageOperationContracts from './useManageOperationContracts';
@@ -44,7 +43,7 @@ import useManageOperationContracts from './useManageOperationContracts';
 const FILTER_LABEL_MAP: Record<keyof OperationContractFilter, string> = {
   contractNumber: 'Số hợp đồng',
   contractName: 'Tên hợp đồng',
-  customerId: 'Khách hàng',
+  operationUnitId: 'Đơn vị vận hành',
   contractType: 'Loại hợp đồng',
   status: 'Trạng thái'
 };
@@ -65,10 +64,10 @@ const ManageOperationContractScreen = () => {
     pagination,
     filter,
     filterApplied,
-    customerOptions,
-    getCustomerDisplay,
-    onOpenCustomerDropdown,
-    customerDropdownRender,
+    operationUnitOptions,
+    getOperationUnitDisplay,
+    onOpenOperationUnitDropdown,
+    operationUnitDropdownRender,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -88,11 +87,11 @@ const ManageOperationContractScreen = () => {
 
   const formatFilterValue = useCallback(
     (key: keyof OperationContractFilter, value: string) => {
-      if (key === 'customerId') return getCustomerDisplay(Number(value));
+      if (key === 'operationUnitId') return getOperationUnitDisplay(value);
       if (key === 'status') return getOperationContractStatusMeta(value).label;
       return value;
     },
-    [getCustomerDisplay]
+    [getOperationUnitDisplay]
   );
 
   const columns = useMemo<any[]>(
@@ -126,28 +125,11 @@ const ManageOperationContractScreen = () => {
         render: (text: string) => renderTruncatedText(text, 'max-w-[280px]')
       },
       {
-        title: 'Khách hàng',
-        key: 'customer',
+        title: 'Đơn vị vận hành',
+        dataIndex: 'operationUnitName',
+        key: 'operationUnitName',
         width: K_SIZE_240,
-        render: (_: unknown, record: OperationContract) =>
-          renderTruncatedText(
-            [record.customerCode, record.customerName].filter(Boolean).join(' - '),
-            'max-w-[280px]'
-          )
-      },
-      {
-        title: 'Giá trị HĐ',
-        key: 'contractValue',
-        width: K_SIZE_150,
-        align: 'right',
-        render: (_: unknown, record: OperationContract) => formatVnd(record.contractValue)
-      },
-      {
-        title: 'Sau chiết khấu',
-        key: 'valueAfterDiscount',
-        width: K_SIZE_150,
-        align: 'right',
-        render: (_: unknown, record: OperationContract) => formatVnd(record.valueAfterDiscount)
+        render: (text: string) => renderTruncatedText(text, 'max-w-[280px]')
       },
       {
         title: 'Loại hợp đồng',
@@ -233,7 +215,7 @@ const ManageOperationContractScreen = () => {
         )
       }
     ],
-    [currentPage, onDelete, onOpenDetail, onOpenUpdate, t]
+    [currentPage, getOperationUnitDisplay, onDelete, onOpenDetail, onOpenUpdate, t]
   );
 
   const breadcrumbList = [
@@ -291,14 +273,14 @@ const ManageOperationContractScreen = () => {
             onPressEnter={onApplyFilter}
           />
           <AppSelect
-            name="customerId"
-            label="Khách hàng"
+            name="operationUnitId"
+            label="Đơn vị vận hành"
             placeholder="Tất cả"
-            value={filter.customerId ? Number(filter.customerId) : undefined}
-            options={customerOptions}
-            dropdownRender={customerDropdownRender}
-            onOpenChange={onOpenCustomerDropdown}
-            onSelectOption={({ key }) => onChangeFilter('customerId', String(key))}
+            value={filter.operationUnitId}
+            options={operationUnitOptions}
+            dropdownRender={operationUnitDropdownRender}
+            onOpenChange={onOpenOperationUnitDropdown}
+            onSelectOption={({ key }) => onChangeFilter('operationUnitId', String(key))}
           />
           <AppTextField
             name="contractType"

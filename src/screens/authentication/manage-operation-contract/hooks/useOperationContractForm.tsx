@@ -26,12 +26,9 @@ import {
   getOperationContractId,
   isOperationContractDateBefore,
   OPERATION_CONTRACT_DATE_FORMAT,
-  OperationContractForm,
-  toAmount
+  OperationContractForm
 } from '../utils';
-import useCustomerLookup from 'screens/authentication/manage-contract/hooks/useCustomerLookup';
-import { DOCUMENT_OWNER_TYPE } from 'model/document';
-import { uploadOwnerDocuments } from 'utils/document-upload';
+import useOperationUnitLookup from './useOperationUnitLookup';
 
 const optionalTextSchema = z.preprocess((value) => value ?? '', z.string().trim());
 
@@ -39,24 +36,7 @@ const operationContractSchema = z
   .object({
     contractNumber: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập số hợp đồng' }),
     contractName: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập tên hợp đồng' }),
-    customerId: z.number({ message: 'Vui lòng chọn khách hàng' }).int().positive({
-      message: 'Vui lòng chọn khách hàng'
-    }),
-    contractValue: z
-      .string()
-      .trim()
-      .min(K_SIZE_1, { message: 'Vui lòng nhập giá trị hợp đồng' })
-      .refine((value) => (toAmount(value) ?? 0) > 0, {
-        message: 'Giá trị hợp đồng phải lớn hơn 0'
-      }),
-    discountPercent: optionalTextSchema.refine(
-      (value) => {
-        if (!value) return true;
-        const percent = toAmount(value);
-        return percent !== null && percent >= 0 && percent <= 100;
-      },
-      { message: 'Chiết khấu từ 0 đến 100%' }
-    ),
+    operationUnitId: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn đơn vị vận hành' }),
     contractType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập loại hợp đồng' }),
     signedDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày ký' }),
     effectiveDate: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày hiệu lực' }),
@@ -101,36 +81,17 @@ export default function useOperationContractForm({ isEditMode }: UseOperationCon
     resolver: zodResolver(operationContractSchema)
   });
 
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const selectedCustomerId = form.watch('customerId');
-  const pinnedCustomerIds = useMemo(
-    () => [selectedContract?.customerId, selectedCustomerId],
-    [selectedContract?.customerId, selectedCustomerId]
+  const selectedOperationUnitId = form.watch('operationUnitId');
+  const pinnedOperationUnitIds = useMemo(
+    () => [selectedContract?.operationUnitId, selectedOperationUnitId],
+    [selectedContract?.operationUnitId, selectedOperationUnitId]
   );
 
-  const { customerOptions, onOpenCustomerDropdown, customerDropdownRender } = useCustomerLookup({
-    pinnedIds: pinnedCustomerIds,
-    showErrorToast: true
-  });
-
-  /** Tải tài liệu đã chọn lên sau khi lưu HĐ; file lỗi báo riêng. */
-  const uploadAttachments = useCallback(
-    async (contractId?: string) => {
-      if (!contractId || !attachments.length) return;
-      const failed = await uploadOwnerDocuments(
-        DOCUMENT_OWNER_TYPE.OPERATION_CONTRACT,
-        contractId,
-        attachments
-      );
-      if (failed.length) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: `Đã lưu hợp đồng nhưng tải lên thất bại: ${failed.join(', ')}`
-        });
-      }
-    },
-    [attachments]
-  );
+  const { operationUnitOptions, onOpenOperationUnitDropdown, operationUnitDropdownRender } =
+    useOperationUnitLookup({
+      pinnedIds: pinnedOperationUnitIds,
+      showErrorToast: true
+    });
 
   const onBack = useCallback(() => {
     router.push(ROUTES.MANAGE_OPERATION_CONTRACT);
@@ -215,10 +176,7 @@ export default function useOperationContractForm({ isEditMode }: UseOperationCon
           type: UPDATE_OPERATION_CONTRACT,
           payload: {
             body: buildUpdateOperationContractBody(contractId, data),
-            onSuccess: async () => {
-              await uploadAttachments(contractId);
-              onSubmitSuccess('Cập nhật hợp đồng vận hành thành công');
-            },
+            onSuccess: () => onSubmitSuccess('Cập nhật hợp đồng vận hành thành công'),
             onFailed: (error?: ErrorBase) =>
               onSubmitFailed(error, 'Cập nhật hợp đồng vận hành thất bại')
           }
@@ -230,27 +188,22 @@ export default function useOperationContractForm({ isEditMode }: UseOperationCon
         type: CREATE_OPERATION_CONTRACT,
         payload: {
           body: buildCreateOperationContractBody(data),
-          onSuccess: async (response?: OperationContractRes) => {
-            await uploadAttachments(response?.data?.contractId);
-            onSubmitSuccess('Thêm mới hợp đồng vận hành thành công');
-          },
+          onSuccess: () => onSubmitSuccess('Thêm mới hợp đồng vận hành thành công'),
           onFailed: (error?: ErrorBase) =>
             onSubmitFailed(error, 'Thêm mới hợp đồng vận hành thất bại')
         }
       });
     },
-    [isEditMode, onSubmitFailed, onSubmitSuccess, selectedContract, uploadAttachments]
+    [isEditMode, onSubmitFailed, onSubmitSuccess, selectedContract]
   );
 
   return {
     dateApiFormat: OPERATION_CONTRACT_DATE_FORMAT,
     form,
     detailLoading,
-    customerOptions,
-    onOpenCustomerDropdown,
-    customerDropdownRender,
-    attachments,
-    setAttachments,
+    operationUnitOptions,
+    onOpenOperationUnitDropdown,
+    operationUnitDropdownRender,
     selectedContract,
     onBack,
     onSubmit

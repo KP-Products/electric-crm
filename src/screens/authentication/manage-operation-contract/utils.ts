@@ -33,7 +33,7 @@ export const OPERATION_CONTRACT_STATUS_OPTIONS: AppSelectOption[] = [
 export interface OperationContractFilter {
   contractNumber: string;
   contractName: string;
-  customerId: string;
+  operationUnitId: string;
   contractType: string;
   status: string;
 }
@@ -41,9 +41,7 @@ export interface OperationContractFilter {
 export interface OperationContractForm {
   contractNumber: string;
   contractName: string;
-  customerId?: number;
-  contractValue: string;
-  discountPercent: string;
+  operationUnitId: string;
   contractType: string;
   signedDate: string;
   effectiveDate: string;
@@ -55,7 +53,7 @@ export interface OperationContractForm {
 export const DEFAULT_OPERATION_CONTRACT_FILTER: OperationContractFilter = {
   contractNumber: '',
   contractName: '',
-  customerId: '',
+  operationUnitId: '',
   contractType: '',
   status: ''
 };
@@ -63,9 +61,7 @@ export const DEFAULT_OPERATION_CONTRACT_FILTER: OperationContractFilter = {
 export const DEFAULT_OPERATION_CONTRACT_FORM: OperationContractForm = {
   contractNumber: '',
   contractName: '',
-  customerId: undefined,
-  contractValue: '',
-  discountPercent: '',
+  operationUnitId: '',
   contractType: OPERATION_CONTRACT_DEFAULT_TYPE,
   signedDate: '',
   effectiveDate: '',
@@ -80,23 +76,6 @@ const normalizeText = (value?: string) => {
   const normalized = value?.trim();
   return normalized || undefined;
 };
-
-/** "120.000.000" / "120,000,000" / "5,5" → số; trống → null. */
-export const toAmount = (value?: string | number | null) => {
-  if (value === undefined || value === null) return null;
-  const text = String(value).trim();
-  if (!text) return null;
-  const normalized = /^[0-9.]+,[0-9]{1,2}$/.test(text)
-    ? text.replace(/\./g, '').replace(',', '.')
-    : text.replace(/[^0-9.]/g, '');
-  const amount = Number(normalized);
-  return Number.isFinite(amount) ? amount : null;
-};
-
-export const formatVnd = (value?: number | null) =>
-  value === undefined || value === null
-    ? NULL_VALUE
-    : `${Math.round(value).toLocaleString('vi-VN')} đ`;
 
 export const getOperationContractErrorMessage = (
   error?: ErrorBase & { message?: string },
@@ -139,9 +118,7 @@ export const buildOperationContractFormValues = (
 ): OperationContractForm => ({
   contractNumber: contract?.contractNumber || '',
   contractName: contract?.contractName || '',
-  customerId: contract?.customerId,
-  contractValue: contract?.contractValue != null ? String(contract.contractValue) : '',
-  discountPercent: contract?.discountPercent != null ? String(contract.discountPercent) : '',
+  operationUnitId: contract?.operationUnitId || '',
   contractType: contract?.contractType || '',
   signedDate: formatOperationContractDate(contract?.signedDate),
   effectiveDate: formatOperationContractDate(contract?.effectiveDate),
@@ -159,7 +136,7 @@ export const buildSearchOperationContractsBody = (
   size,
   contractNumber: normalizeText(filter.contractNumber),
   contractName: normalizeText(filter.contractName),
-  customerId: filter.customerId ? Number(filter.customerId) : undefined,
+  operationUnitId: normalizeText(filter.operationUnitId),
   contractType: normalizeText(filter.contractType),
   status: normalizeText(filter.status)
 });
@@ -169,9 +146,7 @@ export const buildCreateOperationContractBody = (
 ): CreateOperationContractReq => ({
   contractNumber: data.contractNumber.trim(),
   contractName: data.contractName.trim(),
-  customerId: data.customerId as number,
-  contractValue: toAmount(data.contractValue) as number,
-  discountPercent: toAmount(data.discountPercent),
+  operationUnitId: data.operationUnitId.trim(),
   contractType: data.contractType.trim(),
   signedDate: formatOperationContractDate(data.signedDate),
   effectiveDate: formatOperationContractDate(data.effectiveDate),
@@ -186,9 +161,7 @@ export const buildUpdateOperationContractBody = (
 ): UpdateOperationContractReq => ({
   id,
   contractName: data.contractName.trim(),
-  customerId: data.customerId,
-  contractValue: toAmount(data.contractValue) as number,
-  discountPercent: toAmount(data.discountPercent),
+  operationUnitId: data.operationUnitId.trim(),
   contractType: normalizeText(data.contractType),
   signedDate: formatOperationContractDate(data.signedDate),
   effectiveDate: formatOperationContractDate(data.effectiveDate),

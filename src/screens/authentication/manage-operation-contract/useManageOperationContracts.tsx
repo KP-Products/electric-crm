@@ -34,7 +34,7 @@ import {
   OperationContractFilter,
   renderOperationContractDate
 } from './utils';
-import useCustomerLookup from 'screens/authentication/manage-contract/hooks/useCustomerLookup';
+import useOperationUnitLookup from './hooks/useOperationUnitLookup';
 
 export default function useManageOperationContracts() {
   const { t } = useAppTranslation();
@@ -50,17 +50,21 @@ export default function useManageOperationContracts() {
   );
   const [exportLoading, setExportLoading] = useState<boolean>(false);
 
-  const pinnedCustomerIds = useMemo(
-    () => [filter.customerId, filterApplied.customerId].filter(Boolean).map(Number),
-    [filter.customerId, filterApplied.customerId]
+  const pinnedOperationUnitIds = useMemo(
+    () => [filter.operationUnitId, filterApplied.operationUnitId],
+    [filter.operationUnitId, filterApplied.operationUnitId]
   );
 
-  const { customerOptions, getCustomerDisplay, onOpenCustomerDropdown, customerDropdownRender } =
-    useCustomerLookup({
-      autoLoad: false,
-      pinnedIds: pinnedCustomerIds,
-      showErrorToast: true
-    });
+  const {
+    operationUnitOptions,
+    getOperationUnitDisplay,
+    onOpenOperationUnitDropdown,
+    operationUnitDropdownRender
+  } = useOperationUnitLookup({
+    autoLoad: false,
+    pinnedIds: pinnedOperationUnitIds,
+    showErrorToast: true
+  });
 
   const fetchList = useCallback(
     (page: number) => {
@@ -230,53 +234,52 @@ export default function useManageOperationContracts() {
     [onDeleteSuccess, t]
   );
 
-  const exportRowsToExcel = useCallback((rows: OperationContract[]) => {
-    const columns = [
-      ['contractNumber', 'Số hợp đồng'],
-      ['contractName', 'Tên hợp đồng'],
-      ['customerName', 'Khách hàng'],
-      ['contractValue', 'Giá trị hợp đồng (VNĐ)'],
-      ['discountPercent', 'Chiết khấu (%)'],
-      ['contractType', 'Loại hợp đồng'],
-      ['signedDate', 'Ngày ký'],
-      ['effectiveDate', 'Ngày hiệu lực'],
-      ['expiryDate', 'Ngày hết hạn'],
-      ['status', 'Trạng thái'],
-      ['createdBy', 'Người tạo'],
-      ['createdAt', 'Ngày tạo']
-    ];
-    const headerHtml = columns.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join('');
-    const bodyHtml = rows
-      .map(
-        (row) =>
-          `<tr>${columns
-            .map(([key]) => {
-              const value = (() => {
-                if (key === 'customerName')
-                  return [row.customerCode, row.customerName].filter(Boolean).join(' - ');
-                if (key === 'signedDate' || key === 'effectiveDate' || key === 'expiryDate') {
-                  return renderOperationContractDate(row[key]);
-                }
-                if (key === 'status') return getOperationContractStatusMeta(row.status).label;
-                return displayText(row[key as keyof OperationContract] as string | number);
-              })();
-              return `<td>${escapeHtml(value)}</td>`;
-            })
-            .join('')}</tr>`
-      )
-      .join('');
-    const html = `<html><head><meta charset="UTF-8" /></head><body><table border="1"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
-    const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `OPERATION_CONTRACT_${moment().format(FORMAT_DATE_TIME_DOWNLOAD)}.${
-      FILE_EXT.EXCEL2
-    }`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  }, []);
+  const exportRowsToExcel = useCallback(
+    (rows: OperationContract[]) => {
+      const columns = [
+        ['contractNumber', 'Số hợp đồng'],
+        ['contractName', 'Tên hợp đồng'],
+        ['operationUnitId', 'Đơn vị vận hành'],
+        ['contractType', 'Loại hợp đồng'],
+        ['signedDate', 'Ngày ký'],
+        ['effectiveDate', 'Ngày hiệu lực'],
+        ['expiryDate', 'Ngày hết hạn'],
+        ['status', 'Trạng thái'],
+        ['createdBy', 'Người tạo'],
+        ['createdAt', 'Ngày tạo']
+      ];
+      const headerHtml = columns.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join('');
+      const bodyHtml = rows
+        .map(
+          (row) =>
+            `<tr>${columns
+              .map(([key]) => {
+                const value = (() => {
+                  if (key === 'operationUnitId')
+                    return getOperationUnitDisplay(row.operationUnitId);
+                  if (key === 'signedDate' || key === 'effectiveDate' || key === 'expiryDate') {
+                    return renderOperationContractDate(row[key]);
+                  }
+                  if (key === 'status') return getOperationContractStatusMeta(row.status).label;
+                  return displayText(row[key as keyof OperationContract] as string | number);
+                })();
+                return `<td>${escapeHtml(value)}</td>`;
+              })
+              .join('')}</tr>`
+        )
+        .join('');
+      const html = `<html><head><meta charset="UTF-8" /></head><body><table border="1"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
+      const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `OPERATION_CONTRACT_${moment().format(FORMAT_DATE_TIME_DOWNLOAD)}.${FILE_EXT.EXCEL2}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    },
+    [getOperationUnitDisplay]
+  );
 
   const onExport = useCallback(async () => {
     setExportLoading(true);
@@ -307,10 +310,10 @@ export default function useManageOperationContracts() {
     pagination,
     filter,
     filterApplied,
-    customerOptions,
-    getCustomerDisplay,
-    onOpenCustomerDropdown,
-    customerDropdownRender,
+    operationUnitOptions,
+    getOperationUnitDisplay,
+    onOpenOperationUnitDropdown,
+    operationUnitDropdownRender,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
