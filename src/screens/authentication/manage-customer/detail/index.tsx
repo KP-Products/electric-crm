@@ -21,7 +21,6 @@ import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
-import { ErrorBase } from 'model/common';
 import { Contract } from 'model/contract';
 import { CustomerDetail } from 'model/customer';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -29,68 +28,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import contractServices from 'services/contract-services';
 import customerServices from 'services/customer-services';
 import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
-import { getContractStatusMeta } from '../../manage-contract/utils';
+import { getContractId, getContractStatusMeta } from '../../manage-contract/utils';
 
-const SUCCESS_MESSAGES = ['success', 'ok'];
-const SUCCESS_CODE_STATUSES = [
-  ...SUCCESS_MESSAGES,
-  '0',
-  '00',
-  '000',
-  '0000',
-  '00000',
-  '000000',
-  '200',
-  '201',
-  '204'
-];
-
-const normalizeApiText = (value?: unknown) =>
-  String(value || '')
-    .trim()
-    .toLowerCase();
-
-const hasApiError = (
-  response?: ErrorBase & {
-    codeStatus?: string;
-    error?: unknown;
-    status?: number;
-    statusCode?: number;
-    message?: string;
-  }
-) => {
-  if (!response) return true;
-
-  const status = Number(response.status ?? response.statusCode);
-  const normalizedCodeStatus = normalizeApiText(response.codeStatus);
-  const hasResponseError = Boolean(
-    response.businessErrorMessage ||
-      response.systemErrorMessage ||
-      response.detailMessage ||
-      response.error
-  );
-
-  if ((Number.isFinite(status) && status >= 400) || hasResponseError) return true;
-  if (SUCCESS_MESSAGES.includes(normalizeApiText(response.message))) return false;
-
-  return Boolean(
-    normalizedCodeStatus &&
-      !SUCCESS_CODE_STATUSES.includes(normalizedCodeStatus) &&
-      !normalizedCodeStatus.startsWith('2')
-  );
-};
-
-const getCustomerErrorMessage = (
-  error?: ErrorBase & { message?: string },
-  fallback = 'Thao tác thất bại'
-) => {
-  const message =
-    error?.businessErrorMessage ||
-    error?.systemErrorMessage ||
-    error?.detailMessage ||
-    error?.message;
-  return message && !SUCCESS_MESSAGES.includes(normalizeApiText(message)) ? message : fallback;
-};
+import CustomerDocuments from '../customer-documents';
+import { buildFormValues, getCustomerErrorMessage, hasApiError } from '../useManageCustomer';
 
 const displayText = (value?: string | number | null) => {
   if (value === undefined || value === null || value === '') return NULL_VALUE;
@@ -125,7 +66,6 @@ const ManageCustomerDetailScreen = () => {
   const [contractsLoadFailed, setContractsLoadFailed] = useState<boolean>(false);
 
   const customer = detail?.customer;
-  const operationUnit = detail?.operationUnit;
 
   const onBack = useCallback(() => {
     router.push(ROUTES.MANAGE_CUSTOMER);
@@ -183,12 +123,12 @@ const ManageCustomerDetailScreen = () => {
     setContracts(Array.isArray(response.data.items) ? response.data.items : []);
   }, [customerId]);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    []
-  );
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -210,8 +150,15 @@ const ManageCustomerDetailScreen = () => {
     router.push(`${ROUTES.MANAGE_CUSTOMER_EDIT}?id=${encodeURIComponent(String(customer.id))}`);
   }, [customer?.id, router]);
 
-  const operationUnitLabel =
-    operationUnit && [operationUnit.unitCode, operationUnit.unitName].filter(Boolean).join(' - ');
+  const onViewContract = useCallback(
+    (contract: Contract) => {
+      const contractId = getContractId(contract);
+      if (!contractId) return;
+
+      router.push(`${ROUTES.MANAGE_CONTRACT_DETAIL}?id=${encodeURIComponent(String(contractId))}`);
+    },
+    [router]
+  );
 
   const contractColumns = useMemo<any[]>(
     () => [
@@ -259,9 +206,26 @@ const ManageCustomerDetailScreen = () => {
           const meta = getContractStatusMeta(status);
           return <Status type={meta.type} kind={KIND_STATUS.PRIMARY} content={meta.label} />;
         }
+      },
+      {
+        title: 'Thao tác',
+        key: 'actions',
+        width: K_SIZE_180,
+        align: 'center',
+        fixed: 'right',
+        render: (_: unknown, record: Contract) => (
+          <ButtonBase
+            type="whiteGhost"
+            size={32}
+            leftIcon="ICON_EYE_OPEN"
+            customContent="Xem chi tiết"
+            disabled={!getContractId(record)}
+            onClick={() => onViewContract(record)}
+          />
+        )
       }
     ],
-    []
+    [onViewContract]
   );
 
   const breadcrumbList = [
@@ -324,23 +288,35 @@ const ManageCustomerDetailScreen = () => {
               <DetailItem label="Mã số thuế" value={displayText(customer?.taxNo)} />
               <DetailItem label="Số điện thoại" value={displayText(customer?.phone)} />
               <DetailItem label="Email" value={displayText(customer?.email)} />
-              <DetailItem label="Người liên hệ" value={displayText(customer?.contactName)} />
-              <DetailItem
-                label="CMND/CCCD người liên hệ"
-                value={displayText(customer?.contactIdNo)}
-              />
               <DetailItem
                 label="Ngày cấp CMND/CCCD"
                 value={renderDate(customer?.contactIssueDate)}
               />
               <DetailItem label="Địa chỉ" value={displayText(customer?.address)} />
-              <DetailItem
-                label="Đơn vị vận hành"
-                value={operationUnitLabel || displayText(customer?.operationUnitId)}
-              />
               <DetailItem label="Ngày tạo" value={renderDateTime(customer?.createdAt)} />
               <DetailItem label="Ngày cập nhật" value={renderDateTime(customer?.updatedAt)} />
             </div>
+            {(
+              [
+                { key: 'representative', label: 'Người đại diện' },
+                { key: 'chiefAccountant', label: 'Kế toán trưởng' },
+                { key: 'contactPerson', label: 'Người liên hệ' }
+              ] as const
+            ).map(({ key, label }) => {
+              const person = buildFormValues(customer)[key];
+              return (
+                <section key={key} className="mt-16 border-t border-color-300 pt-16">
+                  <TextBase classNames="sub-title3 mb-12" text={label} />
+                  <div className="grid grid-cols-4 gap-16 mobile:grid-cols-2">
+                    <DetailItem label="Tên" value={displayText(person?.fullName)} />
+                    <DetailItem label="CCCD" value={displayText(person?.idNo)} />
+                    <DetailItem label="SĐT" value={displayText(person?.phone)} />
+                    <DetailItem label="Email" value={displayText(person?.email)} />
+                  </div>
+                </section>
+              );
+            })}
+            {customer?.id && <CustomerDocuments customerId={customer.id} />}
           </section>
         </Spin>
 
@@ -367,7 +343,7 @@ const ManageCustomerDetailScreen = () => {
                 dataSource={contracts}
                 columns={contractColumns}
                 rowKey={(record: any, index?: number) =>
-                  String(record.id || record.contractNumber || index)
+                  String(getContractId(record) || record.contractNumber || index)
                 }
                 pagination={false}
               />

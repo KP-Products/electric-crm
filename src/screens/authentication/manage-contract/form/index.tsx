@@ -316,18 +316,16 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
                           datePickerClassName="w-full"
                           control={control}
                         />
-                        <div className="pt-8">
-                          <Tooltip title="Xoá">
-                            <ButtonBase
-                              type="ghost"
-                              size={32}
-                              classNames="!text-error-600"
-                              customContent={<DeleteOutlined />}
-                              disabled={meterLineFields.length <= 1}
-                              onClick={() => onRemoveMeterLine(index)}
-                            />
-                          </Tooltip>
-                        </div>
+                        <Tooltip title="Xoá">
+                          <ButtonBase
+                            type="whiteGhost"
+                            classNames="!text-error-600 !inline-flex items-center justify-center !p-0 [&>span]:flex [&>span]:items-center [&>span]:justify-center"
+                            styles={{ width: 42 }}
+                            customContent={<DeleteOutlined />}
+                            disabled={meterLineFields.length <= 1}
+                            onClick={() => onRemoveMeterLine(index)}
+                          />
+                        </Tooltip>
                       </div>
                     );
                   })}

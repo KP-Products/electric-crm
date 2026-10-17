@@ -5,7 +5,17 @@ export enum CUSTOMER_STATUS {
   DELETED = 'DELETED'
 }
 
+export interface CustomerPerson {
+  fullName?: string;
+  idNo?: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface Customer {
+  representative?: CustomerPerson | null;
+  chiefAccountant?: CustomerPerson | null;
+  contactPerson?: CustomerPerson | null;
   id: number;
   customerCode?: string;
   fullName?: string;
@@ -35,6 +45,9 @@ export interface CustomerSearchReq extends PaginationReq {
 }
 
 export interface CreateCustomerReq {
+  representative?: CustomerPerson;
+  chiefAccountant?: CustomerPerson;
+  contactPerson?: CustomerPerson;
   customerCode: string;
   fullName?: string;
   taxNo?: string;

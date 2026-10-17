@@ -13,17 +13,15 @@ import {
   K_SIZE_18,
   K_SIZE_180,
   K_SIZE_200,
-  K_SIZE_220,
   K_SIZE_240,
   K_SIZE_8,
   NULL_VALUE,
   REQUIRED_MARK
 } from '@constant';
-import { Divider, Drawer, Flex, Spin } from 'antd';
+import { Divider, Drawer, Flex, Spin, Upload } from 'antd';
+import { CloudUploadOutlined } from '@ant-design/icons';
 import ButtonBase from 'components/button';
-import { AppDatePickerControl } from 'components/date-picker';
 import IconHover from 'components/icon-vec-local/icon-hover';
-import { AppSelectControl } from 'components/select';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import AppTable from 'components/table';
 import AppPagination from 'components/table/pagination';
@@ -33,8 +31,8 @@ import { AppTextField, AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import { CUSTOMER_STATUS, Customer } from 'model/customer';
-import { useCallback, useMemo } from 'react';
-import { FORMAT_DATE_API, displayDateTimeFromServer } from 'utils/date';
+import { useMemo } from 'react';
+import { displayDateTimeFromServer } from 'utils/date';
 import { useResponsive } from 'utils/responsive';
 import useManageCustomer, { CustomerFilter } from './useManageCustomer';
 
@@ -82,13 +80,15 @@ const ManageCustomerScreen = () => {
     total,
     listLoading,
     detailLoading,
+    files,
+    addFile,
+    removeFile,
+    createdCustomerId,
     currentPage,
     pagination,
     filter,
     filterApplied,
     openForm,
-    operationUnitLoading,
-    operationUnitOptions,
     form,
     onChangeFilter,
     onApplyFilter,
@@ -113,21 +113,6 @@ const ManageCustomerScreen = () => {
         Boolean(value)
       ),
     [filterApplied]
-  );
-
-  const operationUnitLabelMap = useMemo(
-    () =>
-      operationUnitOptions.reduce<Record<string, string>>((result, option) => {
-        result[String(option.value)] = String(option.label);
-        return result;
-      }, {}),
-    [operationUnitOptions]
-  );
-
-  const getOperationUnitLabel = useCallback(
-    (operationUnitId?: string | null) =>
-      operationUnitId ? operationUnitLabelMap[operationUnitId] || operationUnitId : NULL_VALUE,
-    [operationUnitLabelMap]
   );
 
   const columns = useMemo<any[]>(
@@ -187,13 +172,6 @@ const ManageCustomerScreen = () => {
         key: 'contactName',
         render: (text: string) => renderTruncatedText(text, 'max-w-[180px]'),
         width: K_SIZE_180
-      },
-      {
-        title: 'Đơn vị vận hành',
-        dataIndex: 'operationUnitId',
-        key: 'operationUnitId',
-        render: (text: string) => renderTruncatedText(getOperationUnitLabel(text), 'max-w-[220px]'),
-        width: K_SIZE_220
       },
       {
         title: 'Địa chỉ',
@@ -262,7 +240,7 @@ const ManageCustomerScreen = () => {
         )
       }
     ],
-    [currentPage, getOperationUnitLabel, onDelete, onOpenDetail, onOpenUpdate, t]
+    [currentPage, onDelete, onOpenDetail, onOpenUpdate, t]
   );
 
   const breadcrumbList = [
@@ -418,7 +396,7 @@ const ManageCustomerScreen = () => {
             closable={false}
             maskClosable={!detailLoading}
             onClose={onCloseForm}
-            width={isTablet || isMobile ? '92vw' : '34vw'}
+            width={isTablet || isMobile ? '92vw' : 860}
             footer={
               <Flex justify="end" gap={K_SIZE_8}>
                 <ButtonBase
@@ -436,7 +414,7 @@ const ManageCustomerScreen = () => {
                   disabled={!isValid || detailLoading}
                   customContent={
                     <div className="flex flex-row items-center justify-center">
-                      <div>Lưu</div>
+                      <div>{createdCustomerId ? 'Thử lại tài liệu' : 'Lưu'}</div>
                       {detailLoading && (
                         <div className="ml-8">
                           <Spin size="small" />
@@ -448,77 +426,113 @@ const ManageCustomerScreen = () => {
               </Flex>
             }
           >
-            <div className="grid gap-12">
-              <div className="grid grid-cols-2 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">
-                <AppTextFieldControl
-                  name="customerCode"
-                  control={control}
-                  label="Mã khách hàng"
-                  labelSuffix={REQUIRED_MARK}
-                  labelSuffixClassName="text-error-600"
-                  placeholder="Nhập mã khách hàng"
-                />
-                <AppTextFieldControl
-                  name="fullName"
-                  control={control}
-                  label="Tên khách hàng"
-                  placeholder="Nhập tên khách hàng"
-                />
-                <AppTextFieldControl
-                  name="taxNo"
-                  label="Mã số thuế"
-                  placeholder="Nhập mã số thuế"
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name="phone"
-                  label="Số điện thoại"
-                  placeholder="Nhập số điện thoại"
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name="email"
-                  label="Email"
-                  placeholder="Nhập email"
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name="contactName"
-                  label="Người liên hệ"
-                  placeholder="Nhập người liên hệ"
-                  control={control}
-                />
-                <AppTextFieldControl
-                  name="contactIdNo"
-                  label="CMND/CCCD người liên hệ"
-                  placeholder="Nhập CMND/CCCD"
-                  control={control}
-                />
-                <AppDatePickerControl
-                  name="contactIssueDate"
-                  control={control}
-                  backendFormat={FORMAT_DATE_API}
-                  label="Ngày cấp CMND/CCCD"
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
-                />
-              </div>
-
-              <AppSelectControl
-                name="operationUnitId"
-                label="Đơn vị vận hành"
-                placeholder="Chọn đơn vị vận hành"
-                isLoading={operationUnitLoading}
-                options={operationUnitOptions}
-                control={control}
-              />
-
-              <AppTextFieldControl
-                name="address"
-                label="Địa chỉ"
-                placeholder="Nhập địa chỉ"
-                control={control}
-              />
+            <div className="grid gap-16">
+              {createdCustomerId && (
+                <div role="status" className="text-14 text-color-700">
+                  Khách hàng đã được tạo. Chỉ tải lại các tài liệu còn trong danh sách dưới đây.
+                </div>
+              )}
+              <fieldset disabled={detailLoading || Boolean(createdCustomerId)} className="min-w-0">
+                <div className="grid grid-cols-2 gap-12 mobile:grid-cols-1">
+                  <AppTextFieldControl
+                    name="customerCode"
+                    control={control}
+                    label="Mã khách hàng"
+                    labelSuffix={REQUIRED_MARK}
+                    labelSuffixClassName="text-error-600"
+                    placeholder="Nhập mã khách hàng"
+                  />
+                  <AppTextFieldControl
+                    name="fullName"
+                    control={control}
+                    label="Tên khách hàng"
+                    placeholder="Nhập tên khách hàng"
+                  />
+                  <AppTextFieldControl
+                    name="taxNo"
+                    control={control}
+                    label="Mã số thuế"
+                    placeholder="Nhập mã số thuế"
+                    maxLength={30}
+                  />
+                  <AppTextFieldControl
+                    name="address"
+                    label="Địa chỉ"
+                    placeholder="Nhập địa chỉ"
+                    control={control}
+                  />
+                </div>
+                {(
+                  [
+                    { key: 'representative', label: 'Người đại diện' },
+                    { key: 'chiefAccountant', label: 'Kế toán trưởng' },
+                    { key: 'contactPerson', label: 'Người liên hệ' }
+                  ] as const
+                ).map((person) => (
+                  <section key={person.key} className="mt-16 border-t border-color-300 pt-16">
+                    <TextBase classNames="sub-title3 mb-12" text={person.label} />
+                    <div className="grid grid-cols-4 gap-12 mobile:grid-cols-2">
+                      <AppTextFieldControl
+                        name={`${person.key}.fullName`}
+                        label="Tên"
+                        placeholder="Nhập tên"
+                        control={control}
+                        maxLength={255}
+                      />
+                      <AppTextFieldControl
+                        name={`${person.key}.idNo`}
+                        label="CCCD"
+                        placeholder="Nhập CCCD"
+                        control={control}
+                        maxLength={12}
+                      />
+                      <AppTextFieldControl
+                        name={`${person.key}.phone`}
+                        label="SĐT"
+                        placeholder="Nhập số điện thoại"
+                        control={control}
+                      />
+                      <AppTextFieldControl
+                        name={`${person.key}.email`}
+                        label="Email"
+                        placeholder="Nhập email"
+                        control={control}
+                        maxLength={255}
+                      />
+                    </div>
+                  </section>
+                ))}
+              </fieldset>
+              <section className="border-t border-color-300 pt-16">
+                <TextBase classNames="sub-title3 mb-12" text="Tài liệu đính kèm" />
+                <Upload.Dragger
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                  disabled={detailLoading}
+                  beforeUpload={(file) => {
+                    addFile(file);
+                    return false;
+                  }}
+                  fileList={files.map((file, index) => ({
+                    uid: String(index),
+                    name: file.name,
+                    size: file.size,
+                    originFileObj: undefined
+                  }))}
+                  onRemove={(file) => {
+                    removeFile(Number(file.uid));
+                    return true;
+                  }}
+                >
+                  <CloudUploadOutlined className="mb-12 text-28 text-color-600" />
+                  <div>
+                    Kéo thả file vào đây hoặc <span className="text-primary-600">Chọn tệp</span>
+                  </div>
+                  <div className="mt-4 text-12 text-color-500">
+                    Hỗ trợ định dạng: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (Tối đa 10MB/tệp)
+                  </div>
+                </Upload.Dragger>
+              </section>
             </div>
           </Drawer>
         </form>
