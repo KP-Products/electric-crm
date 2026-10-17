@@ -92,27 +92,6 @@ const tariffSchema = z.object({
   effectiveTo: optionalTextSchema
 });
 
-const tariffEditSchema = tariffSchema.extend({
-  status: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn trạng thái' })
-});
-
-// API chi tiết trả priceType dạng enum (SELL/BUY); form và API ghi dùng mã '0'/'1'.
-const PRICE_TYPE_CODE_MAP: Record<string, string> = {
-  SELL: TARIFF_PRICE_TYPE.SELL,
-  BUY: TARIFF_PRICE_TYPE.BUY
-};
-
-const toTariffEditForm = (tariff?: ElectricTariff): ElectricTariffEditForm => ({
-  tariffCode: tariff?.tariffCode || '',
-  tariffName: tariff?.tariffName || '',
-  priceType:
-    PRICE_TYPE_CODE_MAP[tariff?.priceType || ''] || tariff?.priceType || DEFAULT_PRICE_TYPE,
-  voltageLevel: tariff?.voltageLevel || DEFAULT_VOLTAGE_LEVEL,
-  effectiveFrom: normalizeDateToApi(tariff?.effectiveFrom),
-  effectiveTo: normalizeDateToApi(tariff?.effectiveTo),
-  status: tariff?.status || TARIFF_STATUS.ACTIVE
-});
-
 const parseNumber = (value: string) => parseFormattedIntegerNumber(value) ?? Number.NaN;
 
 const getErrorMessage = (error?: ErrorBase, fallback = 'Thao tác thất bại') => {
@@ -143,7 +122,6 @@ export interface ElectricTariffFilter {
 }
 
 export type ElectricTariffForm = z.infer<typeof tariffSchema>;
-export type ElectricTariffEditForm = z.infer<typeof tariffEditSchema>;
 
 export interface TariffTouPriceRow {
   id?: number;
@@ -252,12 +230,6 @@ export default function useElectricTariff() {
       effectiveTo: ''
     },
     resolver: zodResolver(tariffSchema)
-  });
-
-  const tariffEditForm = useForm<ElectricTariffEditForm>({
-    mode: 'onTouched',
-    defaultValues: toTariffEditForm(),
-    resolver: zodResolver(tariffEditSchema)
   });
 
   const buildSearchBody = useCallback(
@@ -394,41 +366,34 @@ export default function useElectricTariff() {
     [onCloseCreate, refreshFirstPage]
   );
 
-  const loadTariffDetail = useCallback(
-    (id: number) => {
-      dispatch({
-        type: GET_ELECTRIC_TARIFF_DETAIL,
-        payload: {
-          body: { id },
-          onSuccess: (response: GetTariffDetailRes) => {
-            setSelectedDetail(response.data);
-            setTouPrices(normalizeTouPrices(getDetailPrices(response.data)));
-            if (response.data?.tariff) {
-              tariffEditForm.reset(toTariffEditForm(response.data.tariff));
-            }
-          },
-          onFailed: (error?: ErrorBase) => {
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content: getErrorMessage(error, 'Tải chi tiết biểu giá thất bại')
-            });
-          }
+  const loadTariffDetail = useCallback((id: number) => {
+    dispatch({
+      type: GET_ELECTRIC_TARIFF_DETAIL,
+      payload: {
+        body: { id },
+        onSuccess: (response: GetTariffDetailRes) => {
+          setSelectedDetail(response.data);
+          setTouPrices(normalizeTouPrices(getDetailPrices(response.data)));
+        },
+        onFailed: (error?: ErrorBase) => {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(error, 'Tải chi tiết biểu giá thất bại')
+          });
         }
-      });
-    },
-    [tariffEditForm]
-  );
+      }
+    });
+  }, []);
 
   const onOpenDetail = useCallback(
     (tariff: ElectricTariff) => {
       setSelectedDetail({ tariff, prices: [] });
-      tariffEditForm.reset(toTariffEditForm(tariff));
       setTouPrices(normalizeTouPrices());
       setSelectedTariffDocumentFile(undefined);
       setOpenDetail(true);
       loadTariffDetail(tariff.id);
     },
-    [loadTariffDetail, tariffEditForm]
+    [loadTariffDetail]
   );
 
   const onCloseDetail = useCallback(() => {
@@ -476,60 +441,51 @@ export default function useElectricTariff() {
     );
   }, []);
 
-  const handleSaveTariffDetail = useCallback(
-    (data: ElectricTariffEditForm) => {
-      if (!selectedDetail?.tariff?.id) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: 'Không tìm thấy ID biểu giá điện để cập nhật'
-        });
-        return;
-      }
-
-      const validationError = validateTouPrices(touPrices);
-      if (validationError) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: validationError
-        });
-        return;
-      }
-
-      const body: UpdateTariffReq = {
-        id: selectedDetail.tariff.id,
-        tariffCode: data.tariffCode.trim(),
-        tariffName: data.tariffName.trim(),
-        priceType: data.priceType,
-        voltageLevel: data.voltageLevel,
-        effectiveFrom: normalizeDateToApi(data.effectiveFrom),
-        effectiveTo: normalizeDateToApi(data.effectiveTo) || undefined,
-        status: data.status,
-        prices: buildTouPriceInputs(touPrices)
-      };
-
-      dispatch({
-        type: UPDATE_ELECTRIC_TARIFF,
-        payload: {
-          body,
-          onSuccess: () => {
-            showToast({
-              type: TYPE_TOAST.SUCCESS,
-              content: 'Cập nhật biểu giá điện thành công'
-            });
-            onCloseDetail();
-            fetchList(currentPage, filterApplied);
-          },
-          onFailed: (error?: ErrorBase) => {
-            showToast({
-              type: TYPE_TOAST.ERROR,
-              content: getErrorMessage(error, 'Cập nhật biểu giá điện thất bại')
-            });
-          }
-        }
+  const handleSaveTouPrices = useCallback(() => {
+    if (!selectedDetail?.tariff?.id) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: 'Không tìm thấy ID biểu giá điện để cập nhật bậc giá'
       });
-    },
-    [currentPage, fetchList, filterApplied, onCloseDetail, selectedDetail?.tariff?.id, touPrices]
-  );
+      return;
+    }
+
+    const validationError = validateTouPrices(touPrices);
+    if (validationError) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: validationError
+      });
+      return;
+    }
+
+    const body: UpdateTariffReq = {
+      id: selectedDetail.tariff.id,
+      prices: buildTouPriceInputs(touPrices)
+    };
+
+    dispatch({
+      type: UPDATE_ELECTRIC_TARIFF,
+      payload: {
+        body,
+        onSuccess: () => {
+          showToast({
+            type: TYPE_TOAST.SUCCESS,
+            content: 'Cập nhật bậc giá thành công'
+          });
+          loadTariffDetail(selectedDetail.tariff?.id || body.id);
+          onCloseDetail();
+        },
+        onFailed: (error?: ErrorBase) => {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(error, 'Cập nhật bậc giá thất bại')
+          });
+          onCloseDetail();
+        }
+      }
+    });
+  }, [loadTariffDetail, onCloseDetail, selectedDetail?.tariff?.id, touPrices]);
 
   const handleUploadTariffDocument = useCallback(() => {
     const tariffId = selectedDetail?.tariff?.id;
@@ -760,7 +716,6 @@ export default function useElectricTariff() {
     selectedTariffDocumentFile,
     tariffDocumentFileName,
     tariffForm,
-    tariffEditForm,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -770,7 +725,7 @@ export default function useElectricTariff() {
     onOpenDetail,
     onCloseDetail,
     onChangeTouPrice,
-    handleSaveTariffDetail,
+    handleSaveTouPrices,
     onSelectTariffDocumentFile,
     onRemoveSelectedTariffDocumentFile,
     handleUploadTariffDocument,

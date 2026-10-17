@@ -154,7 +154,6 @@ const ElectricTariffScreen = () => {
     selectedTariffDocumentFile,
     tariffDocumentFileName,
     tariffForm,
-    tariffEditForm,
     onChangeFilter,
     onApplyFilter,
     onResetFilter,
@@ -164,7 +163,7 @@ const ElectricTariffScreen = () => {
     onOpenDetail,
     onCloseDetail,
     onChangeTouPrice,
-    handleSaveTariffDetail,
+    handleSaveTouPrices,
     onSelectTariffDocumentFile,
     onRemoveSelectedTariffDocumentFile,
     handleUploadTariffDocument,
@@ -179,8 +178,6 @@ const ElectricTariffScreen = () => {
     handleSubmit: handleTariffFormSubmit,
     formState: { isValid: isTariffValid }
   } = tariffForm;
-
-  const { control: tariffEditControl, handleSubmit: handleTariffEditSubmit } = tariffEditForm;
 
   const activeFilters = useMemo(
     () =>
@@ -577,66 +574,45 @@ const ElectricTariffScreen = () => {
               <ButtonBase
                 type="primary"
                 disabled={detailLoading}
-                customContent="Lưu"
-                onClick={handleTariffEditSubmit(handleSaveTariffDetail)}
+                customContent="Lưu bậc giá"
+                onClick={handleSaveTouPrices}
               />
             </Flex>
           }
         >
           <Spin spinning={detailLoading}>
             <div className="mb-16 grid grid-cols-2 gap-12 mobile:grid-cols-1">
-              <AppTextFieldControl
-                name="tariffCode"
-                control={tariffEditControl}
+              <AppTextField
+                name="detailTariffCode"
                 label="Mã giá"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
+                value={selectedDetail?.tariff?.tariffCode || ''}
+                isView
               />
-              <AppTextFieldControl
-                name="tariffName"
-                control={tariffEditControl}
+              <AppTextField
+                name="detailTariffName"
                 label="Tên giá"
-                labelSuffix={REQUIRED_MARK}
-                labelSuffixClassName="text-error-600"
+                value={selectedDetail?.tariff?.tariffName || ''}
+                isView
               />
-              <AppSelectControl
-                name="priceType"
-                control={tariffEditControl}
+              <AppTextField
+                name="detailPriceType"
                 label="Loại đơn giá"
-                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                options={PRICE_TYPE_OPTIONS}
+                value={
+                  PRICE_TYPE_LABEL_MAP[selectedDetail?.tariff?.priceType || ''] ||
+                  selectedDetail?.tariff?.priceType ||
+                  ''
+                }
+                isView
               />
-              <AppSelectControl
-                name="voltageLevel"
-                control={tariffEditControl}
+              <AppTextField
+                name="detailVoltageLevel"
                 label="Cấp điện áp"
-                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                options={VOLTAGE_LEVEL_OPTIONS}
-              />
-              <AppDatePickerControl
-                name="effectiveFrom"
-                control={tariffEditControl}
-                backendFormat={DATE_API_FORMAT}
-                label="Hiệu lực từ"
-                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-              />
-              <AppDatePickerControl
-                name="effectiveTo"
-                control={tariffEditControl}
-                backendFormat={DATE_API_FORMAT}
-                label="Hiệu lực đến"
-                allowClear
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-              />
-              <AppSelectControl
-                name="status"
-                control={tariffEditControl}
-                label="Trạng thái"
-                labelSuffix={<span className="text-error-600">{REQUIRED_MARK}</span>}
-                options={STATUS_OPTIONS}
+                value={
+                  VOLTAGE_LEVEL_LABEL_MAP[selectedDetail?.tariff?.voltageLevel || ''] ||
+                  selectedDetail?.tariff?.voltageLevel ||
+                  ''
+                }
+                isView
               />
             </div>
 
