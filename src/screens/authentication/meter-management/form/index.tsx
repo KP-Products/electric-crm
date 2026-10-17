@@ -8,8 +8,7 @@ import { AppDatePickerControl } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { AppSelectControl } from 'components/select';
 import { TextBase } from 'components/text';
-import AppTable from 'components/table';
-import { AppTextField, AppTextFieldControl } from 'components/text-field';
+import { AppTextFieldControl } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import Link from 'next/link';
@@ -33,27 +32,9 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
     parentMeterDropdownRender,
     showParentMeterField,
     loading,
-    multiplierHistory,
-    historyLoading,
-    currentMultiplierRow,
     onBack,
     onEdit
   } = useManageMeterForm(props);
-
-  const historyColumns = [
-    { title: 'STT', key: 'stt', width: 60, render: (_: unknown, __: unknown, i: number) => i + 1 },
-    { title: 'Hệ số nhân', dataIndex: 'multiplier', key: 'multiplier' },
-    { title: 'Ngày bắt đầu', dataIndex: 'effectiveFrom', key: 'effectiveFrom' },
-    {
-      title: 'Ngày kết thúc',
-      dataIndex: 'effectiveTo',
-      key: 'effectiveTo',
-      render: (value?: string | null) => value || '-'
-    },
-    { title: 'Người cập nhật', dataIndex: 'updatedBy', key: 'updatedBy' },
-    { title: 'Thời gian cập nhật', dataIndex: 'updatedAt', key: 'updatedAt' },
-    { title: 'Ghi chú', dataIndex: 'note', key: 'note', render: (value?: string) => value || '-' }
-  ];
   const breadcrumbList = [
     {
       title: t('menu:system_administration'),
@@ -77,8 +58,7 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
   } = userForm;
 
   const handleNumberFieldChange =
-    (fieldName: 'multiplier' | 'initialReading' | 'initialReadingCd' | 'initialReadingTd') =>
-    (event: ChangeEvent<HTMLInputElement>) => {
+    (fieldName: 'multiplier' | 'initialReading') => (event: ChangeEvent<HTMLInputElement>) => {
       setValue(fieldName, sanitizeIntegerInput(event.target.value), {
         shouldDirty: true,
         shouldTouch: true,
@@ -165,81 +145,28 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             options={VOLTAGE_LEVEL_OPTIONS}
             control={control}
           />
-          <div className="grid gap-16">
-            <AppTextFieldControl
-              name="multiplier"
-              label="Hệ số nhân"
-              labelSuffix={requiredMark}
-              placeholder="Nhập hệ số nhân"
-              isView={isView}
-              inputMode="numeric"
-              formatNumberWithCommas
-              onChange={handleNumberFieldChange('multiplier')}
-              control={control}
-            />
-            <div className="grid grid-cols-2 gap-16 mobile:grid-cols-1">
-              <AppDatePickerControl
-                control={control}
-                name="multiplierEffectiveFrom"
-                label="Ngày bắt đầu"
-                labelSuffix={requiredMark}
-                placeholder="Chọn ngày bắt đầu"
-                isView={isView}
-                wrapperClassName="w-full"
-                datePickerClassName="w-full"
-              />
-              <AppTextField
-                name="multiplierEffectiveTo"
-                label="Ngày kết thúc"
-                placeholder="Tự điền khi có hệ số mới"
-                value={currentMultiplierRow?.effectiveTo || ''}
-                disabled
-                isView={isView}
-              />
-            </div>
-            {!isAddMode && !isView && (
-              <AppTextFieldControl
-                name="multiplierNote"
-                label="Ghi chú đổi hệ số"
-                placeholder="Lý do đổi hệ số nhân (nếu đổi)"
-                control={control}
-              />
-            )}
-          </div>
-          <div>
-            <TextBase classNames="mb-8 text-14 font-semibold text-color-800">
-              Chỉ số đầu {requiredMark}
-            </TextBase>
-            <div className="overflow-hidden rounded-radius-m border border-color-300">
-              <div className="grid grid-cols-[1fr_1.4fr] bg-color-100 px-12 py-8 text-14 font-semibold text-color-700">
-                <div>Khung giờ</div>
-                <div>Chỉ số</div>
-              </div>
-              {(
-                [
-                  ['initialReading', 'Giờ bình thường'],
-                  ['initialReadingCd', 'Cao điểm'],
-                  ['initialReadingTd', 'Thấp điểm']
-                ] as const
-              ).map(([name, label]) => (
-                <div
-                  key={name}
-                  className="grid grid-cols-[1fr_1.4fr] items-center gap-8 border-t border-color-200 px-12 py-8"
-                >
-                  <div className="text-14">{label}</div>
-                  <AppTextFieldControl
-                    name={name}
-                    placeholder="Nhập chỉ số đầu"
-                    isView={isView}
-                    inputMode="numeric"
-                    formatNumberWithCommas
-                    onChange={handleNumberFieldChange(name)}
-                    control={control}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          <AppTextFieldControl
+            name="multiplier"
+            label="Hệ số nhân"
+            labelSuffix={requiredMark}
+            placeholder="Nhập hệ số nhân"
+            isView={isView}
+            inputMode="numeric"
+            formatNumberWithCommas
+            onChange={handleNumberFieldChange('multiplier')}
+            control={control}
+          />
+          <AppTextFieldControl
+            name="initialReading"
+            label="Chỉ số đầu"
+            labelSuffix={requiredMark}
+            placeholder="Nhập chỉ số đầu"
+            isView={isView}
+            inputMode="numeric"
+            formatNumberWithCommas
+            onChange={handleNumberFieldChange('initialReading')}
+            control={control}
+          />
           <AppDatePickerControl
             control={control}
             name="purchaseDate"
@@ -269,26 +196,6 @@ const ManageMeterForm = (props: ManageMeterFormProps) => {
             control={control}
           />
         </div>
-
-        {!isAddMode && (
-          <section className="mb-[88px] mt-24 rounded-radius-l border border-color-300 bg-color-50 p-16">
-            <TextBase
-              classNames="sub-title3 mb-16 !text-primary-700"
-              text="Lịch sử thay đổi hệ số nhân"
-            />
-            <div className="overflow-hidden rounded-radius-l border border-color-400">
-              <AppTable
-                loading={historyLoading}
-                rootClassName="w-full"
-                scroll={{ x: 'max-content' }}
-                dataSource={multiplierHistory}
-                columns={historyColumns}
-                rowKey={(record: any) => String(record.id)}
-                pagination={false}
-              />
-            </div>
-          </section>
-        )}
 
         {!isView && (
           <div className="fixed bottom-0 left-[254px] right-0 z-[9] bg-color-50 tablet:left-0">
