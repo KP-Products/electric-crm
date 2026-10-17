@@ -316,7 +316,7 @@ const ElectricTariffScreen = () => {
           record.touName || TOU_LABEL_MAP[text] || text || NULL_VALUE
       },
       {
-        title: 'Đơn giá',
+        title: 'Đơn giá (VND)',
         dataIndex: 'draftUnitPrice',
         key: 'unitPrice',
         align: 'right',
@@ -333,25 +333,25 @@ const ElectricTariffScreen = () => {
           />
         )
       },
-      {
-        title: 'VAT 10%',
-        dataIndex: 'unitPrice',
-        key: 'vat',
-        align: 'right',
-        width: K_SIZE_130,
-        render: (value: number) =>
-          formatCurrency(
-            typeof value === 'number' && Number.isFinite(value) ? value * 0.1 : undefined
-          )
-      },
-      {
-        title: 'Đơn giá sau VAT',
-        dataIndex: 'unitPrice',
-        key: 'priceWithVat',
-        align: 'right',
-        width: K_SIZE_160,
-        render: (value: number) => formatCurrency(getPriceWithVat(value))
-      }
+      // {
+      //   title: 'VAT 10%',
+      //   dataIndex: 'unitPrice',
+      //   key: 'vat',
+      //   align: 'right',
+      //   width: K_SIZE_130,
+      //   render: (value: number) =>
+      //     formatCurrency(
+      //       typeof value === 'number' && Number.isFinite(value) ? value * 0.1 : undefined
+      //     )
+      // },
+      // {
+      //   title: 'Đơn giá sau VAT',
+      //   dataIndex: 'unitPrice',
+      //   key: 'priceWithVat',
+      //   align: 'right',
+      //   width: K_SIZE_160,
+      //   render: (value: number) => formatCurrency(getPriceWithVat(value))
+      // }
     ],
     [onChangeTouPrice]
   );
