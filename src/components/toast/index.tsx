@@ -64,7 +64,9 @@ const Component = forwardRef((_: any, ref) => {
     show: (props: ToastProps) => {
       api.open({
         message: handleToastContent(props),
-        duration: props.timeShow || 3,
+        duration: props.timeShow ?? 15,
+        showProgress: true,
+        pauseOnHover: true,
         icon: handleToastIcon(props),
         placement: props.placement || 'topRight',
         className: props.type === TYPE_TOAST.DARK ? 'dark-toast' : '',

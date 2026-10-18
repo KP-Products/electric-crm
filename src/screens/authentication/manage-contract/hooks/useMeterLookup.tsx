@@ -21,7 +21,7 @@ interface UseMeterLookupProps {
   autoLoad?: boolean;
   pinnedIds?: Array<string | undefined>;
   showErrorToast?: boolean;
-  meterType?: string;
+  meterType?: string | string[];
 }
 
 const mergeByMeterValue = (meters: Meter[]) => {
@@ -39,6 +39,7 @@ export default function useMeterLookup({
   showErrorToast = false,
   meterType
 }: UseMeterLookupProps = {}) {
+  const meterTypeKey = Array.isArray(meterType) ? meterType.join('|') : meterType || '';
   const [dropdownMeters, setDropdownMeters] = useState<Meter[]>([]);
   const [meterMap, setMeterMap] = useState<Record<string, Meter>>({});
   const [meterLoading, setMeterLoading] = useState<boolean>(false);
@@ -91,13 +92,18 @@ export default function useMeterLookup({
       searchRequestIdRef.current = requestId;
       setMeterLoading(true);
 
-      const response = await meterServices.getMeterSearchList({
-        page: 0,
-        size: DEFAULT_PAGE_SIZE,
-        meterCodeContains: normalizedSearch || undefined,
-        filter: normalizedSearch || undefined,
-        meterType
-      });
+      const responses = await Promise.all(
+        (meterTypeKey ? meterTypeKey.split('|') : [undefined]).map((type) =>
+          meterServices.getMeterSearchList({
+            page: 0,
+            size: DEFAULT_PAGE_SIZE,
+            meterCodeContains: normalizedSearch || undefined,
+            filter: normalizedSearch || undefined,
+            meterType: type
+          })
+        )
+      );
+      const response = responses.find((item) => !item?.data) || responses[0];
 
       if (!mountedRef.current || requestId !== searchRequestIdRef.current) return;
       setMeterLoading(false);
@@ -117,12 +123,15 @@ export default function useMeterLookup({
       }
 
       const meters = mergeByMeterValue(
-        (response.data.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[]
+        responses
+          .flatMap((item) => item.data?.items || [])
+          .map(normalizeMeterSearchItem)
+          .filter(Boolean) as Meter[]
       );
       setDropdownMeters(meters);
       mergeMeters(meters);
     },
-    [mergeMeters, meterType, showErrorToast]
+    [mergeMeters, meterTypeKey, showErrorToast]
   );
 
   const debouncedSearchMeters = useMemo(

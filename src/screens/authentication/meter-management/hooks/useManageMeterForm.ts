@@ -1,8 +1,8 @@
 import { K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ADD_METER, EDIT_METER, METER_DETAIL } from '@redux-action-type/meter';
+import { ADD_METER, EDIT_METER } from '@redux-action-type/meter';
 import { dispatch } from '@redux-common';
-import { selectMeterList, selectMeterLoadingDetail } from '@redux-selector/meter';
+import { selectMeterLoadingDetail } from '@redux-selector/meter';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
@@ -10,15 +10,18 @@ import { ErrorBase } from 'model/common';
 import {
   AddMeterReq,
   EditMeterReq,
-  GetMeterDetailRes,
+  MeterMultiplierHistory,
   Meter,
   normalizeMeterSearchItem
 } from 'model/meter';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
-import { DebugUtils } from 'utils/debug-utils';
+import meterServices from 'services/meter-services';
+import { hasApiError } from 'utils/api-response';
+import moment from 'moment';
+import { API_DATE_INPUT_FORMATS } from 'utils/date';
 import { normalizeDateToApi } from 'utils/date';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
 import { parseFormattedNumber } from 'utils/number-input';
@@ -42,19 +45,39 @@ const parseNumberInput = (value: string) => parseFormattedNumber(value) ?? Numbe
 const shouldSelectParentMeter = (meterType?: string) =>
   meterType === METER_TYPE.CUSTOMER || meterType === METER_TYPE.CONG_TO_TONG;
 
-const meterSchema = (t: TypedT) => {
+const readingSchema = z
+  .string()
+  .trim()
+  .min(1, 'Vui lòng nhập chỉ số đầu')
+  .refine((value) => {
+    const parsed = parseNumberInput(value);
+    return Number.isFinite(parsed) && parsed >= 0;
+  }, 'Chỉ số đầu phải là số không âm');
+
+export const meterSchema = (t: TypedT) => {
   return z
     .object({
       meterCode: z
         .string()
         .trim()
-        .min(K_SIZE_1, { message: t('validate:required', { name: 'Số công tơ' }) }),
+        .min(K_SIZE_1, { message: t('validate:required', { name: 'Số công tơ' }) })
+        .max(50, 'Mã công tơ không được quá 50 ký tự'),
       status: z
         .string()
         .trim()
         .min(K_SIZE_1, { message: t('validate:required', { name: 'Trạng thái' }) }),
       purchaseDate: optionalString,
       installationDate: optionalString,
+      multiplierEffectiveFrom: z
+        .string()
+        .trim()
+        .min(1, 'Vui lòng chọn ngày bắt đầu')
+        .refine(
+          (value) => moment(value, API_DATE_INPUT_FORMATS, true).isValid(),
+          'Ngày bắt đầu không hợp lệ'
+        ),
+      initialReadingCd: readingSchema,
+      initialReadingTd: readingSchema,
       voltageLevel: optionalString,
       meterType: optionalString,
       parentId: optionalString,
@@ -92,10 +115,6 @@ const meterSchema = (t: TypedT) => {
         { field: 'voltageLevel', label: 'Cấp điện áp' }
       ];
 
-      if (shouldSelectParentMeter(data.meterType) && !data.parentId) {
-        requiredFields.push({ field: 'parentId', label: 'Công tơ cha/Lộ tổng' });
-      }
-
       requiredFields.forEach(({ field, label }) => {
         if (!data[field]) {
           ctx.addIssue({
@@ -124,15 +143,23 @@ const defaultMeterFormValues: MeterForm = {
   installationDate: '',
   voltageLevel: '',
   multiplier: '1',
-  initialReading: '0'
+  initialReading: '0',
+  initialReadingCd: '0',
+  initialReadingTd: '0',
+  multiplierEffectiveFrom: ''
 };
 
 export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFormProps) {
   const { t } = useAppTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const meterList = useSelector(selectMeterList);
-  const loading = useSelector(selectMeterLoadingDetail);
+  const saving = useSelector(selectMeterLoadingDetail);
+  const [fetching, setFetching] = useState(false);
+  const [history, setHistory] = useState<MeterMultiplierHistory[]>([]);
+  const [historyFailed, setHistoryFailed] = useState(false);
+  const [reload, setReload] = useState(0);
+  const submittingRef = useRef(false);
+  const loading = saving || fetching;
   const [selectedMeter, setSelectedMeter] = useState<Meter>();
 
   const id = searchParams.get('id') || '';
@@ -164,7 +191,7 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
     autoLoad: false,
     pinnedIds: pinnedParentIds,
     showErrorToast: true,
-    meterType: METER_TYPE.FEEDER
+    meterType: [METER_TYPE.FEEDER, METER_TYPE.CONG_TO_TONG]
   });
 
   useEffect(() => {
@@ -186,6 +213,9 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
         meter.multiplier !== undefined && meter.multiplier !== null
           ? String(meter.multiplier)
           : '1',
+      initialReadingCd: String(meter.initialReadingCd ?? 0),
+      initialReadingTd: String(meter.initialReadingTd ?? 0),
+      multiplierEffectiveFrom: '',
       initialReading:
         meter.initialReading !== undefined && meter.initialReading !== null
           ? String(meter.initialReading)
@@ -206,52 +236,51 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       return;
     }
 
-    const meterDetail = meterList.find((meter) => meter.meterId === id || meter.id === id);
-    if (meterDetail) {
-      setSelectedMeter(meterDetail);
-      userForm.reset(mapMeterToForm(meterDetail));
-      return;
-    }
-
-    dispatch({
-      type: METER_DETAIL,
-      payload: {
-        body: { meterId: id },
-        onSuccess: (res: GetMeterDetailRes) => {
-          const meter = normalizeMeterSearchItem(res.data);
-          if (meter) {
-            setSelectedMeter(meter);
-            userForm.reset(mapMeterToForm(meter));
-          }
-        },
-        onFailed: (error?: ErrorBase) => {
-          showToast({
-            type: TYPE_TOAST.ERROR,
-            content:
-              error?.businessErrorMessage ||
-              error?.systemErrorMessage ||
-              'Tải thông tin công tơ thất bại'
-          });
-          router.replace(ROUTES.METER_MANAGEMENT);
-        }
+    let active = true;
+    setFetching(true);
+    setHistoryFailed(false);
+    const load = async () => {
+      const [detail, historyResponse] = await Promise.all([
+        meterServices.getMeterDetail({ meterId: id }),
+        meterServices.getMultiplierHistory({ meterId: id })
+      ]);
+      if (!active) return;
+      setFetching(false);
+      const meter = normalizeMeterSearchItem(detail.data);
+      if (hasApiError(detail) || !meter) {
+        showToast({ type: TYPE_TOAST.ERROR, content: 'Tải thông tin công tơ thất bại' });
+        router.replace(ROUTES.METER_MANAGEMENT);
+        return;
       }
-    });
-  }, [id, isAddMode, mapMeterToForm, meterList, router, userForm]);
-
-  const onSubmitSuccess = useCallback(
-    (res: any) => {
-      DebugUtils.logS(res);
-      router.push(ROUTES.METER_MANAGEMENT);
-      showToast({
-        type: TYPE_TOAST.SUCCESS,
-        content: action + ' công tơ thành công'
+      const failed = hasApiError(historyResponse) || !Array.isArray(historyResponse.data);
+      const rows = failed ? [] : historyResponse.data || [];
+      setHistoryFailed(failed);
+      setHistory(rows);
+      setSelectedMeter(meter);
+      const current = [...rows].reverse().find((row) => !row.effectiveTo);
+      userForm.reset({
+        ...mapMeterToForm(meter),
+        multiplierEffectiveFrom: normalizeDateToApi(current?.effectiveFrom)
       });
-    },
-    [router, action]
-  );
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [id, isAddMode, mapMeterToForm, router, userForm, reload]);
+
+  const onSubmitSuccess = useCallback(() => {
+    submittingRef.current = false;
+    router.push(ROUTES.METER_MANAGEMENT);
+    showToast({
+      type: TYPE_TOAST.SUCCESS,
+      content: action + ' công tơ thành công'
+    });
+  }, [router, action]);
 
   const onSubmitFailed = useCallback(
     (error?: ErrorBase) => {
+      submittingRef.current = false;
       showToast({
         type: TYPE_TOAST.ERROR,
         content:
@@ -271,7 +300,10 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       installationDate: normalizeDateToApi(data.installationDate) || undefined,
       voltageLevel: data.voltageLevel || undefined,
       multiplier: parseNumberInput(data.multiplier),
-      initialReading: parseNumberInput(data.initialReading)
+      initialReading: parseNumberInput(data.initialReading),
+      initialReadingCd: parseNumberInput(data.initialReadingCd),
+      initialReadingTd: parseNumberInput(data.initialReadingTd),
+      multiplierEffectiveFrom: normalizeDateToApi(data.multiplierEffectiveFrom)
     };
 
     return body;
@@ -279,7 +311,8 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
 
   const onSubmit = useCallback(
     (data: MeterForm) => {
-      DebugUtils.logS(data);
+      if (submittingRef.current || loading || isView || historyFailed) return;
+      submittingRef.current = true;
       if (isAddMode) {
         const body = buildSubmitBody(data);
         dispatch({
@@ -295,6 +328,13 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
           ...buildSubmitBody(data),
           meterId: id
         };
+        if (
+          !userForm.formState.dirtyFields.multiplier &&
+          !userForm.formState.dirtyFields.multiplierEffectiveFrom
+        ) {
+          delete body.multiplier;
+          delete body.multiplierEffectiveFrom;
+        }
         dispatch({
           type: EDIT_METER,
           payload: {
@@ -305,7 +345,17 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
         });
       }
     },
-    [buildSubmitBody, onSubmitSuccess, onSubmitFailed, isAddMode, id]
+    [
+      buildSubmitBody,
+      onSubmitSuccess,
+      onSubmitFailed,
+      isAddMode,
+      id,
+      loading,
+      isView,
+      historyFailed,
+      userForm
+    ]
   );
 
   const onBack = useCallback(() => router.back(), [router]);
@@ -321,7 +371,10 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
     onSubmit,
     userForm,
     selectedMeter,
-    parentMeterOptions,
+    history,
+    historyFailed,
+    reloadHistory: () => setReload((value) => value + 1),
+    parentMeterOptions: parentMeterOptions.filter((option) => String(option.value) !== id),
     onOpenParentMeterDropdown,
     parentMeterDropdownRender,
     showParentMeterField,

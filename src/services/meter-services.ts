@@ -2,6 +2,7 @@ import { ApiResponse } from '../model/common';
 import appServices from '@app-services';
 import { ApiConstants } from './networking/app-apis';
 import {
+  MeterMultiplierHistoryRes,
   AddMeterReq,
   AddMeterRes,
   DeleteMeterReq,
@@ -67,7 +68,18 @@ async function deleteMeter(params: DeleteMeterReq): Promise<ApiResponse<DeleteMe
     return error;
   }
 }
+async function getMultiplierHistory(
+  params: GetMeterDetailReq
+): Promise<ApiResponse<MeterMultiplierHistoryRes>> {
+  try {
+    const response = await appServices.post(ApiConstants.METER_MULTIPLIER_HISTORY, params);
+    return response.data;
+  } catch (error: any) {
+    return error;
+  }
+}
 const meterServices = {
+  getMultiplierHistory,
   getListMeter,
   getMeterSearchList,
   getMeterDetail,

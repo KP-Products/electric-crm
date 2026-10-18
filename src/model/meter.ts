@@ -21,6 +21,8 @@ export interface Meter {
   voltageType?: string;
   parentId?: string;
   initialReading?: number;
+  initialReadingCd?: number;
+  initialReadingTd?: number;
   status: string;
   createdAt?: string;
   createdBy?: string;
@@ -84,6 +86,7 @@ export interface GetMeterDetailReq {
 export interface GetMeterDetailRes extends ResultBase<MeterSearchItem> {}
 
 export interface AddMeterReq {
+  multiplierEffectiveFrom?: string;
   meterCode: string;
   customerId?: number;
   purchaseDate?: string;
@@ -93,6 +96,8 @@ export interface AddMeterReq {
   voltageType?: string;
   parentId?: string;
   initialReading?: number;
+  initialReadingCd?: number;
+  initialReadingTd?: number;
   status: string;
   meterType?: string;
 }
@@ -106,3 +111,15 @@ export interface DeleteMeterReq {
   meterId: string;
 }
 export interface DeleteMeterRes extends ResultBase {}
+
+export interface MeterMultiplierHistory {
+  id: number;
+  meterId: string;
+  multiplier: number;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  updatedBy?: string;
+  updatedAt?: string;
+  note?: string;
+}
+export interface MeterMultiplierHistoryRes extends ResultBase<MeterMultiplierHistory[]> {}

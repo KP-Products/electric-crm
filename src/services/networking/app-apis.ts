@@ -77,6 +77,7 @@ const ApiEndPoint = {
   EDIT_METER: '/admin/meters/update',
   DELETE_METER: '/admin/meters/delete',
   METER_DETAIL: '/admin/meters/detail',
+  METER_MULTIPLIER_HISTORY: '/admin/meters/multiplier-history/list',
   // METER
 
   // MEASURING DEVICE
