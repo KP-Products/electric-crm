@@ -54,7 +54,8 @@ import {
   METER_CHANGE_EXPORT_FILE_PREFIX,
   METER_CHANGE_STATUS,
   normalizeEventDateForForm,
-  sanitizeExcelCellValue
+  sanitizeExcelCellValue,
+  toEventDateTimeApi
 } from './utils';
 
 export interface MeterChangeEventFilter {
@@ -553,7 +554,7 @@ export default function useMeterChangeEvents() {
       eventNo: data.eventNo.trim(),
       eventType: data.eventType,
       customerId: toOptionalCustomerId(data.customerId),
-      eventDate: data.eventDate,
+      eventDate: toEventDateTimeApi(data.eventDate),
       reason: normalizeText(data.reason),
       status: normalizeText(data.status),
       note: normalizeText(data.note),
@@ -567,7 +568,7 @@ export default function useMeterChangeEvents() {
       id,
       eventType: data.eventType,
       customerId: toOptionalCustomerId(data.customerId),
-      eventDate: data.eventDate,
+      eventDate: toEventDateTimeApi(data.eventDate),
       reason: normalizeText(data.reason),
       status: normalizeText(data.status),
       note: normalizeText(data.note),

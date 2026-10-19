@@ -120,6 +120,12 @@ export const displayEventDate = (date?: string) =>
 export const displayEventDateTime = (date?: string) =>
   date ? displayMeterChangeDate(date, FORMAT_DATE_TIME_PARAMS) : NULL_VALUE;
 
+// BE nhận eventDate dạng ngày giờ (dd-MM-yyyy HH:mm:ss); form chỉ chọn ngày → ghép 00:00:00.
+export const toEventDateTimeApi = (date: string) => {
+  const parsedDate = moment(date, DATE_API_FORMAT, true);
+  return parsedDate.isValid() ? `${parsedDate.format(DATE_API_FORMAT)} 00:00:00` : date;
+};
+
 export const normalizeEventDateForForm = (date?: string) => {
   if (!date) return '';
   const parsedDate = parseMeterChangeDate(date);
