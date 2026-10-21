@@ -947,8 +947,64 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     ]
   );
 
+  // Đổi kỳ: tải lại trạng thái các công tơ đang hiển thị + dữ liệu công tơ đang chọn theo kỳ mới
+  // (không bắt bấm Tìm kiếm — trước đây chọn công tơ vẫn ra dữ liệu của kỳ cũ).
+  const reloadForPeriod = useCallback(
+    async (nextFilter: ManualReadingFilter) => {
+      if (!meters.length) return;
+      const requestId = meterSearchRequestIdRef.current + K_SIZE_1;
+      meterSearchRequestIdRef.current = requestId;
+      setChangedMeterIds(new Set());
+      setLoadingMeters(true);
+      const nextMeters = await fetchMeterStatuses(meters, nextFilter);
+      if (requestId !== meterSearchRequestIdRef.current) return;
+      setLoadingMeters(false);
+      setMeters(nextMeters);
+      const current =
+        nextMeters.find((meter) => meter.id === selectedMeterId) || nextMeters[K_SIZE_0];
+      setSelectedMeterId(current?.id || '');
+      if (current) {
+        await fetchMeterPeriod(current, nextFilter);
+      }
+    },
+    [fetchMeterPeriod, fetchMeterStatuses, meters, selectedMeterId]
+  );
+
   const onChangeFilter = useCallback(
     (key: keyof ManualReadingFilter, value: string) => {
+      // Kỳ / ngày ghi áp dụng ngay (giữ nguyên bộ lọc khách hàng đã tìm).
+      if (key === 'periodCode' || key === 'readingDate') {
+        if (filterDraft[key] === value && filterApplied[key] === value) return;
+        const nextApplied = { ...filterApplied, [key]: value };
+        const apply = () => {
+          setFilterDraft((prev) => ({ ...prev, [key]: value }));
+          setFilterApplied(nextApplied);
+          if (key === 'periodCode') {
+            void reloadForPeriod(nextApplied);
+          }
+        };
+        // Đổi kỳ khi đã có danh sách công tơ: xác nhận trước khi tải dữ liệu kỳ mới; Hủy thì ô kỳ
+        // giữ nguyên kỳ cũ (giá trị ô bám theo filterDraft chưa đổi).
+        if (key !== 'periodCode' || !meters.length) {
+          apply();
+          return;
+        }
+        const unsaved = changedMeterIds.size;
+        showDialog({
+          title: 'Đổi kỳ ghi chỉ số',
+          content: unsaved
+            ? `Có ${unsaved} công tơ đã sửa chưa lưu ở kỳ ${filterApplied.periodCode}. Chuyển sang kỳ ${value} sẽ bỏ các thay đổi này và tải dữ liệu kỳ ${value}. Bạn có muốn tiếp tục?`
+            : `Chuyển sang kỳ ${value} và tải dữ liệu chỉ số kỳ ${value} cho các công tơ đang hiển thị?`,
+          type: TYPE_MESSAGE.CONFIRM,
+          disableTouchOutSide: true,
+          actions: [
+            { title: 'Đồng ý', type: TYPE_ACTION.PRIMARY, onPress: apply },
+            { title: 'Hủy', type: TYPE_ACTION.SECONDARY }
+          ]
+        });
+        return;
+      }
+
       const clearStaleMeterData = () => {
         meterSearchRequestIdRef.current += K_SIZE_1;
         setSelectedMeterId('');
@@ -971,7 +1027,14 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       clearStaleMeterData();
       setFilterDraft((prev) => ({ ...prev, [key]: value }));
     },
-    [debouncedFetchSearchLookupOptions, filterDraft]
+    [
+      changedMeterIds,
+      debouncedFetchSearchLookupOptions,
+      filterApplied,
+      filterDraft,
+      meters.length,
+      reloadForPeriod
+    ]
   );
 
   const onApplyFilter = useCallback(async () => {
