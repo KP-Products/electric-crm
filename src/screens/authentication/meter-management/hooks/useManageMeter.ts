@@ -10,7 +10,7 @@ import { ErrorBase } from 'model/common';
 import { GetListMeterReq, GetListMeterRes, Meter, normalizeMeterSearchItem } from 'model/meter';
 import moment from 'moment';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import meterServices from 'services/meter-services';
 import { DebugUtils } from 'utils/debug-utils';
@@ -19,14 +19,16 @@ import { useAppTranslation } from 'utils/i18n';
 import useCustomerLookup from '../../manage-contract/hooks/useCustomerLookup';
 import { escapeHtml as escapeExcelHtml } from '../../manage-contract/utils';
 import {
-  METER_STATUS,
   METER_TYPE,
+  UNASSIGNED_METER_GROUP,
   getMeterRecordId,
   getMeterStatusLabel,
   getVoltageLevelLabel,
-  normalizeMeterStatus,
+  isUnassignedMeter,
+  isUnassignedMeterGroup,
   normalizeMeterType
 } from '../utils/constant';
+import { loadUnassignedMeters } from '../utils/loadUnassignedMeters';
 
 export interface MeterFilterForm {
   meterCodeContains: string;
@@ -38,15 +40,6 @@ export interface MeterFilterForm {
   installationDateTo: string;
   purchaseDateFrom: string;
   purchaseDateTo: string;
-}
-
-export interface MeterStats {
-  total: number;
-  feeder: number;
-  installed: number;
-  notInstalled: number;
-  active: number;
-  activeRate: number;
 }
 
 export interface MeterChildListState {
@@ -154,11 +147,12 @@ export default function useManageMeter() {
   const router = useRouter();
   const loadingMeterList = useSelector(selectMeterLoadingList);
   const [meterList, setMeterList] = useState<Meter[]>([]);
-  const [summaryMeterList, setSummaryMeterList] = useState<Meter[]>([]);
   const [total, setTotal] = useState<number>(K_SIZE_0);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [childMeterMap, setChildMeterMap] = useState<Record<string, MeterChildListState>>({});
+  const unassignedMeterCache = useRef<Meter[]>();
+  const childRequestVersion = useRef(0);
 
   const defaultFilter: MeterFilterForm = useMemo(
     () => ({
@@ -179,6 +173,8 @@ export default function useManageMeter() {
   const [currentPage, setCurrentPage] = useState<number>(K_SIZE_1);
 
   const resetExpandedRows = useCallback(() => {
+    childRequestVersion.current += 1;
+    unassignedMeterCache.current = undefined;
     setExpandedRowKeys([]);
     setChildMeterMap({});
   }, []);
@@ -239,7 +235,7 @@ export default function useManageMeter() {
       return {
         page: page - K_SIZE_1,
         size,
-        parentId,
+        parentId: parentId === UNASSIGNED_METER_GROUP.meterId ? undefined : parentId,
         meterCodeContains: normalize(filter.meterCodeContains),
         customerId: filter.customerId,
         meterType: meterType && meterType !== METER_TYPE.FEEDER ? meterType : undefined,
@@ -303,50 +299,12 @@ export default function useManageMeter() {
     fetchMeterList(currentPage);
   }, [currentPage, fetchMeterList]);
 
-  useEffect(() => {
-    let disposed = false;
-
-    meterServices
-      .getMeterSearchList({
-        ...buildRootSearchBody(filterApplied, K_SIZE_1, MAX_PAGE_SIZE)
-      })
-      .then((response) => {
-        if (disposed) return;
-
-        setSummaryMeterList(
-          applyClientOnlyFilters(
-            (response?.data?.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[],
-            filterApplied
-          )
-        );
-      });
-
-    return () => {
-      disposed = true;
-    };
-  }, [buildRootSearchBody, filterApplied]);
-
-  const meterStats = useMemo<MeterStats>(() => {
-    const summaryRows = summaryMeterList.length ? summaryMeterList : meterList;
-    const totalCount = total || summaryRows.length;
-    const activeCount = summaryRows.filter(
-      (meter) => normalizeMeterStatus(meter.status) === METER_STATUS.ACTIVE
-    ).length;
-    const feederCount = summaryRows.filter(
-      (meter) => normalizeMeterType(meter.meterType) === METER_TYPE.FEEDER
-    ).length;
-    const installedCount = activeCount;
-    const notInstalledCount = Math.max(totalCount - installedCount, K_SIZE_0);
-
-    return {
-      total: totalCount,
-      feeder: feederCount,
-      installed: installedCount,
-      notInstalled: notInstalledCount,
-      active: activeCount,
-      activeRate: totalCount ? (activeCount / totalCount) * 100 : K_SIZE_0
-    };
-  }, [meterList, summaryMeterList, total]);
+  useEffect(
+    () => () => {
+      childRequestVersion.current += 1;
+    },
+    []
+  );
 
   const pagination = useMemo(
     () => ({
@@ -403,6 +361,8 @@ export default function useManageMeter() {
       }
 
       const shouldClientFilter = hasClientOnlyFilters(filterApplied);
+      const requestVersion = childRequestVersion.current;
+      const isUnassignedGroup = parentId === UNASSIGNED_METER_GROUP.meterId;
 
       setChildMeterMap((prev) => ({
         ...prev,
@@ -413,6 +373,51 @@ export default function useManageMeter() {
         }
       }));
 
+      if (isUnassignedGroup) {
+        try {
+          let rows = unassignedMeterCache.current;
+          if (!rows) {
+            const unassignedRows = await loadUnassignedMeters(
+              (searchPage) =>
+                meterServices.getMeterSearchList(
+                  buildChildSearchBody(parentId, filterApplied, searchPage)
+                ),
+              () => requestVersion === childRequestVersion.current
+            );
+            if (!unassignedRows) return;
+            rows = applyClientOnlyFilters(unassignedRows, filterApplied);
+            unassignedMeterCache.current = rows;
+          }
+
+          const cachedRows = rows;
+          const pageStart = (page - K_SIZE_1) * DEFAULT_PAGE_SIZE;
+          setChildMeterMap((prev) => ({
+            ...prev,
+            [parentId]: {
+              items: cachedRows.slice(pageStart, pageStart + DEFAULT_PAGE_SIZE),
+              total: cachedRows.length,
+              currentPage: page,
+              loading: false,
+              loaded: true
+            }
+          }));
+        } catch (error) {
+          if (requestVersion !== childRequestVersion.current) return;
+          setChildMeterMap((prev) => ({
+            ...prev,
+            [parentId]: getEmptyChildListState(page)
+          }));
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getMeterErrorMessage(
+              error as ErrorBase | undefined,
+              'Tải danh sách công tơ không thuộc lộ thất bại'
+            )
+          });
+        }
+        return;
+      }
+
       const response = await meterServices.getMeterSearchList(
         buildChildSearchBody(
           parentId,
@@ -421,6 +426,7 @@ export default function useManageMeter() {
           shouldClientFilter ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE
         )
       );
+      if (requestVersion !== childRequestVersion.current) return;
 
       if (!response || !response.data) {
         setChildMeterMap((prev) => ({
@@ -481,32 +487,25 @@ export default function useManageMeter() {
     [childMeterMap, fetchChildMeters]
   );
 
-  const refreshRootAfterDelete = useCallback(
-    (deletedMeterId: string) => {
-      setSummaryMeterList((prev) =>
-        prev.filter((meter) => getMeterRecordId(meter) !== deletedMeterId)
-      );
-      resetExpandedRows();
+  const refreshRootAfterDelete = useCallback(() => {
+    resetExpandedRows();
 
-      if (meterList.length === K_SIZE_1 && currentPage > K_SIZE_1) {
-        setCurrentPage(currentPage - K_SIZE_1);
-        return;
-      }
+    if (meterList.length === K_SIZE_1 && currentPage > K_SIZE_1) {
+      setCurrentPage(currentPage - K_SIZE_1);
+      return;
+    }
 
-      fetchMeterList(currentPage);
-    },
-    [currentPage, fetchMeterList, meterList.length, resetExpandedRows]
-  );
+    fetchMeterList(currentPage);
+  }, [currentPage, fetchMeterList, meterList.length, resetExpandedRows]);
 
   const refreshChildAfterDelete = useCallback(
-    (record: Meter, deletedMeterId: string) => {
-      setSummaryMeterList((prev) =>
-        prev.filter((meter) => getMeterRecordId(meter) !== deletedMeterId)
-      );
-
-      const parentId = record.parentId;
+    (record: Meter) => {
+      const parentId = isUnassignedMeter(record) ? UNASSIGNED_METER_GROUP.meterId : record.parentId;
+      if (parentId === UNASSIGNED_METER_GROUP.meterId) {
+        unassignedMeterCache.current = undefined;
+      }
       if (!parentId || !childMeterMap[parentId]) {
-        refreshRootAfterDelete(deletedMeterId);
+        refreshRootAfterDelete();
         return;
       }
 
@@ -523,6 +522,7 @@ export default function useManageMeter() {
 
   const onDeleteMeter = useCallback(
     (record: Meter) => {
+      if (isUnassignedMeterGroup(record)) return;
       const meterId = getMeterRecordId(record);
       if (!meterId) {
         showToast({
@@ -546,10 +546,10 @@ export default function useManageMeter() {
                 payload: {
                   body: { meterId },
                   onSuccess: () => {
-                    if (record.parentId) {
-                      refreshChildAfterDelete(record, meterId);
+                    if (record.parentId || isUnassignedMeter(record)) {
+                      refreshChildAfterDelete(record);
                     } else {
-                      refreshRootAfterDelete(meterId);
+                      refreshRootAfterDelete();
                     }
 
                     showToast({
@@ -664,7 +664,6 @@ export default function useManageMeter() {
     childMeterMap,
     onResetFilter,
     meterList,
-    meterStats,
     total,
     onExpandMeterRow,
     onDeleteMeter,

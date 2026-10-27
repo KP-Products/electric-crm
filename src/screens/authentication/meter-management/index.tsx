@@ -34,7 +34,10 @@ import { FORMAT_DATE_API, displayDateFromServer } from 'utils/date';
 import { formatNumberValueWithCommas, parseFormattedNumber } from 'utils/number-input';
 import useManageMeter, { MeterFilterForm } from './hooks/useManageMeter';
 import {
+  METER_TYPE,
   METER_TYPE_OPTIONS,
+  UNASSIGNED_METER_GROUP,
+  isUnassignedMeterGroup,
   getMeterRecordId,
   getMeterStatusLabel,
   getMeterStatusType,
@@ -57,48 +60,6 @@ const renderNumber = (value?: string | number) => {
   return formatNumberValueWithCommas(numericValue, { maximumFractionDigits: 2 });
 };
 
-// const formatCompactNumber = (value: number) => new Intl.NumberFormat('en-US').format(value);
-//
-// const formatPercent = (value: number) =>
-//   new Intl.NumberFormat('en-US', {
-//     maximumFractionDigits: 2,
-//     minimumFractionDigits: 0
-//   }).format(value);
-//
-// interface StatCardProps {
-//   label: string;
-//   value: string;
-//   suffix?: string;
-//   icon: React.ReactNode;
-//   colorClassName: string;
-//   extra?: string;
-// }
-
-// const StatCard = ({
-//   label,
-//   value,
-//   suffix = 'công tơ',
-//   icon,
-//   colorClassName,
-//   extra
-// }: StatCardProps) => (
-//   <div className="flex min-h-[76px] items-center gap-16 rounded-radius-l border border-color-300 bg-color-50 px-16 py-12">
-//     <div
-//       className={`flex size-44 shrink-0 items-center justify-center rounded-radius-m ${colorClassName}`}
-//     >
-//       {icon}
-//     </div>
-//     <div className="min-w-0">
-//       <div className="mb-4 text-12 font-semibold leading-16 text-color-700">{label}</div>
-//       <div className="flex flex-wrap items-baseline gap-8">
-//         <span className="text-24 font-bold leading-28 text-color-900">{value}</span>
-//         <span className="text-12 font-semibold text-color-700">{suffix}</span>
-//         {extra && <span className="text-12 font-semibold text-color-700">{extra}</span>}
-//       </div>
-//     </div>
-//   </div>
-// );
-
 const MeterManagementScreen = () => {
   const {
     t,
@@ -118,13 +79,18 @@ const MeterManagementScreen = () => {
     onApplyFilter,
     onResetFilter,
     meterList,
-    // meterStats,
     total,
     onExpandMeterRow,
     onDeleteMeter,
     fetchChildMeters,
     onImport
   } = useManageMeter();
+
+  const showUnassignedGroup = filterApplied.meterType !== METER_TYPE.FEEDER;
+  const tableRows = useMemo(
+    () => (showUnassignedGroup ? [UNASSIGNED_METER_GROUP, ...meterList] : meterList),
+    [meterList, showUnassignedGroup]
+  );
 
   const meterCodeMap = useMemo(() => {
     const optionMap = new Map<string, string>();
@@ -144,7 +110,10 @@ const MeterManagementScreen = () => {
         align: 'center',
         width: K_SIZE_70,
         render: (_: unknown, __: Meter, index: number) =>
-          (currentPage - K_SIZE_1) * DEFAULT_PAGE_SIZE + index + K_SIZE_1
+          (currentPage - K_SIZE_1) * DEFAULT_PAGE_SIZE +
+          index +
+          K_SIZE_1 -
+          (showUnassignedGroup ? K_SIZE_1 : 0)
       },
       {
         title: 'Mã công tơ',
@@ -287,7 +256,23 @@ const MeterManagementScreen = () => {
         }
       }
     ],
-    [currentPage, meterCodeMap, onDeleteMeter, router, t]
+    [currentPage, meterCodeMap, onDeleteMeter, router, showUnassignedGroup, t]
+  );
+
+  const rootColumns = useMemo(
+    () =>
+      columns.map((column) => ({
+        ...column,
+        render: (value: unknown, record: Meter, index: number) => {
+          if (isUnassignedMeterGroup(record)) {
+            return column.key === 'meterCode' ? (
+              <TextBase text={record.meterCode} classNames="sub-title4 !text-color-900" />
+            ) : null;
+          }
+          return column.render(value, record, index);
+        }
+      })),
+    [columns]
   );
 
   const getChildColumns = useCallback(
@@ -464,7 +449,14 @@ const MeterManagementScreen = () => {
       return (
         <div className="rounded-radius-l border border-color-300 bg-color-50 p-12">
           <Flex justify="space-between" align="center" className="mb-8">
-            <TextBase classNames="sub-title4 !text-color-900" text="Danh sách công tơ thuộc lộ" />
+            <TextBase
+              classNames="sub-title4 !text-color-900"
+              text={
+                isUnassignedMeterGroup(record)
+                  ? 'Danh sách công tơ không thuộc lộ'
+                  : 'Danh sách công tơ thuộc lộ'
+              }
+            />
             <div className="text-13 font-medium text-color-700">
               Hiển thị {childState.items.length} / {childState.total} bản ghi
             </div>
@@ -725,40 +717,6 @@ const MeterManagementScreen = () => {
           </div>
         </div>
 
-        {/*<div className="mb-12 grid grid-cols-5 gap-12 tablet:grid-cols-2 mobile:grid-cols-1">*/}
-        {/*  <StatCard*/}
-        {/*    label="Tổng công tơ"*/}
-        {/*    value={formatCompactNumber(meterStats.total)}*/}
-        {/*    colorClassName="bg-[#0B63F6]"*/}
-        {/*    icon={<IconSvgLocal name="IC_DOWNLOAD_OUTLINE" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*  <StatCard*/}
-        {/*    label="Công tơ tổng (lộ)"*/}
-        {/*    value={formatCompactNumber(meterStats.feeder)}*/}
-        {/*    colorClassName="bg-[#F97316]"*/}
-        {/*    icon={<IconSvgLocal name="ICON_MORE" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*  <StatCard*/}
-        {/*    label="Công tơ đã lắp"*/}
-        {/*    value={formatCompactNumber(meterStats.installed)}*/}
-        {/*    colorClassName="bg-[#4F46E5]"*/}
-        {/*    icon={<IconSvgLocal name="ICON_EYE_OPEN" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*  <StatCard*/}
-        {/*    label="Công tơ chưa lắp"*/}
-        {/*    value={formatCompactNumber(meterStats.notInstalled)}*/}
-        {/*    colorClassName="bg-[#22C55E]"*/}
-        {/*    icon={<IconSvgLocal name="IC_UPLOAD_OUTLINE" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*  <StatCard*/}
-        {/*    label="Đang hoạt động"*/}
-        {/*    value={formatCompactNumber(meterStats.active)}*/}
-        {/*    extra={`(${formatPercent(meterStats.activeRate)}%)`}*/}
-        {/*    colorClassName="bg-[#06B6D4]"*/}
-        {/*    icon={<IconSvgLocal name="ICON_SEARCH" height={22} width={22} fill="#fff" />}*/}
-        {/*  />*/}
-        {/*</div>*/}
-
         <TagFilterGroup />
 
         <div
@@ -770,19 +728,17 @@ const MeterManagementScreen = () => {
             className="border-b border-color-300 px-16 py-12"
           >
             <TextBase classNames="sub-title3 !text-color-900" text="Danh sách công tơ" />
-            <div className="text-14 font-medium text-color-700">
-              Hiển thị {meterList.length} bản ghi
-            </div>
+            <div className="text-14 font-medium text-color-700">Hiển thị {meterList.length} lộ</div>
           </Flex>
           <AppTable
             rootClassName={'w-full'}
             className={'[&_.ant-table-pagination]:hidden'}
             scroll={{ x: 'max-content', y: '68vh' }}
-            dataSource={meterList}
+            dataSource={tableRows}
             loading={loadingMeterList}
-            columns={columns}
+            columns={rootColumns}
             rowKey={(record: any) => getMeterRecordId(record) || record.meterCode}
-            pagination={pagination}
+            pagination={false}
             expandable={{
               expandedRowKeys,
               expandedRowRender: (record) => renderChildTable(record as Meter),

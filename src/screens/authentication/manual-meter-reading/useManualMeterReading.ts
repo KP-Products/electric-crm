@@ -105,8 +105,8 @@ const SEARCH_LOOKUP_FIELD_META = {
 } as const;
 
 const TOU_REGISTERS = [
-  { tou: 'CD', label: 'T1 - Cao điểm' },
-  { tou: 'BT', label: 'T2 - Bình thường' },
+  { tou: 'BT', label: 'T1 - Bình thường' },
+  { tou: 'CD', label: 'T2 - Cao điểm' },
   { tou: 'TD', label: 'T3 - Thấp điểm' }
 ];
 

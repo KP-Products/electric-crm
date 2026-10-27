@@ -41,6 +41,15 @@ export const METER_TYPE = {
   CONG_TO_TONG: 'CONG_TO_TONG'
 } as const;
 
+export const UNASSIGNED_METER_GROUP: Meter = {
+  meterId: '__unassigned_meter_group__',
+  meterCode: 'Công tơ không thuộc lộ',
+  status: ''
+};
+
+export const isUnassignedMeterGroup = (meter: Meter) =>
+  meter.meterId === UNASSIGNED_METER_GROUP.meterId;
+
 export const METER_TYPE_OPTIONS = [
   { value: METER_TYPE.FEEDER, label: 'Lộ tổng' },
   { value: METER_TYPE.CONG_TO_TONG, label: 'Công tơ tổng' },
@@ -107,6 +116,9 @@ export const normalizeMeterType = (meterType?: string) => {
       ?.value || meterType
   );
 };
+
+export const isUnassignedMeter = (meter: Meter) =>
+  !meter.parentId?.trim() && normalizeMeterType(meter.meterType) !== METER_TYPE.FEEDER;
 
 export const getVoltageLevelLabel = (voltageLevel?: string) =>
   voltageLevel ? VOLTAGE_LEVEL_LABEL_MAP[voltageLevel] || voltageLevel : '-';
