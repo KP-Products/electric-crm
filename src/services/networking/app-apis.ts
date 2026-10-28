@@ -183,6 +183,7 @@ const ApiEndPoint = {
   BILLING_READING_PERIOD_UPDATE: '/admin/billing/reading-periods/update',
   BILLING_READING_PERIOD_SEARCH: '/admin/billing/reading-periods/search',
   BILLING_READING_PERIOD_GET: '/admin/billing/reading-periods/get',
+  BILLING_READING_PERIOD_PREPARE: '/admin/billing/reading-periods/prepare',
   BILLING_READING_PERIOD_DELETE: '/admin/billing/reading-periods/delete',
   BILLING_READING_PERIOD_CREATE: '/admin/billing/reading-periods/create',
   BILLING_READING_PERIOD_REVIEW: '/admin/billing/reading-periods/review',

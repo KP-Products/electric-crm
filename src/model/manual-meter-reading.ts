@@ -103,6 +103,30 @@ export interface GetReadingPeriodReq {
 
 export interface GetReadingPeriodRes extends ResultBase<ReadingPeriodDetail> {}
 
+export interface PrepareReadingReq {
+  meterNumber: string;
+  periodCode: string;
+}
+
+/** 1 khung giờ của kỳ đang nhập — chỉ số cũ do BE tính (kỳ trước, hoặc chỉ số đầu công tơ). */
+export interface PrepareReadingRow {
+  tou: string;
+  touLabel?: string;
+  oldIndex?: number | null;
+  newIndex?: number | null;
+  previousNewIndex?: number | null;
+}
+
+export interface PrepareReadingData {
+  meterNumber?: string;
+  periodId?: number | null;
+  periodCode?: string;
+  previousPeriodCode?: string | null;
+  rows?: PrepareReadingRow[];
+}
+
+export interface PrepareReadingRes extends ResultBase<PrepareReadingData> {}
+
 export interface CreateReadingPeriodReq {
   meterNumber: string;
   customerId: number;

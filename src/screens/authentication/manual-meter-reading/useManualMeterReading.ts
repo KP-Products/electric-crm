@@ -10,6 +10,7 @@ import { debounce } from 'lodash';
 import {
   MeterReading,
   MeterSearchForReadingRow,
+  PrepareReadingRow,
   ReadingItem,
   ReadingPeriodDetail,
   ReadingPeriodSaveMode,
@@ -286,20 +287,19 @@ const mapReadingsToRegisters = (
   }));
 };
 
-const mapPreviousReadingsToRegisters = (
-  previousReadings: MeterReading[] | undefined,
+// Chỉ số cũ của kỳ mới do BE tính (/reading-periods/prepare): chỉ số mới của kỳ gần nhất trước
+// đó (mọi nguồn nhập: tay, đo xa, theo lộ); công tơ chưa có kỳ nào thì lấy chỉ số đầu cấu hình
+// trên công tơ theo từng khung giờ.
+const mapPreparedRowsToRegisters = (
+  rows: PrepareReadingRow[] | undefined,
   multiplier: number
 ): ManualReadingRegister[] => {
-  if (!previousReadings?.length) return buildDefaultRegisters(multiplier);
+  if (!rows?.length) return buildDefaultRegisters(multiplier);
 
-  const previousByTou = new Map(
-    previousReadings.map((reading) => [String(reading.tou || '').toUpperCase(), reading])
-  );
+  const rowByTou = new Map(rows.map((row) => [String(row.tou || '').toUpperCase(), row]));
 
   return TOU_REGISTERS.map((register) => {
-    const previousReading = previousByTou.get(register.tou);
-    const oldIndex =
-      toNumber(previousReading?.newIndex) ?? toNumber(previousReading?.oldIndex) ?? K_SIZE_0;
+    const oldIndex = toNumber(rowByTou.get(register.tou)?.oldIndex ?? undefined) ?? K_SIZE_0;
 
     return {
       id: register.tou,
@@ -344,15 +344,15 @@ const mapPeriodDetailToMeter = (
   };
 };
 
-const mapPreviousDetailToNewPeriodMeter = (
+const mapPreparedToNewPeriodMeter = (
   meter: ManualReadingMeter,
-  detail?: ReadingPeriodDetail
+  rows?: PrepareReadingRow[]
 ): ManualReadingMeter => {
   return {
     ...meter,
     periodId: undefined,
     status: 'NOT_ENTERED',
-    registers: mapPreviousReadingsToRegisters(detail?.readings, meter.multiplier),
+    registers: mapPreparedRowsToRegisters(rows, meter.multiplier),
     reactiveIndex: '',
     uploadedPhotos: [],
     pendingPhotos: []
@@ -383,21 +383,6 @@ const getPeriodDateRange = (periodCode: string) => {
     to: end.format(FORMAT_DATE_API)
   };
 };
-
-const parseApiDate = (date?: string) => {
-  const parsed = dayjs(date, [FORMAT_DATE_API, 'YYYY-MM-DD', 'DD/MM/YYYY'], true);
-  return parsed.isValid() ? parsed : undefined;
-};
-
-const getPeriodComparableDate = (period?: {
-  periodTo?: string;
-  readingDate?: string;
-  periodFrom?: string;
-}) =>
-  parseApiDate(period?.periodTo)?.valueOf() ||
-  parseApiDate(period?.readingDate)?.valueOf() ||
-  parseApiDate(period?.periodFrom)?.valueOf() ||
-  K_SIZE_0;
 
 const getCustomerIdForRequest = (meter: ManualReadingMeter) => {
   if (meter.customerId !== undefined && meter.customerId !== null) {
@@ -746,37 +731,13 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     [createObjectUrl]
   );
 
-  const fetchPreviousPeriodDetail = useCallback(
-    async (meter: ManualReadingMeter, periodCode: string) => {
-      const currentPeriodStart = parseApiDate(getPeriodDateRange(periodCode).from);
-      const response = await manualMeterReadingServices.searchReadingPeriods({
-        page: K_SIZE_0,
-        size: DEFAULT_PAGE_SIZE,
-        meterNumber: meter.meterCode,
-        typeInput: MANUAL_READING_TYPE_INPUT
-      });
-
-      if (hasApiError(response) || !response.data?.items?.length) return undefined;
-
-      const previousPeriods = response.data.items
-        .filter((period) => {
-          if (!currentPeriodStart?.isValid()) return period.periodCode !== periodCode;
-          const comparableDate = getPeriodComparableDate(period);
-          return comparableDate > K_SIZE_0 && comparableDate < currentPeriodStart.valueOf();
-        })
-        .sort((a, b) => getPeriodComparableDate(b) - getPeriodComparableDate(a));
-
-      const previousPeriod = previousPeriods[K_SIZE_0];
-      if (!previousPeriod?.id) return undefined;
-
-      const detailResponse = await manualMeterReadingServices.getReadingPeriod({
-        id: previousPeriod.id
-      });
-
-      return !hasApiError(detailResponse) && detailResponse.data ? detailResponse.data : undefined;
-    },
-    []
-  );
+  const fetchPreparedRows = useCallback(async (meter: ManualReadingMeter, periodCode: string) => {
+    const response = await manualMeterReadingServices.prepareReadingPeriod({
+      meterNumber: meter.meterCode,
+      periodCode
+    });
+    return hasApiError(response) ? undefined : response.data?.rows;
+  }, []);
 
   const fetchMeterPeriod = useCallback(
     async (meter: ManualReadingMeter, appliedFilter: ManualReadingFilter) => {
@@ -802,11 +763,9 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
 
       const period = searchResponse.data?.items?.[K_SIZE_0];
       if (!period?.id) {
-        const previousDetail = await fetchPreviousPeriodDetail(meter, appliedFilter.periodCode);
+        const preparedRows = await fetchPreparedRows(meter, appliedFilter.periodCode);
         setMeters((prev) =>
-          updateMeter(prev, meter.id, (item) =>
-            mapPreviousDetailToNewPeriodMeter(item, previousDetail)
-          )
+          updateMeter(prev, meter.id, (item) => mapPreparedToNewPeriodMeter(item, preparedRows))
         );
         setLoadingDetail(false);
         return;
@@ -831,7 +790,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       );
       setLoadingDetail(false);
     },
-    [fetchPreviousPeriodDetail, loadPhotoPreviews]
+    [fetchPreparedRows, loadPhotoPreviews]
   );
 
   const fetchMeterStatuses = useCallback(
@@ -988,8 +947,64 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     ]
   );
 
+  // Đổi kỳ: tải lại trạng thái các công tơ đang hiển thị + dữ liệu công tơ đang chọn theo kỳ mới
+  // (không bắt bấm Tìm kiếm — trước đây chọn công tơ vẫn ra dữ liệu của kỳ cũ).
+  const reloadForPeriod = useCallback(
+    async (nextFilter: ManualReadingFilter) => {
+      if (!meters.length) return;
+      const requestId = meterSearchRequestIdRef.current + K_SIZE_1;
+      meterSearchRequestIdRef.current = requestId;
+      setChangedMeterIds(new Set());
+      setLoadingMeters(true);
+      const nextMeters = await fetchMeterStatuses(meters, nextFilter);
+      if (requestId !== meterSearchRequestIdRef.current) return;
+      setLoadingMeters(false);
+      setMeters(nextMeters);
+      const current =
+        nextMeters.find((meter) => meter.id === selectedMeterId) || nextMeters[K_SIZE_0];
+      setSelectedMeterId(current?.id || '');
+      if (current) {
+        await fetchMeterPeriod(current, nextFilter);
+      }
+    },
+    [fetchMeterPeriod, fetchMeterStatuses, meters, selectedMeterId]
+  );
+
   const onChangeFilter = useCallback(
     (key: keyof ManualReadingFilter, value: string) => {
+      // Kỳ / ngày ghi áp dụng ngay (giữ nguyên bộ lọc khách hàng đã tìm).
+      if (key === 'periodCode' || key === 'readingDate') {
+        if (filterDraft[key] === value && filterApplied[key] === value) return;
+        const nextApplied = { ...filterApplied, [key]: value };
+        const apply = () => {
+          setFilterDraft((prev) => ({ ...prev, [key]: value }));
+          setFilterApplied(nextApplied);
+          if (key === 'periodCode') {
+            void reloadForPeriod(nextApplied);
+          }
+        };
+        // Đổi kỳ khi đã có danh sách công tơ: xác nhận trước khi tải dữ liệu kỳ mới; Hủy thì ô kỳ
+        // giữ nguyên kỳ cũ (giá trị ô bám theo filterDraft chưa đổi).
+        if (key !== 'periodCode' || !meters.length) {
+          apply();
+          return;
+        }
+        const unsaved = changedMeterIds.size;
+        showDialog({
+          title: 'Đổi kỳ ghi chỉ số',
+          content: unsaved
+            ? `Có ${unsaved} công tơ đã sửa chưa lưu ở kỳ ${filterApplied.periodCode}. Chuyển sang kỳ ${value} sẽ bỏ các thay đổi này và tải dữ liệu kỳ ${value}. Bạn có muốn tiếp tục?`
+            : `Chuyển sang kỳ ${value} và tải dữ liệu chỉ số kỳ ${value} cho các công tơ đang hiển thị?`,
+          type: TYPE_MESSAGE.CONFIRM,
+          disableTouchOutSide: true,
+          actions: [
+            { title: 'Đồng ý', type: TYPE_ACTION.PRIMARY, onPress: apply },
+            { title: 'Hủy', type: TYPE_ACTION.SECONDARY }
+          ]
+        });
+        return;
+      }
+
       const clearStaleMeterData = () => {
         meterSearchRequestIdRef.current += K_SIZE_1;
         setSelectedMeterId('');
@@ -1012,7 +1027,14 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       clearStaleMeterData();
       setFilterDraft((prev) => ({ ...prev, [key]: value }));
     },
-    [debouncedFetchSearchLookupOptions, filterDraft]
+    [
+      changedMeterIds,
+      debouncedFetchSearchLookupOptions,
+      filterApplied,
+      filterDraft,
+      meters.length,
+      reloadForPeriod
+    ]
   );
 
   const onApplyFilter = useCallback(async () => {

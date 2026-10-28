@@ -15,6 +15,8 @@ import {
   MeterSearchForReadingReq,
   MeterSearchForReadingRes,
   PeriodIdReq,
+  PrepareReadingReq,
+  PrepareReadingRes,
   ReadingPhotoFileRes,
   ReadingPhotoListRes,
   ReadingPhotoRes,
@@ -66,6 +68,17 @@ async function getReadingPeriod(
 ): Promise<ApiResponse<GetReadingPeriodRes>> {
   try {
     const rs = await appServices.post(ApiConstants.BILLING_READING_PERIOD_GET, params);
+    return rs.data;
+  } catch (error: any) {
+    return error;
+  }
+}
+
+async function prepareReadingPeriod(
+  params: PrepareReadingReq
+): Promise<ApiResponse<PrepareReadingRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.BILLING_READING_PERIOD_PREPARE, params);
     return rs.data;
   } catch (error: any) {
     return error;
@@ -207,6 +220,7 @@ const manualMeterReadingServices = {
   searchMetersForReading,
   searchReadingPeriods,
   getReadingPeriod,
+  prepareReadingPeriod,
   createReadingPeriod,
   updateReadingPeriod,
   deleteReadingPeriod,
