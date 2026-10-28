@@ -82,7 +82,6 @@ export interface ManualReadingMeter {
   pendingPhotos: ManualReadingPendingPhoto[];
 }
 
-const MANUAL_READING_TYPE_INPUT = 'MANUAL';
 const MAX_READING_PHOTOS = K_SIZE_5;
 const SEARCH_BY_OPTIONS = [
   { value: 'CUSTOMER_CODE', label: 'Mã khách hàng' },
@@ -748,8 +747,9 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
         page: K_SIZE_0,
         size: K_SIZE_1,
         meterNumber: meter.meterCode,
-        periodCode: appliedFilter.periodCode,
-        typeInput: MANUAL_READING_TYPE_INPUT
+        // Mọi nguồn nhập (tay, đo xa, theo lộ): mỗi công tơ chỉ có 1 kỳ / mã kỳ. Lọc riêng kỳ nhập
+        // tay thì kỳ đo xa bị bỏ sót → lưu sẽ gọi tạo mới và trùng kỳ (uq_meter_period).
+        periodCode: appliedFilter.periodCode
       });
 
       if (hasApiError(searchResponse)) {
@@ -798,8 +798,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       const response = await manualMeterReadingServices.searchReadingPeriods({
         page: K_SIZE_0,
         size: DEFAULT_PAGE_SIZE,
-        periodCode: appliedFilter.periodCode,
-        typeInput: MANUAL_READING_TYPE_INPUT
+        periodCode: appliedFilter.periodCode
       });
       if (hasApiError(response)) return meterList;
 
