@@ -252,29 +252,19 @@ export default function useManageMeter() {
 
   const fetchMeterList = useCallback(
     (page: number) => {
-      const shouldClientFilter = hasClientOnlyFilters(filterApplied);
+      // Tầng lộ: BE lọc cấp điện áp / ngày (lộ khớp khi có công tơ con khớp) — không lọc lại ở FE,
+      // vì lộ không mang ngày lắp / cấp điện áp của công tơ con.
       dispatch({
         type: GET_METER_SEARCH_LIST,
         payload: {
-          body: buildRootSearchBody(
-            filterApplied,
-            shouldClientFilter ? K_SIZE_1 : page,
-            shouldClientFilter ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE
-          ),
+          body: buildRootSearchBody(filterApplied, page, DEFAULT_PAGE_SIZE),
           onSuccess: (res: GetListMeterRes) => {
             const responseRows = (res?.data?.items || [])
               .map(normalizeMeterSearchItem)
               .filter(Boolean) as Meter[];
-            const filteredRows = shouldClientFilter
-              ? applyClientOnlyFilters(responseRows, filterApplied)
-              : responseRows;
-            const pageStart = (page - K_SIZE_1) * DEFAULT_PAGE_SIZE;
-            const pageEnd = pageStart + DEFAULT_PAGE_SIZE;
 
-            setMeterList(
-              shouldClientFilter ? filteredRows.slice(pageStart, pageEnd) : filteredRows
-            );
-            setTotal(shouldClientFilter ? filteredRows.length : res?.data?.total || K_SIZE_0);
+            setMeterList(responseRows);
+            setTotal(res?.data?.total || K_SIZE_0);
             DebugUtils.logS(['METER LIST data', res]);
           },
           onFailed: (error?: ErrorBase) => {
@@ -629,10 +619,7 @@ export default function useManageMeter() {
     }
 
     exportRowsToExcel(
-      applyClientOnlyFilters(
-        (response.data.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[],
-        filterApplied
-      )
+      (response.data.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[]
     );
     showToast({ type: TYPE_TOAST.SUCCESS, content: 'Xuất Excel danh sách công tơ thành công' });
   }, [buildRootSearchBody, exportRowsToExcel, filterApplied]);

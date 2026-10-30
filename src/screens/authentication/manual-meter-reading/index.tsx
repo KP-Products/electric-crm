@@ -265,7 +265,7 @@ const ManualMeterReadingScreen = ({
               <AppTextField
                 name="keyword"
                 label="Khách hàng"
-                placeholder="Tìm theo mã KH, tên, số điện thoại..."
+                placeholder={KEYWORD_PLACEHOLDER[filterDraft.searchBy] || 'Nhập từ khoá tìm kiếm'}
                 value={filterDraft.keyword}
                 prefix={<SearchOutlined className="text-color-600" />}
                 onChange={(event) => onChangeFilter('keyword', event.target.value)}
@@ -739,4 +739,10 @@ const ManualMeterReadingScreen = ({
   );
 };
 
+// Ô từ khoá tìm theo đúng tiêu chí ở ô "Tìm theo" bên cạnh.
+const KEYWORD_PLACEHOLDER: Record<string, string> = {
+  CUSTOMER_CODE: 'Nhập mã khách hàng',
+  CUSTOMER_NAME: 'Nhập tên khách hàng',
+  METER_CODE: 'Nhập mã công tơ'
+};
 export default ManualMeterReadingScreen;

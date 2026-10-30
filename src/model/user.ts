@@ -24,13 +24,11 @@ export interface User {
   branchName?: string;
 }
 export interface GetListUserReq extends PaginationReq {
-  username?: string;
-  fullName?: string;
-  unitId?: string;
-  departmentId?: string;
+  usernameContains?: string;
+  fullNameContains?: string;
+  emailContains?: string;
   status?: string;
-  roleId?: string;
-  email?: string;
+  roleCode?: string;
   branchId?: string;
 }
 

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { DownloadUtils } from 'utils/download.utils';
 import { useAppTranslation } from 'utils/i18n';
+import { roleActions } from '@redux-slice/role';
 import { userActions } from '@redux-slice/user';
 import { showDialog } from '../../../../components/dialog';
 import { TYPE_ACTION, TYPE_MESSAGE } from '../../../../components/dialog/type';
@@ -72,16 +73,25 @@ export default function useManageUser() {
 
   const userPaginated = userList;
 
-  const buildBodyListUser = useCallback((filter: UserFilterForm, page: number): GetListUserReq => {
-    const normalizeFilterApplied = Object.fromEntries(
-      Object.entries(filter).filter(([_, value]) => value)
-    );
-    return {
-      page: page - K_SIZE_1,
-      size: DEFAULT_PAGE_SIZE,
-      ...normalizeFilterApplied
-    };
-  }, []);
+  // Tên trường theo API /admin/users/search (usernameContains, roleCode...) — gửi sai tên thì BE bỏ qua bộ lọc.
+  const buildBodyListUser = useCallback(
+    (filter: UserFilterForm, page: number): GetListUserReq => {
+      const text = (value: string) => value.trim() || undefined;
+      const body: GetListUserReq = {
+        page: page - K_SIZE_1,
+        size: DEFAULT_PAGE_SIZE,
+        usernameContains: text(filter.username),
+        fullNameContains: text(filter.fullName),
+        emailContains: text(filter.email),
+        status: text(filter.status),
+        roleCode: roleList.find((role) => role.id === filter.roleId)?.code
+      };
+      return Object.fromEntries(
+        Object.entries(body).filter(([_, value]) => value !== undefined)
+      ) as GetListUserReq;
+    },
+    [roleList]
+  );
 
   const onGetUserSearchListSuccess = useCallback(
     (response: any) => {
@@ -126,13 +136,15 @@ export default function useManageUser() {
     getUserSearchList(currentPage);
   }, [currentPage, getUserSearchList]);
 
-  // useEffect(() => {
-  //   const body: GetListRoleReq = {
-  //     page: K_SIZE_0,
-  //     size: MAX_PAGE_SIZE
-  //   };
-  //   dispatch({ type: GET_LIST_ROLE, payload: { body } });
-  // }, []);
+  // Danh sách nhóm quyền cho ô lọc "Nhóm quyền" (lọc gửi roleCode).
+  useEffect(() => {
+    dispatch(
+      roleActions.getListRole(
+        () => undefined,
+        () => undefined
+      )
+    );
+  }, [dispatch]);
 
   const onChangeFilter = useCallback((key: keyof UserFilterForm, value: string) => {
     setFilter((prev) => ({ ...prev, [key]: value }));
