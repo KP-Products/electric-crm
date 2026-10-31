@@ -123,6 +123,8 @@ export interface PrepareReadingData {
   periodId?: number | null;
   periodCode?: string;
   previousPeriodCode?: string | null;
+  // Kỳ sau đã có khi kỳ đang chọn chưa có — có giá trị thì không được nhập lùi kỳ này.
+  laterPeriodCode?: string | null;
   rows?: PrepareReadingRow[];
 }
 

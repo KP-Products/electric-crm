@@ -13,6 +13,7 @@ import {
   PrepareReadingRow,
   ReadingItem,
   ReadingPeriodDetail,
+  PrepareReadingData,
   ReadingPeriodSaveMode,
   ReadingPeriodStatus,
   ReadingPhoto
@@ -80,6 +81,8 @@ export interface ManualReadingMeter {
   note: string;
   uploadedPhotos: ManualReadingUploadedPhoto[];
   pendingPhotos: ManualReadingPendingPhoto[];
+  // Kỳ chưa có mà công tơ đã có kỳ sau (vd chọn 09/2026 khi đã có 10/2026) → khoá nhập lùi.
+  laterPeriodCode?: string;
 }
 
 const MAX_READING_PHOTOS = K_SIZE_5;
@@ -329,6 +332,7 @@ const mapPeriodDetailToMeter = (
   return {
     ...meter,
     periodId: period.id,
+    laterPeriodCode: undefined,
     customerId: period.customerId || meter.customerId,
     meterCode: period.meterNumber || meter.meterCode,
     serialNo: period.meterNumber || meter.serialNo,
@@ -345,13 +349,14 @@ const mapPeriodDetailToMeter = (
 
 const mapPreparedToNewPeriodMeter = (
   meter: ManualReadingMeter,
-  rows?: PrepareReadingRow[]
+  prepared?: PrepareReadingData
 ): ManualReadingMeter => {
   return {
     ...meter,
     periodId: undefined,
+    laterPeriodCode: prepared?.laterPeriodCode || undefined,
     status: 'NOT_ENTERED',
-    registers: mapPreparedRowsToRegisters(rows, meter.multiplier),
+    registers: mapPreparedRowsToRegisters(prepared?.rows, meter.multiplier),
     reactiveIndex: '',
     uploadedPhotos: [],
     pendingPhotos: []
@@ -730,12 +735,12 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     [createObjectUrl]
   );
 
-  const fetchPreparedRows = useCallback(async (meter: ManualReadingMeter, periodCode: string) => {
+  const fetchPrepared = useCallback(async (meter: ManualReadingMeter, periodCode: string) => {
     const response = await manualMeterReadingServices.prepareReadingPeriod({
       meterNumber: meter.meterCode,
       periodCode
     });
-    return hasApiError(response) ? undefined : response.data?.rows;
+    return hasApiError(response) ? undefined : response.data;
   }, []);
 
   const fetchMeterPeriod = useCallback(
@@ -763,9 +768,9 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
 
       const period = searchResponse.data?.items?.[K_SIZE_0];
       if (!period?.id) {
-        const preparedRows = await fetchPreparedRows(meter, appliedFilter.periodCode);
+        const prepared = await fetchPrepared(meter, appliedFilter.periodCode);
         setMeters((prev) =>
-          updateMeter(prev, meter.id, (item) => mapPreparedToNewPeriodMeter(item, preparedRows))
+          updateMeter(prev, meter.id, (item) => mapPreparedToNewPeriodMeter(item, prepared))
         );
         setLoadingDetail(false);
         return;
@@ -790,7 +795,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       );
       setLoadingDetail(false);
     },
-    [fetchPreparedRows, loadPhotoPreviews]
+    [fetchPrepared, loadPhotoPreviews]
   );
 
   const fetchMeterStatuses = useCallback(
@@ -1263,6 +1268,14 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
         showToast({
           type: TYPE_TOAST.ERROR,
           content: 'Bộ lọc đã thay đổi. Vui lòng tìm kiếm lại trước khi lưu'
+        });
+        return false;
+      }
+
+      if (meter.laterPeriodCode && !meter.periodId) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: `Công tơ đã có kỳ chỉ số ${meter.laterPeriodCode}, không được nhập lùi kỳ ${filterApplied.periodCode}`
         });
         return false;
       }

@@ -169,7 +169,9 @@ const ManualMeterReadingScreen = ({
     onSaveDraft
   } = useManualMeterReading({ scope, feederId });
 
-  const isSelectedMeterConfirmed = selectedMeter?.status === 'CONFIRMED';
+  // Khoá nhập khi kỳ đã xác nhận, hoặc kỳ chưa có mà công tơ đã có kỳ sau (không nhập lùi kỳ).
+  const isBackdateLocked = !!selectedMeter?.laterPeriodCode && !selectedMeter?.periodId;
+  const isSelectedMeterConfirmed = selectedMeter?.status === 'CONFIRMED' || isBackdateLocked;
 
   const breadcrumbList = useMemo(
     () => [
@@ -440,6 +442,12 @@ const ManualMeterReadingScreen = ({
                   />
                   <MeterStatus status={selectedMeter.status} />
                 </Flex>
+
+                {isBackdateLocked && (
+                  <div className="mt-12 rounded-radius-m border border-error-200 bg-error-50 px-12 py-8 text-13 font-semibold text-error-600">
+                    {`Công tơ đã có kỳ chỉ số ${selectedMeter.laterPeriodCode}, không được nhập lùi kỳ ${filterApplied.periodCode}. Chọn kỳ ${selectedMeter.laterPeriodCode} hoặc kỳ sau đó để nhập.`}
+                  </div>
+                )}
 
                 <div className="mt-12 grid grid-cols-4 gap-12 desktop:grid-cols-2 mobile:grid-cols-1">
                   <InfoBox
