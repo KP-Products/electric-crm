@@ -4,6 +4,9 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { K_SIZE_24, K_SIZE_8, REQUIRED_MARK } from '@constant';
 import { Divider, Flex, Spin, Tooltip } from 'antd';
 import ButtonBase from 'components/button';
+import OwnerDocuments from 'components/owner-documents';
+import { DOCUMENT_OWNER_TYPE } from 'model/document';
+import { useSearchParams } from 'next/navigation';
 import { AppDatePickerControl } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { AppSelectControl } from 'components/select';
@@ -21,8 +24,14 @@ interface ManageContractFormProps {
   isEditMode: boolean;
 }
 
-const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
+const ContractFormContent = ({ isEditMode }: ManageContractFormProps) => {
   const {
+    files,
+    onFilesChange,
+    documentOwnerId,
+    savedContractId,
+    documentRevision,
+    saving,
     dateApiFormat,
     form,
     isCopyMode,
@@ -61,14 +70,17 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
   const watchedMeters = watch('meters');
 
   const title = isEditMode ? 'Cập nhật hợp đồng mua bán điện' : 'Thêm mới hợp đồng mua bán điện';
+  const formLocked = saving || detailLoading || Boolean(savedContractId);
   const isSaveDisabled =
-    !isValid ||
-    Boolean(isEditMode && !isDirty) ||
+    saving ||
     detailLoading ||
-    meterLoading ||
-    !metersLoaded ||
-    feederLoading ||
-    !feedersLoaded;
+    (!savedContractId &&
+      (!isValid ||
+        Boolean(isEditMode && !isDirty && !files.length) ||
+        meterLoading ||
+        !metersLoaded ||
+        feederLoading ||
+        !feedersLoaded));
 
   const breadcrumbList = [
     {
@@ -91,14 +103,14 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
         customContent="Hủy"
         onClick={onBack}
         classNames="app-common-btn"
-        disabled={detailLoading}
+        disabled={detailLoading || saving}
       />
       <ButtonBase
         type="primary"
         customContent={
           <div className="flex items-center justify-center">
-            <div>Lưu</div>
-            {detailLoading && (
+            <div>{savedContractId ? 'Thử lại tài liệu' : 'Lưu'}</div>
+            {(detailLoading || saving) && (
               <div className="ml-8">
                 <Spin size="small" />
               </div>
@@ -135,213 +147,240 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
         </Flex>
         <Divider className="my-16" />
 
-        <Spin spinning={detailLoading && (isEditMode || isCopyMode)}>
+        <Spin spinning={(detailLoading || saving) && (isEditMode || isCopyMode)}>
           <form id="contract-form" onSubmit={handleSubmit(onSubmit)}>
-            <section className="rounded-radius-l border border-color-300 bg-color-50 p-16">
-              <TextBase classNames="sub-title3 mb-16 !text-primary-700" text="Thông tin hợp đồng" />
-              <div className="grid grid-cols-3 gap-16 tablet:grid-cols-2 mobile:grid-cols-1">
-                <AppTextFieldControl
-                  name="contractNumber"
-                  label="Số hợp đồng"
-                  labelSuffix={requiredMark}
-                  placeholder="Nhập số hợp đồng"
-                  control={control}
-                  disabled={isEditMode}
-                />
-                <AppSelectControl
-                  onChange={onChangeCustomer}
-                  name="customerId"
-                  label="Khách hàng"
-                  labelSuffix={requiredMark}
-                  placeholder="Chọn khách hàng"
-                  options={customerOptions}
-                  dropdownRender={customerDropdownRender}
-                  onOpenChange={onOpenCustomerDropdown}
-                  suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
-                  control={control}
-                />
-                <AppSelectControl
-                  name="status"
-                  label="Trạng thái"
-                  labelSuffix={requiredMark}
-                  placeholder="Chọn trạng thái"
-                  options={CONTRACT_STATUS_OPTIONS}
-                  control={control}
-                />
-                <AppDatePickerControl
-                  name="signedDate"
-                  label="Ngày ký kết"
-                  labelSuffix={REQUIRED_MARK}
-                  labelSuffixClassName="text-error-600"
-                  placeholder="dd/mm/yyyy"
-                  backendFormat={dateApiFormat}
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
-                  control={control}
-                />
-                <AppDatePickerControl
-                  name="effectiveDate"
-                  label="Ngày hiệu lực"
-                  labelSuffix={REQUIRED_MARK}
-                  labelSuffixClassName="text-error-600"
-                  placeholder="dd/mm/yyyy"
-                  backendFormat={dateApiFormat}
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
-                  control={control}
-                />
-                <AppDatePickerControl
-                  name="expiryDate"
-                  label="Ngày hết hiệu lực"
-                  placeholder="dd/mm/yyyy"
-                  backendFormat={dateApiFormat}
-                  allowClear
-                  wrapperClassName="w-full"
-                  datePickerClassName="w-full"
-                  control={control}
-                />
-                <div className="col-span-3 tablet:col-span-2 mobile:col-span-1">
-                  <AppTakeNoteControl
-                    name="note"
-                    label="Ghi chú"
-                    placeholder="Nhập ghi chú (nếu có)"
-                    control={control}
-                    maxLength={500}
-                    showCount
-                    autoSize={{ minRows: 5, maxRows: 7 }}
-                  />
-                </div>
+            {savedContractId && (
+              <div role="status" className="mb-16 text-14 text-color-700">
+                Hợp đồng đã lưu. Chỉ tải lại các tài liệu còn trong danh sách dưới đây.
               </div>
-            </section>
-
-            <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
-              <TextBase classNames="sub-title3 mb-16 !text-primary-700" text="Danh sách công tơ" />
-              {!selectedCustomerId && (
+            )}
+            <fieldset disabled={formLocked} className="min-w-0">
+              <section className="rounded-radius-l border border-color-300 bg-color-50 p-16">
                 <TextBase
-                  classNames="mb-12 text-14 text-color-600"
-                  text="Chọn khách hàng trước để hiện danh sách công tơ của khách hàng."
+                  classNames="sub-title3 mb-16 !text-primary-700"
+                  text="Thông tin hợp đồng"
                 />
-              )}
-              {meterError && (
-                <div role="alert" className="mb-12 flex items-center gap-12 text-error-600">
-                  <span>{meterError}. Chưa thể lưu hợp đồng.</span>
-                  <ButtonBase
-                    type="ghost"
-                    customContent="Thử lại công tơ"
-                    onClick={onRetryMeters}
-                    disabled={meterLoading}
+                <div className="grid grid-cols-3 gap-16 tablet:grid-cols-2 mobile:grid-cols-1">
+                  <AppTextFieldControl
+                    name="contractNumber"
+                    label="Số hợp đồng"
+                    labelSuffix={requiredMark}
+                    placeholder="Nhập số hợp đồng"
+                    control={control}
+                    disabled={isEditMode || formLocked}
                   />
-                </div>
-              )}
-              {feederError && (
-                <div role="alert" className="mb-12 flex items-center gap-12 text-error-600">
-                  <span>{feederError}. Chưa thể lưu hợp đồng.</span>
-                  <ButtonBase
-                    type="ghost"
-                    customContent="Thử lại lộ"
-                    onClick={onRetryFeeders}
-                    disabled={feederLoading}
+                  <AppSelectControl
+                    disabled={formLocked}
+                    onChange={onChangeCustomer}
+                    name="customerId"
+                    label="Khách hàng"
+                    labelSuffix={requiredMark}
+                    placeholder="Chọn khách hàng"
+                    options={customerOptions}
+                    dropdownRender={customerDropdownRender}
+                    onOpenChange={onOpenCustomerDropdown}
+                    suffix={<IconSvgLocal name="ICON_SEARCH" height={20} width={20} />}
+                    control={control}
                   />
-                </div>
-              )}
-              {metersEmpty && (
-                <div role="status" className="mb-12 flex items-center gap-12 text-color-700">
-                  <span>
-                    Không có công tơ phù hợp với khách hàng đã chọn. Chọn khách hàng khác hoặc tải
-                    lại sau khi bổ sung công tơ.
-                  </span>
-                  <ButtonBase
-                    type="ghost"
-                    customContent="Tải lại công tơ"
-                    onClick={onRetryMeters}
-                    disabled={meterLoading}
+                  <AppSelectControl
+                    disabled={formLocked}
+                    name="status"
+                    label="Trạng thái"
+                    labelSuffix={requiredMark}
+                    placeholder="Chọn trạng thái"
+                    options={CONTRACT_STATUS_OPTIONS}
+                    control={control}
                   />
-                </div>
-              )}
-              {feedersEmpty && (
-                <div role="status" className="mb-12 flex items-center gap-12 text-color-700">
-                  <span>Chưa có lộ để chọn. Bổ sung lộ rồi tải lại danh sách.</span>
-                  <ButtonBase
-                    type="ghost"
-                    customContent="Tải lại lộ"
-                    onClick={onRetryFeeders}
-                    disabled={feederLoading}
+                  <AppDatePickerControl
+                    disabled={formLocked}
+                    name="signedDate"
+                    label="Ngày ký kết"
+                    labelSuffix={REQUIRED_MARK}
+                    labelSuffixClassName="text-error-600"
+                    placeholder="dd/mm/yyyy"
+                    backendFormat={dateApiFormat}
+                    wrapperClassName="w-full"
+                    datePickerClassName="w-full"
+                    control={control}
                   />
-                </div>
-              )}
-              {feederLoading && <div className="mb-12 text-14">Đang tải danh sách lộ...</div>}
-              <div className="overflow-x-auto">
-                <div className="min-w-[760px]">
-                  <div className="grid grid-cols-[56px_1.4fr_1fr_1fr_56px] gap-12 rounded-t-radius-m bg-color-100 p-12 text-14 font-semibold text-color-700">
-                    <div>STT</div>
-                    <div>Công tơ {requiredMark}</div>
-                    <div>Lộ {requiredMark}</div>
-                    <div>Ngày lắp đặt {requiredMark}</div>
-                    <div />
+                  <AppDatePickerControl
+                    disabled={formLocked}
+                    name="effectiveDate"
+                    label="Ngày hiệu lực"
+                    labelSuffix={REQUIRED_MARK}
+                    labelSuffixClassName="text-error-600"
+                    placeholder="dd/mm/yyyy"
+                    backendFormat={dateApiFormat}
+                    wrapperClassName="w-full"
+                    datePickerClassName="w-full"
+                    control={control}
+                  />
+                  <AppDatePickerControl
+                    disabled={formLocked}
+                    name="expiryDate"
+                    label="Ngày hết hiệu lực"
+                    placeholder="dd/mm/yyyy"
+                    backendFormat={dateApiFormat}
+                    allowClear
+                    wrapperClassName="w-full"
+                    datePickerClassName="w-full"
+                    control={control}
+                  />
+                  <div className="col-span-3 tablet:col-span-2 mobile:col-span-1">
+                    <AppTakeNoteControl
+                      name="note"
+                      label="Ghi chú"
+                      placeholder="Nhập ghi chú (nếu có)"
+                      control={control}
+                      maxLength={500}
+                      showCount
+                      autoSize={{ minRows: 5, maxRows: 7 }}
+                    />
                   </div>
-                  {meterLineFields.map((field, index) => {
-                    const selectedMeterId = watchedMeters?.[index]?.meterId;
-                    return (
-                      <div
-                        key={field.id}
-                        className="grid grid-cols-[56px_1.4fr_1fr_1fr_56px] items-start gap-12 border-b border-color-200 p-12"
-                      >
-                        <div className="pt-12 text-14">{index + 1}</div>
-                        <div>
-                          <AppSelectControl
-                            name={`meters.${index}.meterId`}
-                            placeholder={meterLoading ? 'Đang tải...' : 'Chọn công tơ'}
-                            options={getMeterOptionsForLine(index)}
-                            control={control}
-                            disabled={!selectedCustomerId || meterLoading}
-                            isLoading={meterLoading}
-                            onChange={(value: string) => {
-                              if (String(value) !== selectedMeterId)
-                                onSelectMeter(index, String(value));
-                            }}
-                          />
-                        </div>
-                        <AppSelectControl
-                          name={`meters.${index}.feederId`}
-                          placeholder="Chọn lộ"
-                          disabled={feederLoading || !feedersLoaded}
-                          options={feederOptions}
-                          control={control}
-                        />
-                        <AppDatePickerControl
-                          name={`meters.${index}.installationDate`}
-                          placeholder="dd/mm/yyyy"
-                          backendFormat={dateApiFormat}
-                          wrapperClassName="w-full"
-                          datePickerClassName="w-full"
-                          control={control}
-                        />
-                        <Tooltip title="Xoá">
-                          <ButtonBase
-                            type="whiteGhost"
-                            classNames="!text-error-600 !inline-flex items-center justify-center !p-0 [&>span]:flex [&>span]:items-center [&>span]:justify-center"
-                            styles={{ width: 42 }}
-                            customContent={<DeleteOutlined />}
-                            disabled={meterLineFields.length <= 1}
-                            onClick={() => onRemoveMeterLine(index)}
-                          />
-                        </Tooltip>
-                      </div>
-                    );
-                  })}
                 </div>
-              </div>
-              {typeof errors.meters?.message === 'string' && (
-                <div className="mt-8 text-14 text-error-600">{errors.meters.message}</div>
-              )}
-              <ButtonBase
-                type="ghost"
-                leftIcon="IC_ADD_OUTLINE2"
-                customContent="Thêm dòng"
-                onClick={onAddMeterLine}
-                classNames="app-common-btn mt-12"
-              />
-            </section>
+              </section>
+
+              <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
+                <TextBase
+                  classNames="sub-title3 mb-16 !text-primary-700"
+                  text="Danh sách công tơ"
+                />
+                {!selectedCustomerId && (
+                  <TextBase
+                    classNames="mb-12 text-14 text-color-600"
+                    text="Chọn khách hàng trước để hiện danh sách công tơ của khách hàng."
+                  />
+                )}
+                {meterError && (
+                  <div role="alert" className="mb-12 flex items-center gap-12 text-error-600">
+                    <span>{meterError}. Chưa thể lưu hợp đồng.</span>
+                    <ButtonBase
+                      type="ghost"
+                      customContent="Thử lại công tơ"
+                      onClick={onRetryMeters}
+                      disabled={meterLoading}
+                    />
+                  </div>
+                )}
+                {feederError && (
+                  <div role="alert" className="mb-12 flex items-center gap-12 text-error-600">
+                    <span>{feederError}. Chưa thể lưu hợp đồng.</span>
+                    <ButtonBase
+                      type="ghost"
+                      customContent="Thử lại lộ"
+                      onClick={onRetryFeeders}
+                      disabled={feederLoading}
+                    />
+                  </div>
+                )}
+                {metersEmpty && (
+                  <div role="status" className="mb-12 flex items-center gap-12 text-color-700">
+                    <span>
+                      Không có công tơ phù hợp với khách hàng đã chọn. Chọn khách hàng khác hoặc tải
+                      lại sau khi bổ sung công tơ.
+                    </span>
+                    <ButtonBase
+                      type="ghost"
+                      customContent="Tải lại công tơ"
+                      onClick={onRetryMeters}
+                      disabled={meterLoading}
+                    />
+                  </div>
+                )}
+                {feedersEmpty && (
+                  <div role="status" className="mb-12 flex items-center gap-12 text-color-700">
+                    <span>Chưa có lộ để chọn. Bổ sung lộ rồi tải lại danh sách.</span>
+                    <ButtonBase
+                      type="ghost"
+                      customContent="Tải lại lộ"
+                      onClick={onRetryFeeders}
+                      disabled={feederLoading}
+                    />
+                  </div>
+                )}
+                {feederLoading && <div className="mb-12 text-14">Đang tải danh sách lộ...</div>}
+                <div className="overflow-x-auto">
+                  <div className="min-w-[760px]">
+                    <div className="grid grid-cols-[56px_1.4fr_1fr_1fr_56px] gap-12 rounded-t-radius-m bg-color-100 p-12 text-14 font-semibold text-color-700">
+                      <div>STT</div>
+                      <div>Công tơ {requiredMark}</div>
+                      <div>Lộ {requiredMark}</div>
+                      <div>Ngày lắp đặt {requiredMark}</div>
+                      <div />
+                    </div>
+                    {meterLineFields.map((field, index) => {
+                      const selectedMeterId = watchedMeters?.[index]?.meterId;
+                      return (
+                        <div
+                          key={field.id}
+                          className="grid grid-cols-[56px_1.4fr_1fr_1fr_56px] items-start gap-12 border-b border-color-200 p-12"
+                        >
+                          <div className="pt-12 text-14">{index + 1}</div>
+                          <div>
+                            <AppSelectControl
+                              name={`meters.${index}.meterId`}
+                              placeholder={meterLoading ? 'Đang tải...' : 'Chọn công tơ'}
+                              options={getMeterOptionsForLine(index)}
+                              control={control}
+                              disabled={formLocked || !selectedCustomerId || meterLoading}
+                              isLoading={meterLoading}
+                              onChange={(value: string) => {
+                                if (String(value) !== selectedMeterId)
+                                  onSelectMeter(index, String(value));
+                              }}
+                            />
+                          </div>
+                          <AppSelectControl
+                            name={`meters.${index}.feederId`}
+                            placeholder="Chọn lộ"
+                            disabled={formLocked || feederLoading || !feedersLoaded}
+                            options={feederOptions}
+                            control={control}
+                          />
+                          <AppDatePickerControl
+                            disabled={formLocked}
+                            name={`meters.${index}.installationDate`}
+                            placeholder="dd/mm/yyyy"
+                            backendFormat={dateApiFormat}
+                            wrapperClassName="w-full"
+                            datePickerClassName="w-full"
+                            control={control}
+                          />
+                          <Tooltip title="Xoá">
+                            <ButtonBase
+                              type="whiteGhost"
+                              classNames="!text-error-600 !inline-flex items-center justify-center !p-0 [&>span]:flex [&>span]:items-center [&>span]:justify-center"
+                              styles={{ width: 42 }}
+                              customContent={<DeleteOutlined />}
+                              disabled={meterLineFields.length <= 1}
+                              onClick={() => onRemoveMeterLine(index)}
+                            />
+                          </Tooltip>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {typeof errors.meters?.message === 'string' && (
+                  <div className="mt-8 text-14 text-error-600">{errors.meters.message}</div>
+                )}
+                <ButtonBase
+                  type="ghost"
+                  leftIcon="IC_ADD_OUTLINE2"
+                  customContent="Thêm dòng"
+                  onClick={onAddMeterLine}
+                  classNames="app-common-btn mt-12"
+                />
+              </section>
+            </fieldset>
+            <OwnerDocuments
+              ownerType={DOCUMENT_OWNER_TYPE.CONTRACT}
+              ownerId={documentOwnerId}
+              files={files}
+              onFilesChange={onFilesChange}
+              disabled={saving || detailLoading}
+              revision={documentRevision}
+            />
           </form>
         </Spin>
 
@@ -353,6 +392,16 @@ const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
         </div>
       </div>
     </PageWithBreadcrumb>
+  );
+};
+
+const ManageContractForm = ({ isEditMode }: ManageContractFormProps) => {
+  const searchParams = useSearchParams();
+  return (
+    <ContractFormContent
+      key={`${isEditMode}:${searchParams.get('id') || ''}:${searchParams.get('copyId') || ''}`}
+      isEditMode={isEditMode}
+    />
   );
 };
 

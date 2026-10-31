@@ -1,6 +1,6 @@
 import { K_SIZE_1 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CREATE_CONTRACT, GET_CONTRACT_DETAIL, UPDATE_CONTRACT } from '@redux-action-type/contract';
+import { GET_CONTRACT_DETAIL } from '@redux-action-type/contract';
 import { dispatch } from '@redux-common';
 import { selectContractLoadingDetail } from '@redux-selector/contract';
 import { AppSelectOption } from 'components/select';
@@ -14,6 +14,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import contractServices from 'services/contract-services';
+import documentServices from 'services/document-services';
+import { DOCUMENT_OWNER_TYPE, DOCUMENT_TYPE } from 'model/document';
+import { hasApiError } from 'utils/api-response';
 import { getVoltageLevelLabel } from 'screens/authentication/meter-management/utils/constant';
 import { z } from 'zod';
 import {
@@ -121,6 +124,17 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
   const [meterRetry, setMeterRetry] = useState(0);
   const [feederRetry, setFeederRetry] = useState(0);
   const submittingRef = useRef<boolean>(false);
+  const mountedRef = useRef(true);
+  const [saving, setSaving] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [savedContractId, setSavedContractId] = useState<string>();
+  const [documentRevision, setDocumentRevision] = useState(0);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const form = useForm<ContractForm>({
     mode: 'onChange',
@@ -298,6 +312,7 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
       payload: {
         body: { id: detailId },
         onSuccess: (response: ContractRes) => {
+          if (!mountedRef.current) return;
           if (!response.data) {
             showToast({
               type: TYPE_TOAST.ERROR,
@@ -311,6 +326,7 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
           resetContractForm(response.data);
         },
         onFailed: (error?: ErrorBase) => {
+          if (!mountedRef.current) return;
           showToast({
             type: TYPE_TOAST.ERROR,
             content: getContractErrorMessage(
@@ -326,81 +342,115 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
     });
   }, [copyId, form, id, isCopyMode, isEditMode, onBack, resetContractForm]);
 
-  const onSubmitSuccess = useCallback(
-    (content: string) => {
-      submittingRef.current = false;
-      showToast({ type: TYPE_TOAST.SUCCESS, content });
-      onBack();
-    },
-    [onBack]
-  );
-
-  const onSubmitFailed = useCallback((error: ErrorBase | undefined, fallback: string) => {
-    submittingRef.current = false;
-    showToast({
-      type: TYPE_TOAST.ERROR,
-      content: getContractErrorMessage(error, fallback)
-    });
-  }, []);
-
   const onSubmit = useCallback(
-    (data: ContractForm) => {
-      if (submittingRef.current || !metersLoaded || meterLoading || !feedersLoaded || feederLoading)
-        return;
-      if (data.meters.some((line) => !meterById.has(line.meterId))) {
-        showToast({
-          type: TYPE_TOAST.ERROR,
-          content: 'Vui lòng chọn lại công tơ hợp lệ cho khách hàng'
-        });
-        return;
-      }
-      submittingRef.current = true;
-
-      if (isEditMode) {
-        const contractId = getContractId(selectedContract);
-        if (!contractId) {
-          submittingRef.current = false;
+    async (data: ContractForm) => {
+      if (submittingRef.current || !mountedRef.current) return;
+      if (!savedContractId) {
+        if (!metersLoaded || meterLoading || !feedersLoaded || feederLoading) return;
+        if (data.meters.some((line) => !meterById.has(line.meterId))) {
           showToast({
             type: TYPE_TOAST.ERROR,
-            content: 'Không tìm thấy ID hợp đồng để cập nhật'
+            content: 'Vui lòng chọn lại công tơ hợp lệ cho khách hàng'
           });
           return;
         }
-
-        dispatch({
-          type: UPDATE_CONTRACT,
-          payload: {
-            body: buildUpdateContractBody(contractId, data),
-            onSuccess: () => onSubmitSuccess('Cập nhật hợp đồng thành công'),
-            onFailed: (error?: ErrorBase) => onSubmitFailed(error, 'Cập nhật hợp đồng thất bại')
-          }
-        });
-        return;
       }
-
-      dispatch({
-        type: CREATE_CONTRACT,
-        payload: {
-          body: buildCreateContractBody(data),
-          onSuccess: () => onSubmitSuccess('Thêm mới hợp đồng thành công'),
-          onFailed: (error?: ErrorBase) => onSubmitFailed(error, 'Thêm mới hợp đồng thất bại')
+      submittingRef.current = true;
+      setSaving(true);
+      try {
+        let contractId = savedContractId || (isEditMode ? getContractId(selectedContract) : '');
+        if (isEditMode && !contractId) {
+          showToast({ type: TYPE_TOAST.ERROR, content: 'Không tìm thấy ID hợp đồng để cập nhật' });
+          return;
         }
-      });
+        if (!savedContractId && (!isEditMode || form.formState.isDirty)) {
+          const response = isEditMode
+            ? await contractServices.updateContract(buildUpdateContractBody(contractId, data))
+            : await contractServices.createContract(buildCreateContractBody(data));
+          if (!mountedRef.current) return;
+          if (hasApiError(response) || !response.data) {
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content: getContractErrorMessage(response, 'Lưu hợp đồng thất bại')
+            });
+            return;
+          }
+          contractId = contractId || getContractId(response.data);
+          if (!contractId) {
+            // Avoid creating a second contract if the successful response omitted its ID.
+            setSavedContractId('');
+            showToast({
+              type: TYPE_TOAST.ERROR,
+              content:
+                'Hợp đồng đã lưu nhưng API không trả ID. Vui lòng mở lại hợp đồng từ danh sách để tải tài liệu.'
+            });
+            onBack();
+            return;
+          }
+          form.reset(data);
+        }
+        setSavedContractId(contractId);
+        const failedFiles: File[] = [];
+        for (const file of files) {
+          if (!mountedRef.current) return;
+          try {
+            const response = await documentServices.uploadDocument({
+              ownerType: DOCUMENT_OWNER_TYPE.CONTRACT,
+              ownerId: contractId,
+              docType: DOCUMENT_TYPE.HD,
+              file
+            });
+            if (hasApiError(response) || !response.data?.id) failedFiles.push(file);
+          } catch {
+            failedFiles.push(file);
+          }
+        }
+        if (!mountedRef.current) return;
+        setFiles(failedFiles);
+        setDocumentRevision((value) => value + 1);
+        if (failedFiles.length) {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content:
+              'Hợp đồng đã lưu. Một số tài liệu tải lên thất bại, vui lòng bấm Thử lại tài liệu.'
+          });
+          return;
+        }
+        showToast({
+          type: TYPE_TOAST.SUCCESS,
+          content: isEditMode ? 'Cập nhật hợp đồng thành công' : 'Thêm mới hợp đồng thành công'
+        });
+        onBack();
+      } catch {
+        if (mountedRef.current)
+          showToast({ type: TYPE_TOAST.ERROR, content: 'Lưu hợp đồng thất bại' });
+      } finally {
+        submittingRef.current = false;
+        if (mountedRef.current) setSaving(false);
+      }
     },
     [
+      savedContractId,
+      files,
       isEditMode,
+      selectedContract,
+      form,
+      metersLoaded,
+      meterLoading,
       feedersLoaded,
       feederLoading,
       meterById,
-      meterLoading,
-      metersLoaded,
-      onSubmitFailed,
-      onSubmitSuccess,
-      selectedContract
+      onBack
     ]
   );
 
   return {
+    files,
+    onFilesChange: setFiles,
+    documentOwnerId: savedContractId || (isEditMode ? getContractId(selectedContract) : undefined),
+    savedContractId,
+    documentRevision,
+    saving,
     dateApiFormat: CONTRACT_DATE_FORMAT,
     form,
     isCopyMode,

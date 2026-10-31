@@ -275,11 +275,10 @@ const ManageContractScreen = () => {
       },
       {
         title: 'Người tạo',
-        dataIndex: 'createdByUsername',
-        key: 'createdByUsername',
+        dataIndex: 'createdByName',
+        key: 'createdByName',
         width: K_SIZE_150,
-        render: (createdByUsername: string) =>
-          renderTruncatedText(createdByUsername, 'max-w-[180px]')
+        render: (createdByName: string) => renderTruncatedText(createdByName, 'max-w-[180px]')
       },
       {
         title: 'Ngày tạo',
