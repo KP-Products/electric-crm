@@ -1,6 +1,6 @@
 import { PaginationReq, PaginationRes, ResultBase } from './common';
 
-export type ReadingPeriodSaveMode = 'DRAFT' | 'SUBMIT';
+export type ReadingPeriodSaveMode = 'DRAFT' | 'SAVED';
 export type ReadingPeriodStatus = 'DRAFT' | 'SAVED' | 'CONFIRMED' | 'REJECTED';
 
 export interface MeterSearchForReadingReq extends PaginationReq {
@@ -153,6 +153,7 @@ export interface CreateReadingPeriodRes extends ResultBase<ReadingPeriodResponse
 
 export interface UpdateReadingPeriodReq {
   id: number;
+  saveMode?: ReadingPeriodSaveMode;
   periodCode?: string;
   periodFrom?: string;
   periodTo?: string;

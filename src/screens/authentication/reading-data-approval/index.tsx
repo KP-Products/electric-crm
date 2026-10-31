@@ -341,21 +341,23 @@ const ReadingDataApprovalScreen = () => {
               className="mb-16 mobile:flex-col mobile:items-start"
             >
               <TextBase classNames="sub-title3 !text-primary-700" text={`Tất cả (${total})`} />
-              <Flex gap={8} className="mobile:w-full">
-                <ButtonBase
-                  type="primary"
-                  size={32}
-                  customContent={
-                    <span className="flex items-center gap-8">
-                      <CheckCircleOutlined />
-                      Phê duyệt
-                    </span>
-                  }
-                  disabled={!selectedPeriodIds.length || actionLoading}
-                  onClick={onConfirmSelected}
-                  classNames="mobile:flex-1 mobile:justify-center"
-                />
-              </Flex>
+              {selectedPeriodIds.length > 1 && (
+                <Flex gap={8} className="mobile:w-full">
+                  <ButtonBase
+                    type="primary"
+                    size={32}
+                    customContent={
+                      <span className="flex items-center gap-8">
+                        <CheckCircleOutlined />
+                        Phê duyệt ({selectedPeriodIds.length})
+                      </span>
+                    }
+                    disabled={!selectedPeriodIds.length || actionLoading}
+                    onClick={onConfirmSelected}
+                    classNames="mobile:flex-1 mobile:justify-center"
+                  />
+                </Flex>
+              )}
             </Flex>
             <Spin spinning={loading || actionLoading}>
               <AppTable

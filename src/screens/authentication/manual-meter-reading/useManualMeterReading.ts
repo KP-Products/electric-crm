@@ -487,36 +487,6 @@ export const getMeterReadingMetrics = (meter?: ManualReadingMeter) => {
   };
 };
 
-export const getStatusMeta = (status: ManualReadingStatus) => {
-  switch (status) {
-    case 'SAVED':
-      return {
-        label: 'Đã nhập',
-        type: 'saved' as const
-      };
-    case 'CONFIRMED':
-      return {
-        label: 'Đã xác nhận',
-        type: 'confirmed' as const
-      };
-    case 'REJECTED':
-      return {
-        label: 'Bị từ chối',
-        type: 'rejected' as const
-      };
-    case 'DRAFT':
-      return {
-        label: 'Nháp',
-        type: 'draft' as const
-      };
-    default:
-      return {
-        label: 'Chưa nhập',
-        type: 'notEntered' as const
-      };
-  }
-};
-
 export interface ManualMeterReadingOptions {
   scope?: 'customer' | 'feeder';
   feederId?: string;
@@ -1300,6 +1270,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       if (meter.periodId) {
         const response = await manualMeterReadingServices.updateReadingPeriod({
           id: meter.periodId,
+          saveMode,
           periodCode: filterApplied.periodCode,
           periodFrom: periodInfo.from,
           periodTo: periodInfo.to,
@@ -1387,7 +1358,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
         return false;
       }
 
-      if (!changedMeterIds.has(meter.id)) {
+      if (!changedMeterIds.has(meter.id) && !(saveMode === 'SAVED' && meter.status === 'DRAFT')) {
         showToast({ type: TYPE_TOAST.WARNING, content: 'Công tơ chưa có thay đổi để lưu' });
         return false;
       }
@@ -1405,28 +1376,37 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     [changedMeterIds, hasUnsyncedFilter, meters, saveMeterToServer, selectedMeterId]
   );
 
-  const onSave = useCallback(() => {
-    showDialog({
-      title: 'Xác nhận lưu chỉ số',
-      content: 'Bạn có chắc chắn muốn lưu chỉ số công tơ này?',
-      type: TYPE_MESSAGE.CONFIRM,
-      disableTouchOutSide: true,
-      actions: [
-        {
-          title: 'Lưu',
-          type: TYPE_ACTION.PRIMARY,
-          stopHide: true,
-          onPress: async () => {
-            setSavingConfirm(true);
-            const saved = await saveSelectedChangedMeter('DRAFT');
-            setSavingConfirm(false);
-            if (saved) hideDialog();
-          }
-        },
-        { title: 'Hủy', type: TYPE_ACTION.SECONDARY }
-      ]
-    });
-  }, [saveSelectedChangedMeter]);
+  const onSave = useCallback(
+    (saveMode: ReadingPeriodSaveMode) => {
+      showDialog({
+        title: saveMode === 'DRAFT' ? 'Lưu nháp chỉ số' : 'Xác nhận và Lưu',
+        content:
+          saveMode === 'DRAFT'
+            ? 'Bạn có chắc chắn muốn lưu nháp chỉ số công tơ này?'
+            : 'Bạn có chắc chắn muốn xác nhận và lưu chỉ số công tơ này?',
+        type: TYPE_MESSAGE.CONFIRM,
+        disableTouchOutSide: true,
+        actions: [
+          {
+            title: saveMode === 'DRAFT' ? 'Lưu nháp' : 'Xác nhận và Lưu',
+            type: TYPE_ACTION.PRIMARY,
+            stopHide: true,
+            onPress: async () => {
+              setSavingConfirm(true);
+              try {
+                const saved = await saveSelectedChangedMeter(saveMode);
+                if (saved) hideDialog();
+              } finally {
+                setSavingConfirm(false);
+              }
+            }
+          },
+          { title: 'Hủy', type: TYPE_ACTION.SECONDARY }
+        ]
+      });
+    },
+    [saveSelectedChangedMeter]
+  );
 
   const onSelectMeterWithUnsavedCheck = useCallback(
     (meterId: string) => {

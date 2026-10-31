@@ -25,17 +25,17 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { API_DATE_INPUT_FORMATS, FORMAT_DATE_API, FORMAT_DATE_PARAMS } from 'utils/date';
 import {
-  formatDecimalWithCommas,
+  formatDecimalInputWithCommas,
   formatNumberValueWithCommas,
   parseFormattedNumber
 } from 'utils/number-input';
 import {
   ManualReadingMeter,
   ManualReadingRegister,
-  ManualReadingStatus,
-  getStatusMeta
+  ManualReadingStatus
 } from './useManualMeterReading';
 import useManualMeterReading from './useManualMeterReading';
+import { getReadingStatusMeta } from '../reading-data-approval/utils';
 
 dayjs.extend(customParseFormat);
 
@@ -56,14 +56,6 @@ const getRegisterUsage = (register: ManualReadingRegister) => {
   return newIndex - register.oldIndex;
 };
 
-const getStatusType = (status: ManualReadingStatus) => {
-  if (status === 'CONFIRMED') return TYPE_STATUS.SUCCESS;
-  if (status === 'REJECTED') return TYPE_STATUS.ERROR;
-  if (status === 'SAVED') return TYPE_STATUS.PENDING;
-  if (status === 'DRAFT') return TYPE_STATUS.SUCCESS;
-  return TYPE_STATUS.DISABLED;
-};
-
 const InfoBox = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="rounded-radius-m border border-color-300 bg-color-50 px-12 py-[10px]">
     <TextBase classNames="caption1 !text-color-700" text={label} />
@@ -72,10 +64,13 @@ const InfoBox = ({ label, value }: { label: string; value: React.ReactNode }) =>
 );
 
 const MeterStatus = ({ status }: { status: ManualReadingStatus }) => {
-  const meta = getStatusMeta(status);
+  const meta =
+    status === 'NOT_ENTERED'
+      ? { label: 'Chưa nhập', type: TYPE_STATUS.DISABLED }
+      : getReadingStatusMeta(status);
   return (
     <Status
-      type={getStatusType(status)}
+      type={meta.type}
       kind={KIND_STATUS.SECONDARY}
       content={meta.label}
       contentStyle="whitespace-nowrap"
@@ -169,6 +164,7 @@ const ManualMeterReadingScreen = ({
   } = useManualMeterReading({ scope, feederId });
 
   const isSelectedMeterConfirmed = selectedMeter?.status === 'CONFIRMED';
+  const isSelectedMeterWaitingConfirmed = selectedMeter?.status === 'SAVED';
 
   const breadcrumbList = useMemo(
     () => [
@@ -225,11 +221,30 @@ const ManualMeterReadingScreen = ({
           </div>
           <Flex justify="end" gap={K_SIZE_8} className="mobile:w-full mobile:flex-col">
             <ButtonBase
+              type="ghost"
+              customContent={
+                <div className="flex items-center gap-8">
+                  <CheckCircleOutlined />
+                  <span>{savingConfirm ? 'Đang lưu...' : 'Lưu nháp'}</span>
+                </div>
+              }
+              disabled={
+                savingConfirm ||
+                loadingMeters ||
+                loadingDetail ||
+                hasUnsyncedFilter ||
+                isSelectedMeterConfirmed ||
+                isSelectedMeterWaitingConfirmed
+              }
+              onClick={() => onSave('DRAFT')}
+              classNames="mobile:w-full mobile:justify-center"
+            />
+            <ButtonBase
               type="primary"
               customContent={
                 <div className="flex items-center gap-8">
                   <CheckCircleOutlined />
-                  <span>{savingConfirm ? 'Đang lưu...' : 'Lưu chỉ số'}</span>
+                  <span>{savingConfirm ? 'Đang lưu...' : 'Xác nhận và Lưu'}</span>
                 </div>
               }
               disabled={
@@ -239,7 +254,7 @@ const ManualMeterReadingScreen = ({
                 hasUnsyncedFilter ||
                 isSelectedMeterConfirmed
               }
-              onClick={onSave}
+              onClick={() => onSave('SAVED')}
               classNames="mobile:w-full mobile:justify-center"
             />
           </Flex>
@@ -489,7 +504,7 @@ const ManualMeterReadingScreen = ({
                                 <Input
                                   className="text-right"
                                   status={invalid ? 'error' : undefined}
-                                  value={formatDecimalWithCommas(register.newIndex)}
+                                  value={formatDecimalInputWithCommas(register.newIndex)}
                                   inputMode="decimal"
                                   placeholder="Nhập chỉ số"
                                   disabled={isSelectedMeterConfirmed}
@@ -497,7 +512,7 @@ const ManualMeterReadingScreen = ({
                                     onChangeRegister(
                                       selectedMeter.id,
                                       register.id,
-                                      formatDecimalWithCommas(event.target.value)
+                                      formatDecimalInputWithCommas(event.target.value)
                                     )
                                   }
                                 />
@@ -584,14 +599,14 @@ const ManualMeterReadingScreen = ({
                     <TextBase classNames="caption1 !text-color-700" text="Chỉ số vô công (kVArh)" />
                     <Input
                       className="mt-8"
-                      value={formatDecimalWithCommas(selectedMeter.reactiveIndex)}
+                      value={formatDecimalInputWithCommas(selectedMeter.reactiveIndex)}
                       inputMode="decimal"
                       placeholder="Nhập chỉ số"
                       disabled={isSelectedMeterConfirmed}
                       onChange={(event) =>
                         onChangeReactiveIndex(
                           selectedMeter.id,
-                          formatDecimalWithCommas(event.target.value)
+                          formatDecimalInputWithCommas(event.target.value)
                         )
                       }
                     />

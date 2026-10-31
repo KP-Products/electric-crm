@@ -144,6 +144,19 @@ export const parseFormattedNumber = (value?: string | number | null) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+// Controlled inputs already display en-US separators. Do not infer a new locale
+// from partially edited groups (for example, typing 5 after "1,234").
+export const formatDecimalInputWithCommas = (value?: string | number | null) => {
+  const input = String(value ?? '').replace(/[^\d.]/g, '');
+  if (!input) return '';
+
+  const [integerPart, ...fractionParts] = input.split('.');
+  const digits = normalizeIntegerDigits(integerPart) || '0';
+  return `${formatIntegerPart(digits)}${
+    fractionParts.length ? `${DECIMAL_SEPARATOR}${fractionParts.join('')}` : ''
+  }`;
+};
+
 export const formatNumberValueWithCommas = (
   value?: string | number | null,
   options: Intl.NumberFormatOptions = {}
