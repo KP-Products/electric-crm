@@ -1,6 +1,7 @@
 import { PaginationReq, PaginationRes, ResultBase } from './common';
 
-export type ReadingPeriodSaveMode = 'DRAFT' | 'SUBMIT';
+// DRAFT = Lưu nháp; SAVED = Lưu (chờ xác nhận ở 5.4 — BE chỉ cho xác nhận kỳ SAVED).
+export type ReadingPeriodSaveMode = 'DRAFT' | 'SAVED';
 export type ReadingPeriodStatus = 'DRAFT' | 'SAVED' | 'CONFIRMED' | 'REJECTED';
 
 export interface MeterSearchForReadingReq extends PaginationReq {
@@ -157,6 +158,7 @@ export interface UpdateReadingPeriodReq {
   periodFrom?: string;
   periodTo?: string;
   readingDate?: string;
+  saveMode?: ReadingPeriodSaveMode;
   readings?: ReadingItem[] | null;
   reactiveEnergyIndex?: number;
   note?: string;

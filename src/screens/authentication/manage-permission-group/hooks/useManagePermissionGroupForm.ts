@@ -132,16 +132,10 @@ export default function useManagePermissionGroupForm({
         return !newPermissionSet.has(permissionCode);
       });
 
-      const samePermissionIds = newPermissionIds.filter((permissionCode: string) => {
-        return oldPermissionSet.has(permissionCode);
-      });
-      if (samePermissionIds.length > 0) {
-        DebugUtils.logS('+++++++++ SAME PERMISSION +++++++++');
-        showSuccessAndBack();
-        return;
-      }
+      // Gán phần mới thêm, gỡ phần bị bỏ; quyền giữ nguyên thì không gọi API. Trước đây hễ còn giữ
+      // 1 quyền cũ là báo thành công và thoát luôn, không lưu thay đổi nào.
       const callRemovePermission = () => {
-        if (removePermissionIds?.length === 0) {
+        if (!removePermissionIds || removePermissionIds.length === 0) {
           showSuccessAndBack();
           return;
         }

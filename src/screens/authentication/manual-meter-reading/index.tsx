@@ -165,7 +165,8 @@ const ManualMeterReadingScreen = ({
     onRemovePendingPhoto,
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
-    onSave
+    onSave,
+    onSaveDraft
   } = useManualMeterReading({ scope, feederId });
 
   const isSelectedMeterConfirmed = selectedMeter?.status === 'CONFIRMED';
@@ -224,6 +225,24 @@ const ManualMeterReadingScreen = ({
             />
           </div>
           <Flex justify="end" gap={K_SIZE_8} className="mobile:w-full mobile:flex-col">
+            <ButtonBase
+              type="secondary"
+              customContent={
+                <div className="flex items-center gap-8">
+                  <FileTextOutlined />
+                  <span>Lưu nháp</span>
+                </div>
+              }
+              disabled={
+                savingConfirm ||
+                loadingMeters ||
+                loadingDetail ||
+                hasUnsyncedFilter ||
+                isSelectedMeterConfirmed
+              }
+              onClick={onSaveDraft}
+              classNames="mobile:w-full mobile:justify-center"
+            />
             <ButtonBase
               type="primary"
               customContent={

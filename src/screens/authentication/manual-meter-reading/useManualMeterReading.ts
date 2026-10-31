@@ -1304,6 +1304,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
           periodFrom: periodInfo.from,
           periodTo: periodInfo.to,
           readingDate: filterApplied.readingDate,
+          saveMode,
           readings,
           reactiveEnergyIndex,
           note: optionalValue(meter.note)
@@ -1387,7 +1388,13 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
         return false;
       }
 
-      if (!changedMeterIds.has(meter.id)) {
+      // Kỳ đang nháp (lưu nháp trước đó hoặc kỳ đo xa vừa import) vẫn được bấm Lưu dù chưa sửa ô
+      // nào, để chuyển sang chờ xác nhận.
+      const canPromoteDraft =
+        saveMode === 'SAVED' &&
+        !!meter.periodId &&
+        (meter.status === 'DRAFT' || meter.status === 'REJECTED');
+      if (!changedMeterIds.has(meter.id) && !canPromoteDraft) {
         showToast({ type: TYPE_TOAST.WARNING, content: 'Công tơ chưa có thay đổi để lưu' });
         return false;
       }
@@ -1405,28 +1412,37 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     [changedMeterIds, hasUnsyncedFilter, meters, saveMeterToServer, selectedMeterId]
   );
 
-  const onSave = useCallback(() => {
-    showDialog({
-      title: 'Xác nhận lưu chỉ số',
-      content: 'Bạn có chắc chắn muốn lưu chỉ số công tơ này?',
-      type: TYPE_MESSAGE.CONFIRM,
-      disableTouchOutSide: true,
-      actions: [
-        {
-          title: 'Lưu',
-          type: TYPE_ACTION.PRIMARY,
-          stopHide: true,
-          onPress: async () => {
-            setSavingConfirm(true);
-            const saved = await saveSelectedChangedMeter('DRAFT');
-            setSavingConfirm(false);
-            if (saved) hideDialog();
-          }
-        },
-        { title: 'Hủy', type: TYPE_ACTION.SECONDARY }
-      ]
-    });
-  }, [saveSelectedChangedMeter]);
+  const confirmSave = useCallback(
+    (saveMode: ReadingPeriodSaveMode) => {
+      const isDraft = saveMode === 'DRAFT';
+      showDialog({
+        title: isDraft ? 'Xác nhận lưu nháp' : 'Xác nhận lưu chỉ số',
+        content: isDraft
+          ? 'Lưu nháp chỉ số công tơ này? Kỳ nháp chưa được gửi sang Xác nhận số liệu.'
+          : 'Lưu chỉ số công tơ này? Sau khi lưu, kỳ chỉ số chuyển sang chờ xác nhận.',
+        type: TYPE_MESSAGE.CONFIRM,
+        disableTouchOutSide: true,
+        actions: [
+          {
+            title: isDraft ? 'Lưu nháp' : 'Lưu',
+            type: TYPE_ACTION.PRIMARY,
+            stopHide: true,
+            onPress: async () => {
+              setSavingConfirm(true);
+              const saved = await saveSelectedChangedMeter(saveMode);
+              setSavingConfirm(false);
+              if (saved) hideDialog();
+            }
+          },
+          { title: 'Hủy', type: TYPE_ACTION.SECONDARY }
+        ]
+      });
+    },
+    [saveSelectedChangedMeter]
+  );
+
+  const onSave = useCallback(() => confirmSave('SAVED'), [confirmSave]);
+  const onSaveDraft = useCallback(() => confirmSave('DRAFT'), [confirmSave]);
 
   const onSelectMeterWithUnsavedCheck = useCallback(
     (meterId: string) => {
@@ -1532,6 +1548,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     onRemovePendingPhoto,
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
-    onSave
+    onSave,
+    onSaveDraft
   };
 }
