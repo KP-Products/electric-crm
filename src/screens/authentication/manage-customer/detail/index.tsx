@@ -286,12 +286,6 @@ const ManageCustomerDetailScreen = () => {
               <DetailItem label="Mã khách hàng" value={displayText(customer?.customerCode)} />
               <DetailItem label="Tên khách hàng" value={displayText(customer?.fullName)} />
               <DetailItem label="Mã số thuế" value={displayText(customer?.taxNo)} />
-              <DetailItem label="Số điện thoại" value={displayText(customer?.phone)} />
-              <DetailItem label="Email" value={displayText(customer?.email)} />
-              <DetailItem
-                label="Ngày cấp CMND/CCCD"
-                value={renderDate(customer?.contactIssueDate)}
-              />
               <DetailItem label="Địa chỉ" value={displayText(customer?.address)} />
               <DetailItem label="Ngày tạo" value={renderDateTime(customer?.createdAt)} />
               <DetailItem label="Ngày cập nhật" value={renderDateTime(customer?.updatedAt)} />

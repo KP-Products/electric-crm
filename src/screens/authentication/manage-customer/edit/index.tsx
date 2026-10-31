@@ -1,13 +1,11 @@
 'use client';
 
-import { K_SIZE_24, K_SIZE_8, REQUIRED_MARK } from '@constant';
+import { K_SIZE_24, K_SIZE_8 } from '@constant';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Divider, Flex, Spin } from 'antd';
 import ButtonBase from 'components/button';
-import { AppDatePickerControl } from 'components/date-picker';
 import { IconSvgLocal } from 'components/icon-vec-local';
 import { TextBase } from 'components/text';
-import { AppTextFieldControl } from 'components/text-field';
 import { showToast } from 'components/toast';
 import { TYPE_TOAST } from 'components/toast/type';
 import { ROUTES } from 'config/routes';
@@ -17,9 +15,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import customerServices from 'services/customer-services';
-import { FORMAT_DATE_API } from 'utils/date';
 import documentServices from 'services/document-services';
 import { DOCUMENT_OWNER_TYPE, DOCUMENT_TYPE } from 'model/document';
+import CustomerFormFields from '../customer-form-fields';
 import CustomerDocuments from '../customer-documents';
 import { customerDocumentOwnerId } from '../create-utils';
 import {
@@ -30,8 +28,6 @@ import {
   getCustomerErrorMessage,
   hasApiError
 } from '../useManageCustomer';
-
-const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
 
 const CustomerEditForm = () => {
   const router = useRouter();
@@ -49,7 +45,7 @@ const CustomerEditForm = () => {
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   const form = useForm<CustomerForm>({
-    mode: 'onTouched',
+    mode: 'onChange',
     defaultValues: buildFormValues(),
     resolver: zodResolver(customerSchema)
   });
@@ -217,96 +213,7 @@ const CustomerEditForm = () => {
                   classNames="sub-title3 mb-24 !text-primary-700"
                   text="Thông tin khách hàng"
                 />
-                <div className="grid grid-cols-3 gap-16 tablet:grid-cols-2 mobile:grid-cols-1">
-                  <AppTextFieldControl
-                    name="customerCode"
-                    control={control}
-                    label="Mã khách hàng"
-                    labelSuffix={requiredMark}
-                    placeholder="Nhập mã khách hàng"
-                    disabled
-                  />
-                  <AppTextFieldControl
-                    name="fullName"
-                    control={control}
-                    label="Tên khách hàng"
-                    placeholder="Nhập tên khách hàng"
-                  />
-                  <AppTextFieldControl
-                    name="taxNo"
-                    maxLength={30}
-                    label="Mã số thuế"
-                    placeholder="Nhập mã số thuế"
-                    control={control}
-                  />
-                  <AppTextFieldControl
-                    name="phone"
-                    label="Số điện thoại"
-                    placeholder="Nhập số điện thoại"
-                    control={control}
-                  />
-                  <AppTextFieldControl
-                    name="email"
-                    maxLength={255}
-                    label="Email"
-                    placeholder="Nhập email"
-                    control={control}
-                  />
-                  <AppDatePickerControl
-                    name="contactIssueDate"
-                    control={control}
-                    backendFormat={FORMAT_DATE_API}
-                    label="Ngày cấp CMND/CCCD"
-                    wrapperClassName="w-full"
-                    datePickerClassName="w-full"
-                  />
-                  <AppTextFieldControl
-                    name="address"
-                    label="Địa chỉ"
-                    placeholder="Nhập địa chỉ"
-                    control={control}
-                  />
-                </div>
-                {(
-                  [
-                    { key: 'representative', label: 'Người đại diện' },
-                    { key: 'chiefAccountant', label: 'Kế toán trưởng' },
-                    { key: 'contactPerson', label: 'Người liên hệ' }
-                  ] as const
-                ).map((person) => (
-                  <section key={person.key} className="mt-16 border-t border-color-300 pt-16">
-                    <TextBase classNames="sub-title3 mb-12" text={person.label} />
-                    <div className="grid grid-cols-4 gap-12 mobile:grid-cols-2">
-                      <AppTextFieldControl
-                        name={`${person.key}.fullName`}
-                        label="Tên"
-                        placeholder="Nhập tên"
-                        control={control}
-                        maxLength={255}
-                      />
-                      <AppTextFieldControl
-                        name={`${person.key}.idNo`}
-                        label="CCCD"
-                        placeholder="Nhập CCCD"
-                        control={control}
-                        maxLength={12}
-                      />
-                      <AppTextFieldControl
-                        name={`${person.key}.phone`}
-                        label="SĐT"
-                        placeholder="Nhập số điện thoại"
-                        control={control}
-                      />
-                      <AppTextFieldControl
-                        name={`${person.key}.email`}
-                        label="Email"
-                        placeholder="Nhập email"
-                        control={control}
-                        maxLength={255}
-                      />
-                    </div>
-                  </section>
-                ))}
+                <CustomerFormFields control={control} customerCodeDisabled />
                 {customer?.id && (
                   <CustomerDocuments
                     customerId={customer.id}
