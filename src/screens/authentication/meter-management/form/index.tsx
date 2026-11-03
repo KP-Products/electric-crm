@@ -120,6 +120,20 @@ const MeterFormContent = (props: ManageMeterFormProps) => {
               isView={isView}
               control={control}
             />
+            <AppTextFieldControl
+              name="manufacturer"
+              label="Hãng"
+              placeholder="Nhập hãng"
+              isView={isView}
+              control={control}
+            />
+            <AppTextFieldControl
+              name="supplier"
+              label="Nhà cung cấp"
+              placeholder="Nhập nhà cung cấp"
+              isView={isView}
+              control={control}
+            />
             <AppSelectControl
               name="parentId"
               label="Công tơ cha/Lộ tổng"

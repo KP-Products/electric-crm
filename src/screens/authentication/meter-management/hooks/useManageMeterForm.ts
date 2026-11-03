@@ -67,6 +67,8 @@ export const meterSchema = (t: TypedT) => {
         .trim()
         .min(K_SIZE_1, { message: t('validate:required', { name: 'Trạng thái' }) }),
       purchaseDate: optionalString,
+      manufacturer: optionalString,
+      supplier: optionalString,
       installationDate: optionalString,
       multiplierEffectiveFrom: z
         .string()
@@ -136,6 +138,8 @@ export interface ManageMeterFormProps {
 
 const defaultMeterFormValues: MeterForm = {
   meterCode: '',
+  manufacturer: '',
+  supplier: '',
   status: METER_STATUS.ACTIVE,
   meterType: '',
   parentId: '',
@@ -203,6 +207,8 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
   const mapMeterToForm = useCallback(
     (meter: Meter): MeterForm => ({
       meterCode: meter.meterCode || '',
+      manufacturer: meter.manufacturer || '',
+      supplier: meter.supplier || '',
       status: normalizeMeterStatus(meter.status),
       meterType: normalizeMeterType(meter.meterType),
       parentId: meter.parentId || '',
@@ -293,6 +299,8 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
   const buildSubmitBody = useCallback((data: MeterForm): AddMeterReq => {
     const body: AddMeterReq = {
       meterCode: data.meterCode.trim(),
+      manufacturer: data.manufacturer.trim(),
+      supplier: data.supplier.trim(),
       status: data.status,
       meterType: data.meterType || undefined,
       parentId: shouldSelectParentMeter(data.meterType) ? data.parentId || undefined : undefined,

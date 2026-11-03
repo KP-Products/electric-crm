@@ -4,6 +4,8 @@ export interface Meter {
   id?: string;
   meterId: string;
   meterCode: string;
+  manufacturer?: string;
+  supplier?: string;
   meterType?: string;
   customerId?: number;
   locationId?: string;
@@ -88,6 +90,8 @@ export interface GetMeterDetailRes extends ResultBase<MeterSearchItem> {}
 export interface AddMeterReq {
   multiplierEffectiveFrom?: string;
   meterCode: string;
+  manufacturer?: string;
+  supplier?: string;
   customerId?: number;
   purchaseDate?: string;
   installationDate?: string;
