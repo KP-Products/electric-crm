@@ -39,7 +39,8 @@ import useElectricTariff, {
   ElectricTariffFilter,
   TariffTouPriceRow,
   TARIFF_PRICE_TYPE,
-  TARIFF_STATUS
+  TARIFF_STATUS,
+  TARIFF_USAGE_PURPOSE_OPTIONS
 } from './useElectricTariff';
 
 const DATE_API_FORMAT = FORMAT_DATE_API;
@@ -242,6 +243,16 @@ const ElectricTariffScreen = () => {
         key: 'voltageLevel',
         width: K_SIZE_130,
         render: (text: string) => VOLTAGE_LEVEL_LABEL_MAP[text] || text || NULL_VALUE
+      },
+      {
+        title: 'Mục đích sử dụng',
+        dataIndex: 'usagePurpose',
+        key: 'usagePurpose',
+        width: K_SIZE_160,
+        render: (value: string) =>
+          TARIFF_USAGE_PURPOSE_OPTIONS.find((option) => option.value === value)?.label ||
+          value ||
+          NULL_VALUE
       },
       {
         title: 'Hiệu lực từ',
@@ -528,6 +539,14 @@ const ElectricTariffScreen = () => {
                 options={PRICE_TYPE_OPTIONS}
               />
               <AppSelectControl
+                name="usagePurpose"
+                control={tariffControl}
+                label="Mục đích sử dụng"
+                placeholder="Chọn mục đích sử dụng"
+                options={TARIFF_USAGE_PURPOSE_OPTIONS}
+                unSeleted
+              />
+              <AppSelectControl
                 name="voltageLevel"
                 control={tariffControl}
                 label="Cấp điện áp"
@@ -607,6 +626,18 @@ const ElectricTariffScreen = () => {
                 value={
                   VOLTAGE_LEVEL_LABEL_MAP[selectedDetail?.tariff?.voltageLevel || ''] ||
                   selectedDetail?.tariff?.voltageLevel ||
+                  ''
+                }
+                isView
+              />
+              <AppTextField
+                name="detailUsagePurpose"
+                label="Mục đích sử dụng"
+                value={
+                  TARIFF_USAGE_PURPOSE_OPTIONS.find(
+                    (option) => option.value === selectedDetail?.tariff?.usagePurpose
+                  )?.label ||
+                  selectedDetail?.tariff?.usagePurpose ||
                   ''
                 }
                 isView
