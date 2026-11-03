@@ -42,6 +42,8 @@ const ApiEndPoint = {
   CUSTOMER_DETAIL: '/admin/customers/detail',
   // MANAGE CUSTOMERS
 
+  SYSTEM_LOG_HISTORY: '/admin/system-logs/history',
+
   // CONTRACT
   CONTRACT_CREATE: '/contracts/create',
   CONTRACT_UPDATE: '/contracts/update',
