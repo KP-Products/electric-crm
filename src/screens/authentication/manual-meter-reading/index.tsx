@@ -17,7 +17,6 @@ import { AppSelect } from 'components/select';
 import CustomDropSearchMore from 'components/select/CustomDropSearchMore';
 import Status, { KIND_STATUS, TYPE_STATUS } from 'components/status';
 import { TextBase } from 'components/text';
-import { AppTextField } from 'components/text-field';
 import { ROUTES } from 'config/routes';
 import PageWithBreadcrumb from 'layout/AppLayout/PageWithBreadcumb';
 import dayjs from 'dayjs';
@@ -273,30 +272,9 @@ const ManualMeterReadingScreen = ({
           />
           <div
             className={`grid items-end gap-12 ${
-              isFeederScope ? 'grid-cols-3' : 'grid-cols-5'
+              isFeederScope ? 'grid-cols-3' : 'grid-cols-4'
             } desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1`}
           >
-            {!isFeederScope && (
-              <AppTextField
-                name="keyword"
-                label="Khách hàng"
-                placeholder={KEYWORD_PLACEHOLDER[filterDraft.searchBy] || 'Nhập từ khoá tìm kiếm'}
-                value={filterDraft.keyword}
-                prefix={<SearchOutlined className="text-color-600" />}
-                onChange={(event) => onChangeFilter('keyword', event.target.value)}
-                onPressEnter={onApplyFilter}
-              />
-            )}
-            {!isFeederScope && (
-              <AppSelect
-                name="searchBy"
-                label="Tìm theo"
-                placeholder="Chọn tiêu chí"
-                options={searchByOptions}
-                value={filterDraft.searchBy}
-                onSelectOption={({ key }) => onChangeFilter('searchBy', String(key))}
-              />
-            )}
             <AppSelect
               name="customerCode"
               label={searchLookupField.label}
@@ -308,6 +286,16 @@ const ManualMeterReadingScreen = ({
               onSelectOption={({ key }) => onChangeFilter('customerCode', String(key))}
               suffix={<SearchOutlined className="text-color-600" />}
             />
+            {!isFeederScope && (
+              <AppSelect
+                name="searchBy"
+                label="Tìm theo"
+                placeholder="Chọn tiêu chí"
+                options={searchByOptions}
+                value={filterDraft.searchBy}
+                onSelectOption={({ key }) => onChangeFilter('searchBy', String(key))}
+              />
+            )}
             <AppSelect
               name="periodCode"
               label="Kỳ ghi chỉ số"
@@ -754,10 +742,4 @@ const ManualMeterReadingScreen = ({
   );
 };
 
-// Ô từ khoá tìm theo đúng tiêu chí ở ô "Tìm theo" bên cạnh.
-const KEYWORD_PLACEHOLDER: Record<string, string> = {
-  CUSTOMER_CODE: 'Nhập mã khách hàng',
-  CUSTOMER_NAME: 'Nhập tên khách hàng',
-  METER_CODE: 'Nhập mã công tơ'
-};
 export default ManualMeterReadingScreen;
