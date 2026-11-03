@@ -137,6 +137,13 @@ const OperationContractFormContent = ({ isEditMode }: ManageOperationContractFor
                     onOpenChange={onOpenCustomerDropdown}
                     control={control}
                   />
+                  <AppTextFieldControl
+                    name="deviceName"
+                    label="Thiết bị"
+                    placeholder="Nhập tên thiết bị"
+                    control={control}
+                    maxLength={255}
+                  />
                   <AppSelectControl
                     name="status"
                     label="Trạng thái"

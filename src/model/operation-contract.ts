@@ -5,6 +5,7 @@ export interface OperationContract {
   contractId: string;
   contractNumber?: string;
   contractName?: string;
+  deviceName?: string;
   customerId?: number;
   contractValue?: number;
   discountPercent?: number;
@@ -42,6 +43,7 @@ export interface OperationContractIdReq {
 export interface CreateOperationContractReq {
   contractNumber: string;
   contractName: string;
+  deviceName?: string;
   customerId: number;
   contractValue: number;
   discountPercent?: number;
@@ -58,6 +60,7 @@ export interface UpdateOperationContractReq {
   contractValue?: number;
   discountPercent?: number;
   contractName?: string;
+  deviceName?: string;
   customerId?: number;
   contractType?: string;
   signedDate?: string;
