@@ -28,6 +28,7 @@ export const operationContractSchema = z
   .object({
     contractNumber: z.string().trim().min(1, 'Vui lòng nhập số hợp đồng'),
     contractName: z.string().trim().min(1, 'Vui lòng nhập tên hợp đồng'),
+    deviceName: z.string().trim().max(255, 'Thiết bị không được quá 255 ký tự'),
     customerId: z
       .number({ required_error: 'Vui lòng chọn khách hàng' })
       .int()

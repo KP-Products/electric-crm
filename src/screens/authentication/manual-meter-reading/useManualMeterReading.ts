@@ -84,19 +84,14 @@ export interface ManualReadingMeter {
 
 const MAX_READING_PHOTOS = K_SIZE_5;
 const SEARCH_BY_OPTIONS = [
-  { value: 'CUSTOMER_CODE', label: 'Mã khách hàng' },
-  { value: 'CUSTOMER_NAME', label: 'Tên khách hàng' },
+  { value: 'CUSTOMER_CODE', label: 'Khách hàng' },
   { value: 'METER_CODE', label: 'Mã công tơ' }
 ];
 
 const SEARCH_LOOKUP_FIELD_META = {
   CUSTOMER_CODE: {
-    label: 'Mã khách hàng',
-    placeholder: 'Chọn mã khách hàng'
-  },
-  CUSTOMER_NAME: {
-    label: 'Tên khách hàng',
-    placeholder: 'Chọn tên khách hàng'
+    label: 'Mã KH - Tên KH',
+    placeholder: 'Chọn khách hàng'
   },
   METER_CODE: {
     label: 'Mã công tơ',
@@ -181,14 +176,14 @@ const getSearchMeterParamsByField = (searchBy: string, searchValue?: string) => 
 
   return {
     customerCode: searchBy === 'CUSTOMER_CODE' ? normalizedValue : undefined,
-    customerName: searchBy === 'CUSTOMER_NAME' ? normalizedValue : undefined,
     meterCode: searchBy === 'METER_CODE' ? normalizedValue : undefined
   };
 };
 
 function buildUniqueLookupOptions<T>(
   rows: T[],
-  getValue: (row: T) => string | number | undefined | null
+  getValue: (row: T) => string | number | undefined | null,
+  getLabel?: (row: T) => string
 ): AppSelectOption[] {
   const optionMap = new Map<string, AppSelectOption>();
 
@@ -198,7 +193,7 @@ function buildUniqueLookupOptions<T>(
 
     optionMap.set(value, {
       value,
-      label: value,
+      label: getLabel?.(row) || value,
       data: row
     });
   });
@@ -206,9 +201,11 @@ function buildUniqueLookupOptions<T>(
   return Array.from(optionMap.values());
 }
 
-const buildCustomerLookupOptions = (customers: Customer[], searchBy: string): AppSelectOption[] =>
-  buildUniqueLookupOptions(customers, (customer) =>
-    searchBy === 'CUSTOMER_NAME' ? customer.fullName : customer.customerCode
+const buildCustomerLookupOptions = (customers: Customer[]): AppSelectOption[] =>
+  buildUniqueLookupOptions(
+    customers,
+    (customer) => customer.customerCode,
+    (customer) => [customer.customerCode, customer.fullName].filter(Boolean).join(' - ')
   );
 
 const buildMeterLookupOptions = (meters: Meter[]): AppSelectOption[] =>
@@ -606,22 +603,38 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
         return;
       }
 
-      const response = await customerServices.searchCustomer({
-        page: K_SIZE_0,
-        size: DEFAULT_PAGE_SIZE,
-        customerCodeContains: searchBy === 'CUSTOMER_CODE' ? optionalValue(search) : undefined,
-        fullNameContains: searchBy === 'CUSTOMER_NAME' ? optionalValue(search) : undefined
-      });
+      const normalizedSearch = optionalValue(search);
+      const responses = normalizedSearch
+        ? await Promise.all([
+            customerServices.searchCustomer({
+              page: K_SIZE_0,
+              size: DEFAULT_PAGE_SIZE,
+              customerCodeContains: normalizedSearch
+            }),
+            customerServices.searchCustomer({
+              page: K_SIZE_0,
+              size: DEFAULT_PAGE_SIZE,
+              fullNameContains: normalizedSearch
+            })
+          ])
+        : [
+            await customerServices.searchCustomer({
+              page: K_SIZE_0,
+              size: DEFAULT_PAGE_SIZE
+            })
+          ];
 
       if (requestId !== searchLookupRequestIdRef.current) return;
       setSearchLookupLoading(false);
 
-      if (hasApiError(response) || !response.data) {
+      if (responses.some((response) => hasApiError(response) || !response.data)) {
         setSearchLookupOptions([]);
         return;
       }
 
-      setSearchLookupOptions(buildCustomerLookupOptions(response.data.items || [], searchBy));
+      setSearchLookupOptions(
+        buildCustomerLookupOptions(responses.flatMap((response) => response.data?.items || []))
+      );
     },
     [isFeederScope]
   );

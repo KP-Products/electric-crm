@@ -184,6 +184,7 @@ const ManageOperationContractDetailScreen = () => {
                 label="Tên hợp đồng"
                 value={displayText(selectedContract?.contractName)}
               />
+              <DetailItem label="Thiết bị" value={displayText(selectedContract?.deviceName)} />
               <DetailItem
                 label="Khách hàng"
                 value={displayText(

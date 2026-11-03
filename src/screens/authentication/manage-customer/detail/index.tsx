@@ -31,6 +31,7 @@ import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
 import { getContractId, getContractStatusMeta } from '../../manage-contract/utils';
 
 import CustomerDocuments from '../customer-documents';
+import CustomerHistory from '../customer-history';
 import { buildFormValues, getCustomerErrorMessage, hasApiError } from '../useManageCustomer';
 
 const displayText = (value?: string | number | null) => {
@@ -313,6 +314,10 @@ const ManageCustomerDetailScreen = () => {
             {customer?.id && <CustomerDocuments customerId={customer.id} />}
           </section>
         </Spin>
+
+        {!detailLoading && customer?.customerCode && (
+          <CustomerHistory key={customer.customerCode} customerCode={customer.customerCode} />
+        )}
 
         <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
           <Flex justify="space-between" align="center" className="mb-16">

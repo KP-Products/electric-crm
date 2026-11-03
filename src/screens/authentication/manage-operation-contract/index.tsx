@@ -125,6 +125,13 @@ const ManageOperationContractScreen = () => {
         render: (text: string) => renderTruncatedText(text, 'max-w-[280px]')
       },
       {
+        title: 'Thiết bị',
+        dataIndex: 'deviceName',
+        key: 'deviceName',
+        width: K_SIZE_240,
+        render: (text: string) => renderTruncatedText(text, 'max-w-[280px]')
+      },
+      {
         title: 'Khách hàng',
         dataIndex: 'customerName',
         key: 'customerName',

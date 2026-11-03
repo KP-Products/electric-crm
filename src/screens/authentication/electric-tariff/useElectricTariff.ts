@@ -29,6 +29,7 @@ import {
   SearchTariffsReq,
   TariffDetail,
   TariffPriceInput,
+  TariffUsagePurpose,
   UpdateTariffReq
 } from 'model/electric-tariff';
 import moment from 'moment';
@@ -62,6 +63,12 @@ export const TARIFF_PRICE_TYPE = {
   BUY: '1'
 };
 
+export const TARIFF_USAGE_PURPOSE_OPTIONS: { value: TariffUsagePurpose; label: string }[] = [
+  { value: 'PRODUCTION', label: 'Sản xuất' },
+  { value: 'BUSSINESS', label: 'Kinh doanh' },
+  { value: 'OTHER', label: 'Khác' }
+];
+
 const DEFAULT_PRICE_TYPE = TARIFF_PRICE_TYPE.SELL;
 const DEFAULT_VOLTAGE_LEVEL = 'HA_AP';
 const TOU_PRICE_ROWS = [
@@ -87,6 +94,7 @@ const tariffSchema = z.object({
   tariffCode: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập mã giá' }),
   tariffName: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng nhập tên giá' }),
   priceType: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn loại đơn giá' }),
+  usagePurpose: z.enum(['PRODUCTION', 'BUSSINESS', 'OTHER', '']),
   voltageLevel: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn cấp điện áp' }),
   effectiveFrom: z.string().trim().min(K_SIZE_1, { message: 'Vui lòng chọn ngày hiệu lực' }),
   effectiveTo: optionalTextSchema
@@ -225,6 +233,7 @@ export default function useElectricTariff() {
       tariffCode: '',
       tariffName: '',
       priceType: DEFAULT_PRICE_TYPE,
+      usagePurpose: '',
       voltageLevel: DEFAULT_VOLTAGE_LEVEL,
       effectiveFrom: moment().format(DATE_API_FORMAT),
       effectiveTo: ''
@@ -302,6 +311,7 @@ export default function useElectricTariff() {
       tariffCode: '',
       tariffName: '',
       priceType: DEFAULT_PRICE_TYPE,
+      usagePurpose: '',
       voltageLevel: DEFAULT_VOLTAGE_LEVEL,
       effectiveFrom: moment().format(DATE_API_FORMAT),
       effectiveTo: ''
@@ -339,7 +349,8 @@ export default function useElectricTariff() {
         voltageLevel: data.voltageLevel,
         effectiveFrom: normalizeDateToApi(data.effectiveFrom),
         effectiveTo: normalizeDateToApi(data.effectiveTo) || undefined,
-        priceType: data.priceType
+        priceType: data.priceType,
+        usagePurpose: data.usagePurpose || undefined
       };
 
       dispatch({
@@ -474,6 +485,7 @@ export default function useElectricTariff() {
             content: 'Cập nhật bậc giá thành công'
           });
           loadTariffDetail(selectedDetail.tariff?.id || body.id);
+          refreshFirstPage();
           onCloseDetail();
         },
         onFailed: (error?: ErrorBase) => {
@@ -485,7 +497,7 @@ export default function useElectricTariff() {
         }
       }
     });
-  }, [loadTariffDetail, onCloseDetail, selectedDetail?.tariff?.id, touPrices]);
+  }, [loadTariffDetail, onCloseDetail, refreshFirstPage, selectedDetail?.tariff?.id, touPrices]);
 
   const handleUploadTariffDocument = useCallback(() => {
     const tariffId = selectedDetail?.tariff?.id;

@@ -42,6 +42,7 @@ export interface OperationContractFilter {
 export interface OperationContractForm {
   contractNumber: string;
   contractName: string;
+  deviceName: string;
   customerId?: number;
   contractValue: string;
   discountPercent: string;
@@ -64,6 +65,7 @@ export const DEFAULT_OPERATION_CONTRACT_FILTER: OperationContractFilter = {
 export const DEFAULT_OPERATION_CONTRACT_FORM: OperationContractForm = {
   contractNumber: '',
   contractName: '',
+  deviceName: '',
   customerId: undefined,
   contractValue: '',
   discountPercent: '',
@@ -123,6 +125,7 @@ export const buildOperationContractFormValues = (
 ): OperationContractForm => ({
   contractNumber: contract?.contractNumber || '',
   contractName: contract?.contractName || '',
+  deviceName: contract?.deviceName || '',
   customerId: contract?.customerId,
   contractValue:
     contract?.contractValue == null ? '' : formatIntegerWithCommas(contract.contractValue),
@@ -154,6 +157,7 @@ export const buildCreateOperationContractBody = (
 ): CreateOperationContractReq => ({
   contractNumber: data.contractNumber.trim(),
   contractName: data.contractName.trim(),
+  deviceName: normalizeText(data.deviceName),
   customerId: data.customerId!,
   contractValue: parseFormattedIntegerNumber(data.contractValue)!,
   discountPercent: data.discountPercent.trim() ? Number(data.discountPercent) : 0,
@@ -171,6 +175,7 @@ export const buildUpdateOperationContractBody = (
 ): UpdateOperationContractReq => ({
   id,
   contractName: data.contractName.trim(),
+  deviceName: normalizeText(data.deviceName),
   customerId: data.customerId!,
   contractValue: parseFormattedIntegerNumber(data.contractValue)!,
   discountPercent: data.discountPercent.trim() ? Number(data.discountPercent) : 0,

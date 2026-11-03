@@ -1,10 +1,13 @@
 import { PaginationReq, PaginationRes, ResultBase } from './common';
 
+export type TariffUsagePurpose = 'PRODUCTION' | 'BUSSINESS' | 'OTHER';
+
 export interface ElectricTariff {
   id: number;
   tariffCode?: string;
   tariffName?: string;
   customerType?: string;
+  usagePurpose?: TariffUsagePurpose;
   voltageLevel?: string;
   effectiveFrom?: string;
   effectiveTo?: string;
@@ -69,6 +72,7 @@ export interface CreateTariffReq {
   tariffCode: string;
   tariffName: string;
   customerType?: string;
+  usagePurpose?: TariffUsagePurpose;
   voltageLevel: string;
   effectiveFrom: string;
   effectiveTo?: string;
@@ -84,6 +88,7 @@ export interface UpdateTariffReq {
   tariffCode?: string;
   tariffName?: string;
   customerType?: string;
+  usagePurpose?: TariffUsagePurpose;
   voltageLevel?: string;
   effectiveFrom?: string;
   effectiveTo?: string;

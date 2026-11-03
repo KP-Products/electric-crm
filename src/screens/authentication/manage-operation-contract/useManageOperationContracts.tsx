@@ -234,6 +234,7 @@ export default function useManageOperationContracts() {
     const columns = [
       ['contractNumber', 'Số hợp đồng'],
       ['contractName', 'Tên hợp đồng'],
+      ['deviceName', 'Thiết bị'],
       ['customerId', 'Khách hàng'],
       ['contractType', 'Loại hợp đồng'],
       ['signedDate', 'Ngày ký'],
