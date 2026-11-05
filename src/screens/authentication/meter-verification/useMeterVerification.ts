@@ -41,6 +41,7 @@ import {
 import { useAppTranslation } from 'utils/i18n';
 import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 import { z } from 'zod';
+import { METER_TYPE } from '../meter-management/utils/constant';
 import {
   calculateNextVerificationDate,
   DATE_API_FORMAT,
@@ -222,7 +223,8 @@ export default function useMeterVerification() {
       meterCodeContains: '',
       customerId: undefined,
       voltageType: '',
-      status: ''
+      status: '',
+      meterType: METER_TYPE.CUSTOMER
     });
 
     if (!response || !response.data) {
@@ -237,7 +239,11 @@ export default function useMeterVerification() {
       return;
     }
 
-    setMeters((response.data.items || []).map(normalizeMeterSearchItem).filter(Boolean) as Meter[]);
+    setMeters(
+      (response.data.items || [])
+        .map(normalizeMeterSearchItem)
+        .filter((meter): meter is Meter => meter?.meterType === METER_TYPE.CUSTOMER)
+    );
   }, []);
 
   const buildSearchBody = useCallback((page: number, filter: MeterVerificationFilterForm) => {
