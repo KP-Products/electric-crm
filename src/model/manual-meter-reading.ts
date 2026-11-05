@@ -106,6 +106,9 @@ export interface GetReadingPeriodRes extends ResultBase<ReadingPeriodDetail> {}
 export interface PrepareReadingReq {
   meterNumber: string;
   periodCode: string;
+  periodNo: number;
+  periodFrom: string;
+  readingDate: string;
 }
 
 /** 1 khung giờ của kỳ đang nhập — chỉ số cũ do BE tính (kỳ trước, hoặc chỉ số đầu công tơ). */

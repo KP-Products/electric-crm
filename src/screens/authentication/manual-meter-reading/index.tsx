@@ -40,6 +40,18 @@ dayjs.extend(customParseFormat);
 
 const requiredMark = <span className="text-error-600">{REQUIRED_MARK}</span>;
 
+const getPeriodBounds = (periodCode: string) => {
+  const monthYear = /^(\d{2})\/(\d{4})$/.exec(periodCode);
+  const yearMonth = /^KY-(\d{4})-(\d{2})$/.exec(periodCode);
+  const month = monthYear ? monthYear[1] : yearMonth?.[2];
+  const year = monthYear ? monthYear[2] : yearMonth?.[1];
+  const start = month && year ? dayjs(`${year}-${month}-01`, 'YYYY-MM-DD', true) : undefined;
+
+  return start?.isValid()
+    ? { start: start.startOf('month'), end: start.endOf('month') }
+    : undefined;
+};
+
 const formatNumber = (value?: number) => {
   if (value === undefined || value === null || !Number.isFinite(value)) return NULL_VALUE;
   return formatNumberValueWithCommas(value);
@@ -141,6 +153,7 @@ const ManualMeterReadingScreen = ({
     selectedFeederCode,
     selectedFeederName,
     periodOptions,
+    periodNoOptions,
     maxPhotoCount,
     hasUnsyncedFilter,
     loadingMeters,
@@ -178,7 +191,17 @@ const ManualMeterReadingScreen = ({
 
   const hasUnsyncedPeriodInfo =
     filterDraft.periodCode !== filterApplied.periodCode ||
+    filterDraft.periodNo !== filterApplied.periodNo ||
+    filterDraft.periodFrom !== filterApplied.periodFrom ||
+    filterDraft.periodTo !== filterApplied.periodTo ||
     filterDraft.readingDate !== filterApplied.readingDate;
+  const periodBounds = getPeriodBounds(filterDraft.periodCode);
+  const periodFromDate = filterDraft.periodFrom
+    ? dayjs(filterDraft.periodFrom, API_DATE_INPUT_FORMATS)
+    : undefined;
+  const periodToDate = filterDraft.periodTo
+    ? dayjs(filterDraft.periodTo, API_DATE_INPUT_FORMATS)
+    : undefined;
 
   const renderSearchLookupDropdown = useCallback(
     (menuInstance: ReactNode) => (
@@ -272,8 +295,8 @@ const ManualMeterReadingScreen = ({
           />
           <div
             className={`grid items-end gap-12 ${
-              isFeederScope ? 'grid-cols-3' : 'grid-cols-4'
-            } desktop:grid-cols-3 tablet:grid-cols-2 mobile:grid-cols-1`}
+              isFeederScope ? 'grid-cols-4' : 'grid-cols-7'
+            } desktop:grid-cols-4 tablet:grid-cols-2 mobile:grid-cols-1`}
           >
             <AppSelect
               name="customerCode"
@@ -304,6 +327,63 @@ const ManualMeterReadingScreen = ({
               options={periodOptions}
               value={filterDraft.periodCode}
               onSelectOption={({ key }) => onChangeFilter('periodCode', String(key))}
+            />
+            <AppSelect
+              name="periodNo"
+              label="Kỳ"
+              labelSuffix={requiredMark}
+              placeholder="Chọn kỳ"
+              options={periodNoOptions}
+              value={filterDraft.periodNo}
+              onSelectOption={({ key }) => onChangeFilter('periodNo', String(key))}
+            />
+            <AppDatePicker
+              name="periodFrom"
+              label="Từ ngày"
+              labelSuffix={requiredMark}
+              allowClear={false}
+              wrapperClassName="w-full"
+              value={
+                filterDraft.periodFrom
+                  ? dayjs(filterDraft.periodFrom, API_DATE_INPUT_FORMATS)
+                  : undefined
+              }
+              format={FORMAT_DATE_PARAMS}
+              disabledDate={(date) =>
+                Boolean(
+                  (periodBounds &&
+                    (date.isBefore(periodBounds.start, 'day') ||
+                      date.isAfter(periodBounds.end, 'day'))) ||
+                    (periodToDate?.isValid() && !date.isBefore(periodToDate, 'day'))
+                )
+              }
+              onChange={(date) => {
+                onChangeFilter('periodFrom', date ? date.format(FORMAT_DATE_API) : '');
+              }}
+            />
+            <AppDatePicker
+              name="periodTo"
+              label="Đến ngày"
+              labelSuffix={requiredMark}
+              allowClear={false}
+              wrapperClassName="w-full"
+              value={
+                filterDraft.periodTo
+                  ? dayjs(filterDraft.periodTo, API_DATE_INPUT_FORMATS)
+                  : undefined
+              }
+              format={FORMAT_DATE_PARAMS}
+              disabledDate={(date) =>
+                Boolean(
+                  (periodBounds &&
+                    (date.isBefore(periodBounds.start, 'day') ||
+                      date.isAfter(periodBounds.end, 'day'))) ||
+                    (periodFromDate?.isValid() && !date.isAfter(periodFromDate, 'day'))
+                )
+              }
+              onChange={(date) => {
+                onChangeFilter('periodTo', date ? date.format(FORMAT_DATE_API) : '');
+              }}
             />
             <AppDatePicker
               name="readingDate"
@@ -338,11 +418,34 @@ const ManualMeterReadingScreen = ({
             </Flex>
           </div>
           {!hasUnsyncedPeriodInfo && (
-            <div className="mt-12 flex min-h-32 items-center gap-8 rounded-radius-m border border-link-200 bg-link-50 px-12 py-8 text-13 text-link-700">
+            <div className="mt-12 flex min-h-32 flex-wrap items-center gap-x-8 gap-y-4 rounded-radius-m border border-link-200 bg-link-50 px-12 py-8 text-13 text-link-700">
               <CalendarOutlined />
-              <span>
-                Kỳ ghi chỉ số: <b>{periodInfo.label}</b> | Ngày ghi:{' '}
-                <b>{periodInfo.readingDate || NULL_VALUE}</b>
+              <span className="flex flex-wrap items-center gap-4">
+                <span>
+                  Kỳ ghi chỉ số: <b>{filterApplied.periodCode}</b> - Kỳ <b>{periodInfo.periodNo}</b>
+                </span>
+                <span aria-hidden="true">|</span>
+                <span>
+                  Từ ngày:{' '}
+                  <b>
+                    {periodInfo.from
+                      ? dayjs(periodInfo.from, API_DATE_INPUT_FORMATS).format(FORMAT_DATE_PARAMS)
+                      : NULL_VALUE}
+                  </b>
+                </span>
+                <span aria-hidden="true">|</span>
+                <span>
+                  Đến ngày:{' '}
+                  <b>
+                    {periodInfo.to
+                      ? dayjs(periodInfo.to, API_DATE_INPUT_FORMATS).format(FORMAT_DATE_PARAMS)
+                      : NULL_VALUE}
+                  </b>
+                </span>
+                <span aria-hidden="true">|</span>
+                <span>
+                  Ngày ghi: <b>{periodInfo.readingDate || NULL_VALUE}</b>
+                </span>
               </span>
             </div>
           )}
