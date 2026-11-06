@@ -21,6 +21,7 @@ export interface MeterVerification {
 }
 
 export interface MeterVerificationSearchReq extends PaginationReq {
+  deviceType?: string;
   meterId?: string;
   resultStatus?: string;
   certificateNoContains?: string;

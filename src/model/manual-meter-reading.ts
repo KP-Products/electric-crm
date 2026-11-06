@@ -87,8 +87,9 @@ export interface ManualMeterReadingRow extends MeterReadingPeriod {
 
 export interface SearchReadingPeriodsReq extends PaginationReq {
   meterNumber?: string;
-  customerId?: number;
+  customerId?: string;
   periodCode?: string;
+  periodNo?: string;
   status?: string;
   typeInput?: string;
   from?: string;
@@ -106,6 +107,9 @@ export interface GetReadingPeriodRes extends ResultBase<ReadingPeriodDetail> {}
 export interface PrepareReadingReq {
   meterNumber: string;
   periodCode: string;
+  periodNo: number;
+  periodFrom: string;
+  readingDate: string;
 }
 
 /** 1 khung giờ của kỳ đang nhập — chỉ số cũ do BE tính (kỳ trước, hoặc chỉ số đầu công tơ). */

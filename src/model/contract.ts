@@ -36,6 +36,8 @@ export interface ContractMeterChangeEvent {
 export interface AvailableMeter {
   meterId: string;
   meterCode?: string;
+  feederCode?: string;
+  feederName?: string;
   voltageLevel?: string;
   multiplier?: number;
   meterType?: string;

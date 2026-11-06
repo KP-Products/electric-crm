@@ -38,6 +38,9 @@ export interface ManualReadingFilter {
   searchBy: string;
   customerCode: string;
   periodCode: string;
+  periodNo: string;
+  periodFrom: string;
+  periodTo: string;
   readingDate: string;
 }
 
@@ -110,6 +113,9 @@ const DEFAULT_FILTER: ManualReadingFilter = {
   searchBy: 'CUSTOMER_CODE',
   customerCode: '',
   periodCode: dayjs().format('MM/YYYY'),
+  periodNo: '1',
+  periodFrom: dayjs().startOf('month').format(FORMAT_DATE_API),
+  periodTo: dayjs().endOf('month').format(FORMAT_DATE_API),
   readingDate: dayjs().format(FORMAT_DATE_API)
 };
 
@@ -117,6 +123,10 @@ const PERIOD_OPTIONS = Array.from({ length: 12 }, (_, index) => {
   const value = dayjs().subtract(index, 'month').format('MM/YYYY');
   return { value, label: value };
 });
+const PERIOD_NO_OPTIONS = [1, 2, 3].map((periodNo) => ({
+  value: String(periodNo),
+  label: String(periodNo)
+}));
 
 const SUCCESS_MESSAGES = ['success', 'ok'];
 const SUCCESS_CODE_STATUSES = ['0', '00', '000', '0000', '00000', '000000', '200', '201', '204'];
@@ -521,6 +531,9 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       filterDraft.searchBy !== filterApplied.searchBy ||
       filterDraft.customerCode !== filterApplied.customerCode ||
       filterDraft.periodCode !== filterApplied.periodCode ||
+      filterDraft.periodNo !== filterApplied.periodNo ||
+      filterDraft.periodFrom !== filterApplied.periodFrom ||
+      filterDraft.periodTo !== filterApplied.periodTo ||
       filterDraft.readingDate !== filterApplied.readingDate,
     [filterApplied, filterDraft]
   );
@@ -684,13 +697,24 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
 
   const periodInfo = useMemo(() => {
     const range = getPeriodDateRange(filterApplied.periodCode || DEFAULT_FILTER.periodCode);
+    const from = dayjs(filterApplied.periodFrom, FORMAT_DATE_API, true);
+    const to = dayjs(filterApplied.periodTo, FORMAT_DATE_API, true);
     const readingDate = dayjs(filterApplied.readingDate, FORMAT_DATE_API);
 
     return {
       ...range,
+      from: from.isValid() ? from.format(FORMAT_DATE_API) : range.from,
+      to: to.isValid() ? to.format(FORMAT_DATE_API) : range.to,
+      periodNo: filterApplied.periodNo,
       readingDate: readingDate.isValid() ? readingDate.format('DD/MM/YYYY') : ''
     };
-  }, [filterApplied.periodCode, filterApplied.readingDate]);
+  }, [
+    filterApplied.periodCode,
+    filterApplied.periodFrom,
+    filterApplied.periodTo,
+    filterApplied.periodNo,
+    filterApplied.readingDate
+  ]);
 
   const loadPhotoPreviews = useCallback(
     async (photos: ReadingPhoto[]): Promise<ManualReadingUploadedPhoto[]> => {
@@ -713,13 +737,19 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     [createObjectUrl]
   );
 
-  const fetchPreparedRows = useCallback(async (meter: ManualReadingMeter, periodCode: string) => {
-    const response = await manualMeterReadingServices.prepareReadingPeriod({
-      meterNumber: meter.meterCode,
-      periodCode
-    });
-    return hasApiError(response) ? undefined : response.data?.rows;
-  }, []);
+  const fetchPreparedRows = useCallback(
+    async (meter: ManualReadingMeter, appliedFilter: ManualReadingFilter) => {
+      const response = await manualMeterReadingServices.prepareReadingPeriod({
+        meterNumber: meter.meterCode,
+        periodCode: appliedFilter.periodCode,
+        periodNo: Number(appliedFilter.periodNo),
+        periodFrom: appliedFilter.periodFrom,
+        readingDate: appliedFilter.readingDate
+      });
+      return hasApiError(response) ? undefined : response.data?.rows;
+    },
+    []
+  );
 
   const fetchMeterPeriod = useCallback(
     async (meter: ManualReadingMeter, appliedFilter: ManualReadingFilter) => {
@@ -729,6 +759,8 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       const searchResponse = await manualMeterReadingServices.searchReadingPeriods({
         page: K_SIZE_0,
         size: K_SIZE_1,
+        typeInput: '1',
+        periodNo: appliedFilter.periodNo,
         meterNumber: meter.meterCode,
         // Mọi nguồn nhập (tay, đo xa, theo lộ): mỗi công tơ chỉ có 1 kỳ / mã kỳ. Lọc riêng kỳ nhập
         // tay thì kỳ đo xa bị bỏ sót → lưu sẽ gọi tạo mới và trùng kỳ (uq_meter_period).
@@ -746,7 +778,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
 
       const period = searchResponse.data?.items?.[K_SIZE_0];
       if (!period?.id) {
-        const preparedRows = await fetchPreparedRows(meter, appliedFilter.periodCode);
+        const preparedRows = await fetchPreparedRows(meter, appliedFilter);
         setMeters((prev) =>
           updateMeter(prev, meter.id, (item) => mapPreparedToNewPeriodMeter(item, preparedRows))
         );
@@ -781,6 +813,8 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       const response = await manualMeterReadingServices.searchReadingPeriods({
         page: K_SIZE_0,
         size: DEFAULT_PAGE_SIZE,
+        customerId: appliedFilter.customerCode,
+        typeInput: '1',
         periodCode: appliedFilter.periodCode
       });
       if (hasApiError(response)) return meterList;
@@ -954,14 +988,37 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
 
   const onChangeFilter = useCallback(
     (key: keyof ManualReadingFilter, value: string) => {
-      // Kỳ / ngày ghi áp dụng ngay (giữ nguyên bộ lọc khách hàng đã tìm).
-      if (key === 'periodCode' || key === 'readingDate') {
+      // Kỳ / khoảng ngày / ngày ghi áp dụng ngay (giữ nguyên bộ lọc khách hàng đã tìm).
+      if (
+        key === 'periodCode' ||
+        key === 'periodNo' ||
+        key === 'periodFrom' ||
+        key === 'periodTo' ||
+        key === 'readingDate'
+      ) {
         if (filterDraft[key] === value && filterApplied[key] === value) return;
-        const nextApplied = { ...filterApplied, [key]: value };
+        const nextApplied =
+          key === 'periodCode'
+            ? {
+                ...filterApplied,
+                periodCode: value,
+                periodFrom: getPeriodDateRange(value).from,
+                periodTo: getPeriodDateRange(value).to
+              }
+            : { ...filterApplied, [key]: value };
         const apply = () => {
-          setFilterDraft((prev) => ({ ...prev, [key]: value }));
+          setFilterDraft((prev) =>
+            key === 'periodCode'
+              ? {
+                  ...prev,
+                  periodCode: value,
+                  periodFrom: nextApplied.periodFrom,
+                  periodTo: nextApplied.periodTo
+                }
+              : { ...prev, [key]: value }
+          );
           setFilterApplied(nextApplied);
-          if (key === 'periodCode') {
+          if (key !== 'readingDate') {
             void reloadForPeriod(nextApplied);
           }
         };
@@ -975,8 +1032,8 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
         showDialog({
           title: 'Đổi kỳ ghi chỉ số',
           content: unsaved
-            ? `Có ${unsaved} công tơ đã sửa chưa lưu ở kỳ ${filterApplied.periodCode}. Chuyển sang kỳ ${value} sẽ bỏ các thay đổi này và tải dữ liệu kỳ ${value}. Bạn có muốn tiếp tục?`
-            : `Chuyển sang kỳ ${value} và tải dữ liệu chỉ số kỳ ${value} cho các công tơ đang hiển thị?`,
+            ? `Có ${unsaved} công tơ đã sửa chưa lưu ở kỳ ${filterApplied.periodCode}. Thay đổi thông tin kỳ sẽ bỏ các thay đổi này và tải lại dữ liệu. Bạn có muốn tiếp tục?`
+            : `Tải lại dữ liệu chỉ số theo thông tin kỳ đã chọn cho các công tơ đang hiển thị?`,
           type: TYPE_MESSAGE.CONFIRM,
           disableTouchOutSide: true,
           actions: [
@@ -1259,10 +1316,24 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
         return false;
       }
 
-      if (!periodInfo.from || !periodInfo.to || !filterApplied.readingDate) {
+      const periodFrom = dayjs(filterApplied.periodFrom, FORMAT_DATE_API, true);
+      const periodTo = dayjs(filterApplied.periodTo, FORMAT_DATE_API, true);
+      const selectedPeriodRange = getPeriodDateRange(filterApplied.periodCode);
+      const selectedPeriodStart = dayjs(selectedPeriodRange.from, FORMAT_DATE_API, true);
+      const selectedPeriodEnd = dayjs(selectedPeriodRange.to, FORMAT_DATE_API, true);
+      if (
+        !periodInfo.from ||
+        !periodInfo.to ||
+        !filterApplied.readingDate ||
+        !periodFrom.isValid() ||
+        !periodTo.isValid() ||
+        !periodTo.isAfter(periodFrom, 'day') ||
+        periodFrom.isBefore(selectedPeriodStart, 'day') ||
+        periodTo.isAfter(selectedPeriodEnd, 'day')
+      ) {
         showToast({
           type: TYPE_TOAST.ERROR,
-          content: 'Vui lòng chọn kỳ ghi chỉ số và ngày ghi chỉ số'
+          content: 'Vui lòng chọn khoảng ngày hợp lệ trong kỳ ghi chỉ số'
         });
         return false;
       }
@@ -1347,6 +1418,8 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     },
     [
       filterApplied.periodCode,
+      filterApplied.periodFrom,
+      filterApplied.periodTo,
       filterApplied.readingDate,
       hasUnsyncedFilter,
       periodInfo.from,
@@ -1505,6 +1578,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     selectedFeederCode: selectedFeeder?.meterCode || '',
     selectedFeederName: selectedFeeder?.customerName || '',
     periodOptions: PERIOD_OPTIONS,
+    periodNoOptions: PERIOD_NO_OPTIONS,
     maxPhotoCount: MAX_READING_PHOTOS,
     hasUnsyncedFilter,
     loadingMeters,

@@ -69,7 +69,6 @@ const MeterVerificationScreen = () => {
   const { isMobile, isTablet } = useResponsive();
   const {
     t,
-    configs,
     meterOptions,
     verifications,
     filterDraft,
@@ -97,7 +96,6 @@ const MeterVerificationScreen = () => {
     onSubmit,
     resetComputedNextDate,
     getMeterLabel,
-    getEquipmentTypeLabel,
     getResultStatusLabel
   } = useMeterVerification();
 
@@ -139,13 +137,6 @@ const MeterVerificationScreen = () => {
         key: 'meterId',
         width: K_SIZE_220,
         render: (meterId: string) => renderTruncatedText(getMeterLabel(meterId), 'max-w-[260px]')
-      },
-      {
-        title: 'Loại thiết bị',
-        dataIndex: 'deviceType',
-        key: 'deviceType',
-        width: K_SIZE_160,
-        render: getEquipmentTypeLabel
       },
       {
         title: 'Ngày kiểm định',
@@ -228,7 +219,7 @@ const MeterVerificationScreen = () => {
         )
       }
     ],
-    [getEquipmentTypeLabel, getMeterLabel, getResultStatusLabel, onDelete, onOpenUpdate, t]
+    [getMeterLabel, getResultStatusLabel, onDelete, onOpenUpdate, t]
   );
 
   const breadcrumbList = [
@@ -383,18 +374,6 @@ const MeterVerificationScreen = () => {
                 labelSuffix={requiredMark}
                 placeholder="Chọn công tơ"
                 options={meterOptions}
-                control={control}
-                disabled={Boolean(selectedVerification)}
-              />
-              <AppSelectControl
-                name="deviceType"
-                label="Loại công tơ / thiết bị"
-                labelSuffix={requiredMark}
-                placeholder="Chọn loại thiết bị"
-                options={configs.map((config) => ({
-                  value: config.equipmentType,
-                  label: config.label
-                }))}
                 control={control}
                 disabled={Boolean(selectedVerification)}
               />

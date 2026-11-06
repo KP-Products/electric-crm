@@ -36,6 +36,7 @@ export const ROUTES = {
 
   DEFAULT_PARAMETERS: '/default-parameters',
   // METER
+  MASTER_DEVICE_CATALOG: '/device-catalog',
   METER_MANAGEMENT: '/meter-management',
   MANAGE_METER_ADD: '/meter-management/add',
   MANAGE_METER_EDIT: '/meter-management/edit',
@@ -46,6 +47,10 @@ export const ROUTES = {
   MEASURING_DEVICE_ADD: '/measuring-devices/add',
   MEASURING_DEVICE_EDIT: '/measuring-devices/edit',
   MEASURING_DEVICE_DETAIL: '/measuring-devices/detail',
+  ELECTRICAL_DEVICE_VERIFICATION: '/electrical-device-verification',
+  ELECTRICAL_DEVICE_VERIFICATION_ADD: '/electrical-device-verification/add',
+  ELECTRICAL_DEVICE_VERIFICATION_EDIT: '/electrical-device-verification/edit',
+  ELECTRICAL_DEVICE_VERIFICATION_DETAIL: '/electrical-device-verification/detail',
   PPE_ITEMS: '/ppe-items',
   PPE_ITEM_DETAIL: '/ppe-items/detail',
   PPE_ITEM_HISTORY: '/ppe-item-history',
