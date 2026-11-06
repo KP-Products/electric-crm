@@ -87,8 +87,9 @@ export interface ManualMeterReadingRow extends MeterReadingPeriod {
 
 export interface SearchReadingPeriodsReq extends PaginationReq {
   meterNumber?: string;
-  customerId?: number;
+  customerId?: string;
   periodCode?: string;
+  periodNo?: string;
   status?: string;
   typeInput?: string;
   from?: string;

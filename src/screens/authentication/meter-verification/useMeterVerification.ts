@@ -249,7 +249,8 @@ export default function useMeterVerification() {
   const buildSearchBody = useCallback((page: number, filter: MeterVerificationFilterForm) => {
     const body = {
       page: page - K_SIZE_1,
-      size: DEFAULT_PAGE_SIZE
+      size: DEFAULT_PAGE_SIZE,
+      deviceType: 'METER'
     };
 
     return {
@@ -436,7 +437,7 @@ export default function useMeterVerification() {
             : {
                 ...baseRequest,
                 meterId: data.meterId,
-                deviceType: data.deviceType || undefined
+                deviceType: 'METER'
               },
           onSuccess: () => {
             showToast({ type: TYPE_TOAST.SUCCESS, content: 'Lưu ngày kiểm định thành công' });

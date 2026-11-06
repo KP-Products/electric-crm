@@ -315,9 +315,7 @@ const ManageCustomerDetailScreen = () => {
           </section>
         </Spin>
 
-        {!detailLoading && customer?.customerCode && (
-          <CustomerHistory key={customer.customerCode} customerCode={customer.customerCode} />
-        )}
+        {!detailLoading && customer?.id && <CustomerHistory key={customer.id} id={customer.id} />}
 
         <section className="mt-16 rounded-radius-l border border-color-300 bg-color-50 p-16">
           <Flex justify="space-between" align="center" className="mb-16">

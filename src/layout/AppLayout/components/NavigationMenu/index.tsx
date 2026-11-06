@@ -91,13 +91,6 @@ const NavigationMenu = () => {
             type: 'item'
           },
           {
-            key: ROUTES.METER_VERIFICATION,
-            label: 'Kiểm định công tơ',
-            icon: <CarryOutOutlined />,
-            type: 'item',
-            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
-          },
-          {
             key: ROUTES.DEFAULT_PARAMETERS,
             label: t('menu:default_parameter_management'),
             icon: <ReconciliationOutlined />,
@@ -192,6 +185,27 @@ const NavigationMenu = () => {
             key: ROUTES.METER_CHANGE_EVENTS,
             label: 'Biến động công tơ/TU/TI',
             icon: <SwapOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.METER_VERIFICATION,
+            label: 'Kiểm định công tơ',
+            icon: <CarryOutOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.MASTER_DEVICE_CATALOG,
+            label: 'Danh mục thiết bị',
+            icon: <SettingOutlined />,
+            type: 'item',
+            permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
+          },
+          {
+            key: ROUTES.ELECTRICAL_DEVICE_VERIFICATION,
+            label: 'Theo dõi kiểm định thiết bị',
+            icon: <CarryOutOutlined />,
             type: 'item',
             permission: PERMISSION_VIEW_ACTION.SYSTEM_MANAGEMENT_CUSTOMER_GROUP_VIEW_ACTION
           },

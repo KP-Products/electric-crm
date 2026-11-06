@@ -759,6 +759,8 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       const searchResponse = await manualMeterReadingServices.searchReadingPeriods({
         page: K_SIZE_0,
         size: K_SIZE_1,
+        typeInput: '1',
+        periodNo: appliedFilter.periodNo,
         meterNumber: meter.meterCode,
         // Mọi nguồn nhập (tay, đo xa, theo lộ): mỗi công tơ chỉ có 1 kỳ / mã kỳ. Lọc riêng kỳ nhập
         // tay thì kỳ đo xa bị bỏ sót → lưu sẽ gọi tạo mới và trùng kỳ (uq_meter_period).
@@ -811,6 +813,8 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       const response = await manualMeterReadingServices.searchReadingPeriods({
         page: K_SIZE_0,
         size: DEFAULT_PAGE_SIZE,
+        customerId: appliedFilter.customerCode,
+        typeInput: '1',
         periodCode: appliedFilter.periodCode
       });
       if (hasApiError(response)) return meterList;

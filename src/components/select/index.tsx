@@ -44,6 +44,7 @@ export interface AppSelectProps extends InputProps {
   disabledInput?: boolean;
   isLoading?: boolean;
   triggerDropdown?: DropdownProps['trigger'];
+  overlayClassName?: string;
   placement?:
     | 'bottomRight'
     | 'topLeft'
@@ -106,6 +107,7 @@ export function AppSelect(props: AppSelectProps) {
     placement,
     suffix,
     triggerDropdown,
+    overlayClassName = 'z-[5] [&_.ant-dropdown-menu-vertical]:max-h-full',
     isView = false,
     classNameIsView = '',
     classNameMore,
@@ -188,7 +190,7 @@ export function AppSelect(props: AppSelectProps) {
           disabled={disabled}
           placement={placement}
           dropdownRender={dropdownRender || dropdownRenderDefault}
-          overlayClassName="z-[5] [&_.ant-dropdown-menu-vertical]:max-h-full"
+          overlayClassName={overlayClassName}
         >
           <div
             className={` rounded-radius-m border border-color-300

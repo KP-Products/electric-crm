@@ -90,6 +90,23 @@ const ApiEndPoint = {
   MEASURING_DEVICE_DELETE: '/admin/measuring-devices/delete',
   // MEASURING DEVICE
 
+  // ELECTRICAL DEVICE VERIFICATION
+  ELECTRICAL_DEVICE_SEARCH: '/admin/electrical-devices/search',
+  ELECTRICAL_DEVICE_DETAIL: '/admin/electrical-devices/detail',
+  ELECTRICAL_DEVICE_CREATE: '/admin/electrical-devices/create',
+  ELECTRICAL_DEVICE_UPDATE: '/admin/electrical-devices/update',
+  INSPECTION_LOCATION_SEARCH: '/admin/inspection-locations/search',
+  INSPECTION_LOCATION_DETAIL: '/admin/inspection-locations/detail',
+  INSPECTION_LOCATION_CREATE: '/admin/inspection-locations/create',
+  INSPECTION_LOCATION_UPDATE: '/admin/inspection-locations/update',
+  INSPECTION_LOCATION_DELETE: '/admin/inspection-locations/delete',
+  MASTER_DEVICE_SEARCH: '/admin/master-devices/search',
+  MASTER_DEVICE_DETAIL: '/admin/master-devices/detail',
+  MASTER_DEVICE_CREATE: '/admin/master-devices/create',
+  MASTER_DEVICE_UPDATE: '/admin/master-devices/update',
+  MASTER_DEVICE_DELETE: '/admin/master-devices/delete',
+  // ELECTRICAL DEVICE VERIFICATION
+
   // METER VERIFICATION
   METER_VERIFICATION_SEARCH: '/admin/meter-verifications/search',
   METER_VERIFICATION_LIST: '/admin/meter-verifications/list',

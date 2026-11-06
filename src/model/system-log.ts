@@ -21,8 +21,7 @@ export interface SystemLog {
 }
 
 export interface SystemLogHistoryReq extends PaginationReq {
-  /** Với entityName = customers, dùng customerCode, không dùng ID số của khách hàng. */
-  changeId: string;
+  changeId: number;
   entityName: string;
 }
 

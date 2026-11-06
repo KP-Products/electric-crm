@@ -20,7 +20,8 @@ export const METER_STATUS_LABEL_MAP: Record<string, string> = {
   WAREHOUSE: 'Lưu kho',
   NEW: 'Lưu kho',
   INSTALLED: 'Đã lắp',
-  USING: 'Đã lắp'
+  USING: 'Đã lắp',
+  REMOVE: 'Đã gỡ bỏ'
 };
 
 export const METER_STATUS_TYPE_MAP: Record<string, TYPE_STATUS> = {
@@ -32,7 +33,8 @@ export const METER_STATUS_TYPE_MAP: Record<string, TYPE_STATUS> = {
   WAREHOUSE: TYPE_STATUS.PENDING,
   NEW: TYPE_STATUS.PENDING,
   INSTALLED: TYPE_STATUS.SUCCESS,
-  USING: TYPE_STATUS.SUCCESS
+  USING: TYPE_STATUS.SUCCESS,
+  REMOVE: TYPE_STATUS.DISABLED
 };
 
 export const METER_TYPE = {

@@ -208,7 +208,15 @@ export default function useContractForm({ isEditMode }: UseContractFormProps) {
   }, [editingContractId, selectedCustomerId, meterRetry]);
 
   const feederOptions = useMemo(
-    () => feeders.map((feeder) => ({ value: feeder.meterId, label: feeder.meterCode || '' })),
+    () => {
+      const uniqueFeeders = new Map<string, { value: string; label: string }>();
+      feeders.forEach((feeder) => {
+        const value = feeder.feederId || feeder.meterId;
+        const label = feeder.feederName || feeder.feederCode || feeder.meterCode || value;
+        if (value && !uniqueFeeders.has(value)) uniqueFeeders.set(value, { value, label });
+      });
+      return Array.from(uniqueFeeders.values());
+    },
     [feeders]
   );
   const meterById = useMemo(() => {

@@ -7,7 +7,7 @@ import {
   K_SIZE_120,
   K_SIZE_160,
   K_SIZE_200,
-  K_SIZE_8
+  K_SIZE_8, K_SIZE_130
 } from '@constant';
 import { Divider, Flex, Spin, type TableColumnsType } from 'antd';
 import ButtonBase from 'components/button';
@@ -34,6 +34,7 @@ import {
   getContractStatusMeta,
   renderContractDate
 } from '../utils';
+import { getMeterStatusLabel, getMeterStatusType } from '../../meter-management/utils/constant';
 
 const DetailItem = ({ label, value }: { label: string; value: ReactNode }) => (
   <div className="min-w-0">
@@ -90,6 +91,27 @@ const ManageContractDetailScreen = () => {
         key: 'installationDate',
         width: K_SIZE_200,
         render: (date?: string) => renderContractDate(date)
+      },
+      {
+        title: 'Ngày gỡ bỏ',
+        dataIndex: 'remove_at',
+        key: 'remove_at',
+        width: K_SIZE_200,
+        render: (date?: string) => renderContractDate(date)
+      },
+      {
+        title: 'Trạng thái',
+        dataIndex: 'status',
+        key: 'status',
+        align: 'left',
+        width: K_SIZE_130,
+        render: (status: string) => (
+          <Status
+            type={getMeterStatusType(status)}
+            kind={KIND_STATUS.SECONDARY}
+            content={getMeterStatusLabel(status)}
+          />
+        )
       }
     ],
     []

@@ -55,7 +55,7 @@ const HistoryChanges = ({ log }: { log: SystemLog }) => {
   );
 };
 
-export default function CustomerHistory({ customerCode }: { customerCode: string }) {
+export default function CustomerHistory({ id }: { id: number }) {
   const [page, setPage] = useState(K_SIZE_1);
   const [revision, setRevision] = useState(0);
   const [logs, setLogs] = useState<SystemLog[]>([]);
@@ -69,7 +69,7 @@ export default function CustomerHistory({ customerCode }: { customerCode: string
     setFailed(false);
     const load = async () => {
       const response = await systemLogServices.getHistory({
-        changeId: customerCode,
+        changeId: id,
         entityName: 'customers',
         page: page - K_SIZE_1,
         size: K_SIZE_20
@@ -90,7 +90,7 @@ export default function CustomerHistory({ customerCode }: { customerCode: string
     return () => {
       active = false;
     };
-  }, [customerCode, page, revision]);
+  }, [id, page, revision]);
 
   const columns = useMemo<ColumnsType<SystemLog>>(
     () => [
