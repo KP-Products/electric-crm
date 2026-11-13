@@ -1,5 +1,5 @@
-const THOUSAND_SEPARATOR = ',';
-const DECIMAL_SEPARATOR = '.';
+const THOUSAND_SEPARATOR = '.';
+const DECIMAL_SEPARATOR = ',';
 
 export const sanitizeIntegerInput = (value?: string | number | null) =>
   String(value ?? '').replace(/\D/g, '');
@@ -33,7 +33,7 @@ export const isFormattedIntegerInput = (value?: string | number | null) => {
   return (
     !normalizedValue ||
     /^\d+$/.test(normalizedValue) ||
-    /^\d{1,3}(?:,\d{3})+$/.test(normalizedValue)
+    /^\d{1,3}(?:\.\d{3})+$/.test(normalizedValue)
   );
 };
 
@@ -84,7 +84,7 @@ export const normalizeFormattedNumberInput = (value?: string | number | null) =>
 
   if (hasDot) {
     const dotCount = (unsignedValue.match(/\./g) || []).length;
-    if (dotCount > 1 && /^\d{1,3}(?:\.\d{3})+$/.test(unsignedValue)) {
+    if (dotCount > 0 && /^\d{1,3}(?:\.\d{3})+$/.test(unsignedValue)) {
       return `${sign}${unsignedValue.replace(/\./g, '')}`;
     }
 
@@ -144,16 +144,18 @@ export const parseFormattedNumber = (value?: string | number | null) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-// Controlled inputs already display en-US separators. Do not infer a new locale
-// from partially edited groups (for example, typing 5 after "1,234").
+// Controlled inputs use Vietnamese separators. Do not infer a new locale
+// from partially edited groups while the user types.
 export const formatDecimalInputWithCommas = (value?: string | number | null) => {
-  const input = String(value ?? '').replace(/[^\d.]/g, '');
+  const input = String(value ?? '').replace(/[^\d,.]/g, '');
   if (!input) return '';
 
-  const [integerPart, ...fractionParts] = input.split('.');
-  const digits = normalizeIntegerDigits(integerPart) || '0';
+  const decimalIndex = input.lastIndexOf(',');
+  const integerPart = decimalIndex < 0 ? input : input.slice(0, decimalIndex);
+  const decimalPart = decimalIndex < 0 ? undefined : input.slice(decimalIndex + 1).replace(/,/g, '');
+  const digits = normalizeIntegerDigits(integerPart.replace(/\D/g, '')) || '0';
   return `${formatIntegerPart(digits)}${
-    fractionParts.length ? `${DECIMAL_SEPARATOR}${fractionParts.join('')}` : ''
+    decimalPart !== undefined ? `${DECIMAL_SEPARATOR}${decimalPart}` : ''
   }`;
 };
 
@@ -164,7 +166,7 @@ export const formatNumberValueWithCommas = (
   const parsedValue = parseFormattedNumber(value);
   if (parsedValue === undefined) return '';
 
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('vi-VN', {
     maximumFractionDigits: 3,
     ...options
   }).format(parsedValue);

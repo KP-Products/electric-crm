@@ -135,15 +135,13 @@ const MeterManagementScreen = () => {
         }
       },
       {
-        title: 'Mã khách hàng',
-        dataIndex: 'customerId',
-        key: 'customerId',
+        title: 'Tên khách hàng',
+        dataIndex: 'customerName',
+        key: 'customerName',
         align: 'left',
         width: K_SIZE_150,
-        render: (customerId: number, record: Meter) => (
-          <span title={String(customerId || record.customerName || '')}>
-            {customerId || record.customerName || NULL_VALUE}
-          </span>
+        render: (customerName: string) => (
+          <span title={customerName}>{customerName || NULL_VALUE}</span>
         )
       },
       {
@@ -305,15 +303,13 @@ const MeterManagementScreen = () => {
         }
       },
       {
-        title: 'Mã khách hàng',
-        dataIndex: 'customerId',
-        key: 'customerId',
+        title: 'Tên khách hàng',
+        dataIndex: 'customerName',
+        key: 'customerName',
         align: 'left',
         width: K_SIZE_150,
-        render: (customerId: number, record: Meter) => (
-          <span title={String(customerId || record.customerName || '')}>
-            {customerId || record.customerName || NULL_VALUE}
-          </span>
+        render: (customerName: string) => (
+          <span title={customerName || ''}>{customerName || NULL_VALUE}</span>
         )
       },
       {
