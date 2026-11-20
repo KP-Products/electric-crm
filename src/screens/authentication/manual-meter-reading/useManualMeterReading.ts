@@ -864,7 +864,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
 
       const rows = isFeederScope
         ? Array.isArray(response.data)
-          ? response.data
+          ? response.data.filter((meter) => meter.meterType === METER_TYPE.CONG_TO_TONG)
           : []
         : !Array.isArray(response.data)
           ? response.data.items || []
