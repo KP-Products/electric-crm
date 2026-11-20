@@ -2,13 +2,15 @@
 
 import {
   CheckCircleOutlined,
+  CloseCircleOutlined,
   DownloadOutlined,
   EyeOutlined,
   FilePdfOutlined,
+  MoreOutlined,
   SearchOutlined
 } from '@ant-design/icons';
 import { DEFAULT_PAGE_SIZE, K_SIZE_0, K_SIZE_1, NULL_VALUE } from '@constant';
-import { Flex, Modal, Spin, Tooltip } from 'antd';
+import { Dropdown, Flex, Modal, Spin, Tooltip } from 'antd';
 import ButtonBase from 'components/button';
 import { AppDatePicker } from 'components/date-picker';
 import { AppSelect } from 'components/select';
@@ -30,8 +32,9 @@ import useElectricityNoticeCspk from './useElectricityNoticeCspk';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tất cả' },
-  { value: 'CHO_DUYET', label: 'Đã tính, chờ duyệt' },
-  { value: 'CONFIRMED', label: 'Đã chốt/duyệt' }
+  { value: 'CHO_DUYET', label: 'Chờ duyệt' },
+  { value: 'CONFIRMED', label: 'Đã xác nhận' },
+  { value: 'REJECTED', label: 'Đã từ chối' }
 ];
 
 const PAY_STATUS_OPTIONS = [
@@ -47,8 +50,16 @@ const VOLTAGE_LEVEL_OPTIONS = [
 ];
 
 const getBillStatusMeta = (status?: string) => {
-  if (status === 'CONFIRMED') return { label: 'Đã chốt/duyệt', type: TYPE_STATUS.SUCCESS };
-  if (status === 'CHO_DUYET') return { label: 'Đã tính, chờ duyệt', type: TYPE_STATUS.PENDING };
+  const normalizedStatus = status?.trim().toUpperCase();
+  if (['CONFIRMED', 'XAC_NHAN', 'DA_XAC_NHAN'].includes(normalizedStatus || '')) {
+    return { label: 'Đã xác nhận', type: TYPE_STATUS.SUCCESS };
+  }
+  if (normalizedStatus === 'CHO_DUYET') {
+    return { label: 'Chờ duyệt', type: TYPE_STATUS.PENDING };
+  }
+  if (normalizedStatus === 'REJECTED') {
+    return { label: 'Đã từ chối', type: TYPE_STATUS.ERROR };
+  }
   return { label: status || NULL_VALUE, type: TYPE_STATUS.DEFAULT };
 };
 
@@ -87,12 +98,20 @@ const ElectricityNoticeCspkScreen = () => {
     onOpenDetail,
     onCloseDetail,
     onConfirmBill,
+    onRejectBill,
     onExportNotice
   } = useElectricityNoticeCspk();
   const [createOpen, setCreateOpen] = useState(false);
   const [periodId, setPeriodId] = useState('');
   const [voltageLevel, setVoltageLevel] = useState('TRUNG_AP');
   const [vatRate, setVatRate] = useState('8');
+  const [billToReject, setBillToReject] = useState<Bill | null>(null);
+
+  const onConfirmReject = useCallback(async () => {
+    if (!billToReject) return;
+    const rejected = await onRejectBill(billToReject);
+    if (rejected) setBillToReject(null);
+  }, [billToReject, onRejectBill]);
 
   const onSubmitCreate = useCallback(async () => {
     const parsedPeriodId = Number(periodId);
@@ -217,46 +236,65 @@ const ElectricityNoticeCspkScreen = () => {
         fixed: 'right',
         align: 'center',
         render: (_: unknown, bill: Bill) => (
-          <Flex justify="center" gap={8}>
-            <Tooltip title="Xem chi tiết hóa đơn">
+          <Flex justify="center">
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  {
+                    key: 'detail',
+                    icon: <EyeOutlined className="text-color-700" />,
+                    label: 'Xem chi tiết hóa đơn',
+                    onClick: () => onOpenDetail(bill)
+                  },
+                  ...(bill.status !== 'CONFIRMED'
+                    ? [
+                        {
+                          key: 'confirm',
+                          icon: <CheckCircleOutlined className="text-success-600" />,
+                          label: 'Xác nhận hóa đơn và gửi email',
+                          onClick: () => onConfirmBill(bill)
+                        }
+                      ]
+                    : []),
+                  ...(bill.status === 'CHO_DUYET'
+                    ? [
+                        {
+                          key: 'reject',
+                          icon: <CloseCircleOutlined className="text-error-500" />,
+                          label: 'Từ chối hóa đơn',
+                          onClick: () => setBillToReject(bill)
+                        }
+                      ]
+                    : []),
+                  {
+                    key: 'export-electricity',
+                    icon: <FilePdfOutlined className="text-error-500" />,
+                    label: 'Xuất thông báo tiền điện PDF',
+                    onClick: () => onExportNotice(bill, 'DIEN')
+                  },
+                  {
+                    key: 'export-cspk',
+                    icon: <DownloadOutlined className="text-primary-600" />,
+                    label: 'Xuất thông báo tiền CSPK PDF',
+                    onClick: () => onExportNotice(bill, 'CSPK')
+                  }
+                ]
+              }}
+            >
               <button
-                className="text-color-700 hover:text-primary-600"
-                onClick={() => onOpenDetail(bill)}
+                type="button"
+                className="cursor-pointer rounded px-8 py-4 text-color-700 hover:bg-color-100 hover:text-primary-600"
+                aria-label="Mở thao tác hóa đơn"
               >
-                <EyeOutlined />
+                <MoreOutlined />
               </button>
-            </Tooltip>
-            {bill.status !== 'CONFIRMED' && (
-              <Tooltip title="Xác nhận hóa đơn và gửi email">
-                <button
-                  className="text-success-600 hover:text-success-700"
-                  onClick={() => onConfirmBill(bill)}
-                >
-                  <CheckCircleOutlined />
-                </button>
-              </Tooltip>
-            )}
-            <Tooltip title="Xuất thông báo tiền điện PDF">
-              <button
-                className="text-error-500 hover:text-error-600"
-                onClick={() => onExportNotice(bill, 'DIEN')}
-              >
-                <FilePdfOutlined />
-              </button>
-            </Tooltip>
-            <Tooltip title="Xuất thông báo tiền CSPK PDF">
-              <button
-                className="text-primary-600 hover:text-primary-700"
-                onClick={() => onExportNotice(bill, 'CSPK')}
-              >
-                <DownloadOutlined />
-              </button>
-            </Tooltip>
+            </Dropdown>
           </Flex>
         )
       }
     ],
-    [currentPage, onConfirmBill, onExportNotice, onOpenDetail]
+    [currentPage, onConfirmBill, onExportNotice, onOpenDetail, onRejectBill]
   );
 
   const breadcrumbList = [
@@ -419,6 +457,33 @@ const ElectricityNoticeCspkScreen = () => {
             onChange={(event) => setVatRate(event.target.value)}
           />
         </div>
+      </Modal>
+
+      <Modal
+        title="Từ chối hóa đơn"
+        open={Boolean(billToReject)}
+        centered
+        onCancel={() => setBillToReject(null)}
+        footer={
+          <Flex justify="end" gap={8}>
+            <ButtonBase
+              type="ghost"
+              customContent="Hủy"
+              disabled={actionLoading}
+              onClick={() => setBillToReject(null)}
+            />
+            <ButtonBase
+              type="primary"
+              customContent="Từ chối"
+              disabled={actionLoading}
+              onClick={onConfirmReject}
+            />
+          </Flex>
+        }
+      >
+        <p>
+          Bạn có chắc chắn muốn từ chối hóa đơn của Khách hàng <b>{billToReject?.customerName}</b> Kỳ <b>{billToReject?.periodCode}</b>?
+        </p>
       </Modal>
 
       <Modal

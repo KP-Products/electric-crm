@@ -9,6 +9,7 @@ import {
   CreateBillForPeriodReq,
   ExportBillNoticeReq,
   ExportBillNoticeRes,
+  RejectBillReq,
   SearchBillsReq,
   SearchBillsRes
 } from 'model/bill';
@@ -59,6 +60,15 @@ async function confirmBill(params: ConfirmBillReq): Promise<ApiResponse<ConfirmB
   }
 }
 
+async function rejectBill(params: RejectBillReq): Promise<ApiResponse<BillRes>> {
+  try {
+    const rs = await appServices.post(ApiConstants.BILLING_BILL_REJECT, params);
+    return rs.data;
+  } catch (error: any) {
+    return error;
+  }
+}
+
 async function exportBillNotice(params: ExportBillNoticeReq): Promise<ExportBillNoticeRes> {
   try {
     const rs = await appServices.post(ApiConstants.BILLING_BILL_EXPORT_NOTICE, params, {
@@ -78,6 +88,7 @@ const billServices = {
   createBillForPeriod,
   getBillDetail,
   confirmBill,
+  rejectBill,
   exportBillNotice
 };
 

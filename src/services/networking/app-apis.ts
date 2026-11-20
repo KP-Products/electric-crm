@@ -239,6 +239,7 @@ const ApiEndPoint = {
   BILLING_BILL_CREATE_FOR_PERIOD: '/admin/billing/bills/create-for-period',
   BILLING_BILL_DETAIL: '/admin/billing/bills/detail',
   BILLING_BILL_CONFIRM: '/admin/billing/bills/confirm',
+  BILLING_BILL_REJECT: '/admin/billing/bills/reject',
   BILLING_BILL_EXPORT_NOTICE: '/admin/billing/bills/export-notice',
 
   // BILLING 5.5 - CHOT SO EVN

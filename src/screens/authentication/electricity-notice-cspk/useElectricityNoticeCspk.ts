@@ -235,6 +235,27 @@ export default function useElectricityNoticeCspk() {
     [refresh]
   );
 
+  const onRejectBill = useCallback(
+    async (bill: Bill) => {
+      setActionLoading(true);
+      const response = await billServices.rejectBill({ billId: bill.id });
+      setActionLoading(false);
+
+      if (hasApiError(response)) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: getErrorMessage(response, 'Từ chối hóa đơn thất bại')
+        });
+        return false;
+      }
+
+      showToast({ type: TYPE_TOAST.SUCCESS, content: 'Từ chối hóa đơn thành công' });
+      refresh();
+      return true;
+    },
+    [refresh]
+  );
+
   const onExportNotice = useCallback(async (bill: Bill, type: BillNoticeType) => {
     setActionLoading(true);
     const response = await billServices.exportBillNotice({ billId: bill.id, type });
@@ -285,6 +306,7 @@ export default function useElectricityNoticeCspk() {
     onOpenDetail,
     onCloseDetail: () => setDetailOpen(false),
     onConfirmBill,
+    onRejectBill,
     onExportNotice
   };
 }
