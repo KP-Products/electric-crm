@@ -83,6 +83,10 @@ export interface ConfirmBillReq {
   billId: number;
 }
 
+export interface RejectBillReq {
+  billId: number;
+}
+
 export interface ConfirmBillResponse {
   bill?: Bill;
   mailSent?: boolean;

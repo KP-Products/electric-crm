@@ -135,6 +135,7 @@ export interface CreateReadingPeriodReq {
   meterNumber: string;
   customerId: number;
   periodCode: string;
+  periodNo: number;
   periodFrom: string;
   periodTo: string;
   readingDate: string;
@@ -159,6 +160,7 @@ export interface UpdateReadingPeriodReq {
   id: number;
   saveMode?: ReadingPeriodSaveMode;
   periodCode?: string;
+  periodNo?: number;
   periodFrom?: string;
   periodTo?: string;
   readingDate?: string;
