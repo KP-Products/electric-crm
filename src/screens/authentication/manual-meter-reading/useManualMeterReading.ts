@@ -758,7 +758,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       setLoadingDetail(true);
       const searchResponse = await manualMeterReadingServices.searchReadingPeriods({
         page: K_SIZE_0,
-        size: K_SIZE_1,
+        size: DEFAULT_PAGE_SIZE,
         typeInput: '1',
         periodNo: appliedFilter.periodNo,
         meterNumber: meter.meterCode,
@@ -815,7 +815,8 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
         size: DEFAULT_PAGE_SIZE,
         customerId: appliedFilter.customerCode,
         typeInput: '1',
-        periodCode: appliedFilter.periodCode
+        periodCode: appliedFilter.periodCode,
+        periodNo: appliedFilter.periodNo
       });
       if (hasApiError(response)) return meterList;
 
@@ -1356,6 +1357,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
           id: meter.periodId,
           saveMode,
           periodCode: filterApplied.periodCode,
+          periodNo: Number(filterApplied.periodNo),
           periodFrom: periodInfo.from,
           periodTo: periodInfo.to,
           readingDate: filterApplied.readingDate,
@@ -1378,6 +1380,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
           meterNumber: meter.meterCode,
           customerId,
           periodCode: filterApplied.periodCode,
+          periodNo: Number(filterApplied.periodNo),
           periodFrom: periodInfo.from,
           periodTo: periodInfo.to,
           readingDate: filterApplied.readingDate,
@@ -1418,6 +1421,7 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     },
     [
       filterApplied.periodCode,
+      filterApplied.periodNo,
       filterApplied.periodFrom,
       filterApplied.periodTo,
       filterApplied.readingDate,
