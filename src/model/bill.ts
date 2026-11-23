@@ -108,3 +108,16 @@ export interface ExportBillNoticeRes {
   detailMessage?: string;
   message?: string;
 }
+
+export interface ExportHaApReq {
+  periodId: number;
+}
+
+export interface ExportHaApRes {
+  data?: Blob;
+  fileName?: string;
+  businessErrorMessage?: string;
+  systemErrorMessage?: string;
+  detailMessage?: string;
+  message?: string;
+}

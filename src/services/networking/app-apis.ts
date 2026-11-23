@@ -209,6 +209,7 @@ const ApiEndPoint = {
   BILLING_READING_PERIOD_CONFIRM: '/admin/billing/reading-periods/confirm',
   BILLING_READING_PERIOD_REJECT: '/admin/billing/reading-periods/reject',
   BILLING_READING_PERIOD_EXPORT_RECORD: '/admin/billing/reading-periods/export-record',
+  BILLING_READING_PERIOD_EXPORT_HA_AP: '/admin/billing/reading-periods/export-ha-ap',
   BILLING_READING_PHOTO_UPLOAD: '/admin/billing/reading-periods/photos/upload',
   BILLING_READING_PHOTO_LIST: '/admin/billing/reading-periods/photos/list',
   BILLING_READING_PHOTO_VIEW: '/admin/billing/reading-periods/photos/view',
