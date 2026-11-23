@@ -294,7 +294,7 @@ export default function useElectricityNoticeCspk() {
       return;
     }
 
-    downloadBlob(response.data, response.fileName || `bien-ban-ha-ap-${bill.periodId}.pdf`);
+    downloadBlob(response.data, response.fileName || `bien-ban-ha-ap-${bill.periodId}.xlsx`);
   }, []);
 
   const pagination = useMemo(
