@@ -276,6 +276,27 @@ export default function useElectricityNoticeCspk() {
     );
   }, []);
 
+  const onExportHaAp = useCallback(async (bill: Bill) => {
+    if (!bill.periodId) {
+      showToast({ type: TYPE_TOAST.ERROR, content: 'Không tìm thấy kỳ ghi chỉ số để xuất biên bản' });
+      return;
+    }
+
+    setActionLoading(true);
+    const response = await billServices.exportHaAp({ periodId: bill.periodId });
+    setActionLoading(false);
+
+    if (!response.data) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getErrorMessage(response, 'Xuất biên bản hạ áp thất bại')
+      });
+      return;
+    }
+
+    downloadBlob(response.data, response.fileName || `bien-ban-ha-ap-${bill.periodId}.pdf`);
+  }, []);
+
   const pagination = useMemo(
     () => ({
       current: currentPage,
@@ -307,6 +328,7 @@ export default function useElectricityNoticeCspk() {
     onCloseDetail: () => setDetailOpen(false),
     onConfirmBill,
     onRejectBill,
-    onExportNotice
+    onExportNotice,
+    onExportHaAp
   };
 }

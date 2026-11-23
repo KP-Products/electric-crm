@@ -99,7 +99,8 @@ const ElectricityNoticeCspkScreen = () => {
     onCloseDetail,
     onConfirmBill,
     onRejectBill,
-    onExportNotice
+    onExportNotice,
+    onExportHaAp
   } = useElectricityNoticeCspk();
   const [createOpen, setCreateOpen] = useState(false);
   const [periodId, setPeriodId] = useState('');
@@ -278,6 +279,12 @@ const ElectricityNoticeCspkScreen = () => {
                     icon: <DownloadOutlined className="text-primary-600" />,
                     label: 'Xuất thông báo tiền CSPK PDF',
                     onClick: () => onExportNotice(bill, 'CSPK')
+                  },
+                  {
+                    key: 'export-ha-ap',
+                    icon: <DownloadOutlined className="text-primary-600" />,
+                    label: 'Xuất BB hạ áp',
+                    onClick: () => onExportHaAp(bill)
                   }
                 ]
               }}
@@ -294,7 +301,7 @@ const ElectricityNoticeCspkScreen = () => {
         )
       }
     ],
-    [currentPage, onConfirmBill, onExportNotice, onOpenDetail, onRejectBill]
+    [currentPage, onConfirmBill, onExportHaAp, onExportNotice, onOpenDetail, onRejectBill]
   );
 
   const breadcrumbList = [

@@ -9,6 +9,8 @@ import {
   CreateBillForPeriodReq,
   ExportBillNoticeReq,
   ExportBillNoticeRes,
+  ExportHaApReq,
+  ExportHaApRes,
   RejectBillReq,
   SearchBillsReq,
   SearchBillsRes
@@ -83,13 +85,28 @@ async function exportBillNotice(params: ExportBillNoticeReq): Promise<ExportBill
   }
 }
 
+async function exportHaAp(params: ExportHaApReq): Promise<ExportHaApRes> {
+  try {
+    const rs = await appServices.post(ApiConstants.BILLING_READING_PERIOD_EXPORT_HA_AP, params, {
+      responseType: 'blob'
+    });
+    return {
+      data: rs.data,
+      fileName: getFileNameFromDisposition(rs.headers['content-disposition'])
+    };
+  } catch (error: any) {
+    return error;
+  }
+}
+
 const billServices = {
   searchBills,
   createBillForPeriod,
   getBillDetail,
   confirmBill,
   rejectBill,
-  exportBillNotice
+  exportBillNotice,
+  exportHaAp
 };
 
 export default billServices;
