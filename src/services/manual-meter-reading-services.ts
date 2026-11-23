@@ -216,6 +216,23 @@ async function exportReadingRecord(
   }
 }
 
+/** Biên bản hạ áp (biên bản xác nhận chỉ số công tơ) của 1 kỳ ghi, file Excel theo mẫu. */
+async function exportHaApRecord(params: ExportReadingRecordReq): Promise<ExportReadingRecordRes> {
+  try {
+    const rs = await appServices.post(ApiConstants.BILLING_READING_PERIOD_EXPORT_HA_AP, params, {
+      responseType: 'blob'
+    });
+
+    // Không đọc được tên file từ header thì màn hình tự đặt tên theo số công tơ.
+    return {
+      data: rs.data,
+      fileName: getFileNameFromDisposition(rs.headers['content-disposition'])
+    };
+  } catch (error: any) {
+    return error;
+  }
+}
+
 const manualMeterReadingServices = {
   searchMetersForReading,
   searchReadingPeriods,
@@ -231,7 +248,8 @@ const manualMeterReadingServices = {
   listReadingPhotos,
   deleteReadingPhoto,
   viewReadingPhoto,
-  exportReadingRecord
+  exportReadingRecord,
+  exportHaApRecord
 };
 
 export default manualMeterReadingServices;

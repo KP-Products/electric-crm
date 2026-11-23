@@ -4,6 +4,7 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   DeleteOutlined,
+  FileExcelOutlined,
   FileTextOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -172,6 +173,8 @@ const ManualMeterReadingScreen = ({
     onRemovePendingPhoto,
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
+    exportingHaAp,
+    onExportHaAp,
     onSave
   } = useManualMeterReading({ scope, feederId });
 
@@ -828,6 +831,18 @@ const ManualMeterReadingScreen = ({
                     onClick={onClearSelectedMeter}
                     disabled={savingConfirm || isSelectedMeterConfirmed}
                     classNames="min-w-[120px] mobile:flex-1 mobile:justify-center"
+                  />
+                  <ButtonBase
+                    type="ghost"
+                    customContent={
+                      <div className="flex items-center gap-8">
+                        <FileExcelOutlined />
+                        <span>{exportingHaAp ? 'Đang xuất...' : 'Xuất biên bản hạ áp'}</span>
+                      </div>
+                    }
+                    onClick={onExportHaAp}
+                    disabled={!selectedMeter.periodId || exportingHaAp || savingConfirm}
+                    classNames="min-w-[160px] mobile:flex-1 mobile:justify-center"
                   />
                 </Flex>
               </>

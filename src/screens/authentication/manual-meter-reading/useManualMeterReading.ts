@@ -25,6 +25,7 @@ import evnReadingBatchServices from 'services/evn-reading-batch-services';
 import manualMeterReadingServices from 'services/manual-meter-reading-services';
 import meterServices from 'services/meter-services';
 import { METER_TYPE } from '../meter-management/utils/constant';
+import { downloadBlobResponse } from 'utils/blob-response';
 import { FORMAT_DATE_API } from 'utils/date';
 import { parseFormattedNumber } from 'utils/number-input';
 import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
@@ -1259,6 +1260,36 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     setChangedMeterIds((previous) => new Set(previous).add(selectedMeter.id));
   }, [revokeObjectUrl, selectedMeter]);
 
+  const [exportingHaAp, setExportingHaAp] = useState(false);
+
+  /** Tải biên bản hạ áp (Excel) của kỳ ghi đã lưu của công tơ đang chọn. */
+  const onExportHaAp = useCallback(async () => {
+    const periodId = selectedMeter?.periodId;
+    if (!selectedMeter || !periodId) return;
+    if (changedMeterIds.has(selectedMeter.id)) {
+      showToast({
+        type: TYPE_TOAST.WARNING,
+        content: 'Chỉ số đang sửa chưa được lưu. Vui lòng lưu trước khi xuất biên bản hạ áp.'
+      });
+      return;
+    }
+
+    setExportingHaAp(true);
+    const response = await manualMeterReadingServices.exportHaApRecord({ periodId });
+    setExportingHaAp(false);
+    if (!response?.data) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getErrorMessage(response, 'Xuất biên bản hạ áp thất bại')
+      });
+      return;
+    }
+    downloadBlobResponse(
+      { blob: response.data, fileName: response.fileName },
+      `bien-ban-ha-ap-${selectedMeter.meterCode || periodId}.xlsx`
+    );
+  }, [changedMeterIds, selectedMeter]);
+
   const uploadPendingPhoto = useCallback(async (meter: ManualReadingMeter, periodId: number) => {
     if (!meter.pendingPhotos.length) return meter;
 
@@ -1603,6 +1634,8 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     onRemovePendingPhoto,
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
+    exportingHaAp,
+    onExportHaAp,
     onSave
   };
 }
