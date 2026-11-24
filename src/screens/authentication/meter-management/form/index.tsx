@@ -166,6 +166,7 @@ const MeterFormContent = (props: ManageMeterFormProps) => {
                 control={control}
                 type="number"
                 allowDecimal
+                formatNumberWithCommas
               />
               <AppDatePickerControl
                 name="multiplierEffectiveFrom"
@@ -225,6 +226,7 @@ const MeterFormContent = (props: ManageMeterFormProps) => {
                         isView={isView}
                         type="number"
                         allowDecimal
+                        formatNumberWithCommas
                         control={control}
                       />
                     </div>

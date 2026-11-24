@@ -24,7 +24,7 @@ import moment from 'moment';
 import { API_DATE_INPUT_FORMATS } from 'utils/date';
 import { normalizeDateToApi } from 'utils/date';
 import { TypedT, useAppTranslation } from 'utils/i18n/useAppTranslation';
-import { parseFormattedNumber } from 'utils/number-input';
+import { parseFormattedNumber, toDecimalInputValue } from 'utils/number-input';
 import { z } from 'zod';
 import {
   METER_TYPE,
@@ -217,14 +217,14 @@ export default function useManageMeterForm({ isAddMode, isView }: ManageMeterFor
       voltageLevel: normalizeVoltageLevel(meter.voltageLevel),
       multiplier:
         meter.multiplier !== undefined && meter.multiplier !== null
-          ? String(meter.multiplier)
+          ? toDecimalInputValue(meter.multiplier)
           : '1',
-      initialReadingCd: String(meter.initialReadingCd ?? 0),
-      initialReadingTd: String(meter.initialReadingTd ?? 0),
+      initialReadingCd: toDecimalInputValue(meter.initialReadingCd ?? 0),
+      initialReadingTd: toDecimalInputValue(meter.initialReadingTd ?? 0),
       multiplierEffectiveFrom: '',
       initialReading:
         meter.initialReading !== undefined && meter.initialReading !== null
-          ? String(meter.initialReading)
+          ? toDecimalInputValue(meter.initialReading)
           : '0'
     }),
     []
