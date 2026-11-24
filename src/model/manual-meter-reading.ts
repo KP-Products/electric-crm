@@ -133,7 +133,8 @@ export interface PrepareReadingRes extends ResultBase<PrepareReadingData> {}
 
 export interface CreateReadingPeriodReq {
   meterNumber: string;
-  customerId: number;
+  /** Id/mã khách hàng, hoặc mã công tơ tổng khi công tơ không gắn khách hàng (nhập theo lộ) */
+  customerId: number | string;
   periodCode: string;
   periodNo: number;
   periodFrom: string;

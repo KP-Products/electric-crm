@@ -26,7 +26,7 @@ import manualMeterReadingServices from 'services/manual-meter-reading-services';
 import meterServices from 'services/meter-services';
 import { METER_TYPE } from '../meter-management/utils/constant';
 import { FORMAT_DATE_API } from 'utils/date';
-import { parseFormattedNumber } from 'utils/number-input';
+import { parseFormattedNumber, toDecimalInputValue } from 'utils/number-input';
 import { getUploadFileSizeError, isValidUploadFileSize } from 'utils/upload';
 
 dayjs.extend(customParseFormat);
@@ -287,8 +287,7 @@ const mapReadingsToRegisters = (
     tou: reading.tou,
     label: getTouLabel(reading.tou),
     oldIndex: toNumber(reading.oldIndex) ?? K_SIZE_0,
-    newIndex:
-      reading.newIndex === undefined || reading.newIndex === null ? '' : String(reading.newIndex),
+    newIndex: toDecimalInputValue(reading.newIndex),
     multiplier
   }));
 };
@@ -344,7 +343,7 @@ const mapPeriodDetailToMeter = (
     reactiveIndex:
       period.reactiveEnergyIndex === undefined || period.reactiveEnergyIndex === null
         ? meter.reactiveIndex
-        : String(period.reactiveEnergyIndex),
+        : toDecimalInputValue(period.reactiveEnergyIndex),
     uploadedPhotos: nextPhotos,
     pendingPhotos: []
   };
@@ -395,7 +394,8 @@ const getCustomerIdForRequest = (meter: ManualReadingMeter) => {
     return meter.customerId;
   }
 
-  return undefined;
+  // Công tơ tổng/lộ (nhập theo lộ) không gắn khách hàng: API nhận "mã khách hàng hoặc công tơ tổng".
+  return meter.meterCode || undefined;
 };
 
 const getManualReadingStatus = (status?: string): ManualReadingStatus => {

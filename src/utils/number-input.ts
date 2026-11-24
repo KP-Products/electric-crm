@@ -140,9 +140,17 @@ export const parseFormattedNumber = (value?: string | number | null) => {
     return undefined;
   }
 
-  const parsed = Number(normalizedValue);
+  // normalizeFormattedNumberInput trả về dấu thập phân kiểu Việt (","), Number() chỉ hiểu "."
+  const parsed = Number(normalizedValue.replace(DECIMAL_SEPARATOR, '.'));
   return Number.isFinite(parsed) ? parsed : undefined;
 };
+
+/**
+ * Số từ API ("8300.5") → giá trị ô nhập kiểu Việt ("8300,5"). Đưa thẳng String(số) vào
+ * formatDecimalInputWithCommas thì dấu chấm bị hiểu là phân cách nghìn → "83.005".
+ */
+export const toDecimalInputValue = (value?: number | string | null) =>
+  value === undefined || value === null ? '' : String(value).replace('.', DECIMAL_SEPARATOR);
 
 // Controlled inputs use Vietnamese separators. Do not infer a new locale
 // from partially edited groups while the user types.
