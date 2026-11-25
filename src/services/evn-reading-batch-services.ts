@@ -8,6 +8,7 @@ import {
   ExportEvnReadingBatchRecordRes,
   FeederMetersReq,
   FeederMetersRes,
+  SaveEvnBatchReadingsReq,
   SearchEvnReadingBatchesReq,
   SearchEvnReadingBatchesRes,
   UpdateEvnReadingBatchReq
@@ -54,6 +55,11 @@ const evnReadingBatchServices = {
     call<EvnReadingBatchRes>(() =>
       appServices.post(ApiConstants.BILLING_READING_BATCH_CONFIRM, params)
     ),
+  /** Nhập chỉ số theo lộ: BE tạo/cập nhật kỳ ghi từng công tơ con và tính lại trạng thái lô. */
+  saveReadings: (params: SaveEvnBatchReadingsReq) =>
+    call<EvnReadingBatchRes>(() =>
+      appServices.post(ApiConstants.BILLING_READING_BATCH_SAVE_READINGS, params)
+    ),
   metersByFeeder: (params: FeederMetersReq) =>
     call<FeederMetersRes>(() =>
       appServices.post(ApiConstants.BILLING_READING_BATCH_METERS_BY_FEEDER, params)
@@ -71,7 +77,7 @@ const evnReadingBatchServices = {
         data: response.data,
         fileName:
           getFileNameFromDisposition(response.headers['content-disposition']) ||
-          `bien-ban-chot-so-evn-${params.id}.pdf`
+          `bien-ban-chot-so-evn-${params.id}.xlsx`
       };
     } catch (error: any) {
       return error;

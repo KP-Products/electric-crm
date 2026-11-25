@@ -5,7 +5,7 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
-  FilePdfOutlined,
+  FileExcelOutlined,
   MoreOutlined,
   SearchOutlined
 } from '@ant-design/icons';
@@ -27,56 +27,46 @@ import { EvnReadingBatch } from 'model/evn-reading-batch';
 import dayjs from 'dayjs';
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { displayDateFromServer } from 'utils/date';
+import { displayDateFromServer, displayDateTimeFromServer } from 'utils/date';
 import { formatNumberValueWithCommas } from 'utils/number-input';
 import useEvnReadingBatch, { DEFAULT_EVN_BATCH_FORM, EvnBatchForm } from './useEvnReadingBatch';
 
+// Trạng thái lô theo BE (BatchStatus) — trạng thái do BE tự tính khi lưu chỉ số qua save-readings.
 const STATUS_OPTIONS = [
   { value: '', label: 'Tất cả trạng thái' },
-  { value: 'DRAFT', label: 'Nháp' },
-  { value: 'SUBMITTED', label: 'Đã gửi' },
-  { value: 'CONFIRMED', label: 'Đã chốt' },
-  { value: 'REJECTED', label: 'Từ chối' }
+  { value: 'CHUA_NHAP', label: 'Chưa nhập' },
+  { value: 'DA_NHAP', label: 'Đã nhập' },
+  { value: 'NHAP_LOI', label: 'Nhập lỗi' },
+  { value: 'CHO_CHOT', label: 'Chờ chốt' },
+  { value: 'DA_CHOT', label: 'Đã chốt' }
 ];
 
-const getStatusMeta = (status?: string) => {
-  switch (status?.toUpperCase()) {
-    case 'DRAFT':
-      return { label: 'Nháp', type: TYPE_STATUS.DISABLED };
-    case 'SUBMITTED':
-      return { label: 'Đã gửi', type: TYPE_STATUS.PENDING };
-    case 'CONFIRMED':
-    case 'DA_CHOT':
-      return { label: 'Đã chốt', type: TYPE_STATUS.SUCCESS };
-    case 'REJECTED':
-      return { label: 'Từ chối', type: TYPE_STATUS.ERROR };
-    default:
-      return { label: status || NULL_VALUE, type: TYPE_STATUS.DEFAULT };
-  }
+const STATUS_TYPES: Record<string, TYPE_STATUS> = {
+  CHUA_NHAP: TYPE_STATUS.DISABLED,
+  DA_NHAP: TYPE_STATUS.PENDING,
+  NHAP_LOI: TYPE_STATUS.ERROR,
+  CHO_CHOT: TYPE_STATUS.CONFIRM,
+  DA_CHOT: TYPE_STATUS.SUCCESS
+};
+
+const getStatusMeta = (status?: string, statusLabel?: string) => {
+  const code = status?.toUpperCase() || '';
+  return {
+    label:
+      statusLabel ||
+      STATUS_OPTIONS.find((option) => option.value && option.value === code)?.label ||
+      status ||
+      NULL_VALUE,
+    type: STATUS_TYPES[code] || TYPE_STATUS.DEFAULT
+  };
 };
 
 const formatDate = (value?: string) => (value ? displayDateFromServer(value) : NULL_VALUE);
+const formatDateTime = (value?: string) => (value ? displayDateTimeFromServer(value) : NULL_VALUE);
 const formatNumber = (value?: number) =>
   value === undefined || value === null ? NULL_VALUE : formatNumberValueWithCommas(value);
 
-const getInputStatusMeta = (batch: EvnReadingBatch) => {
-  const status = (batch.inputStatus || batch.status)?.toUpperCase();
-  if (status === 'DA_CHOT' || status === 'CONFIRMED') {
-    return { label: 'Đã chốt', type: TYPE_STATUS.SUCCESS };
-  }
-  if (status === 'COMPLETED' || status === 'ENTERED' || status === 'IMPORTED') {
-    return { label: 'Đã nhập đủ', type: TYPE_STATUS.SUCCESS };
-  }
-  if (status === 'PARTIAL') return { label: 'Nhập thiếu', type: TYPE_STATUS.ERROR };
-  if (status === 'NOT_ENTERED') return { label: 'Chưa nhập', type: TYPE_STATUS.PENDING };
-
-  if ((batch.enteredMeterCount || 0) === 0)
-    return { label: 'Chưa nhập', type: TYPE_STATUS.PENDING };
-  if (batch.totalMeterCount && (batch.enteredMeterCount || 0) < batch.totalMeterCount) {
-    return { label: 'Nhập thiếu', type: TYPE_STATUS.ERROR };
-  }
-  return { label: 'Đã nhập đủ', type: TYPE_STATUS.SUCCESS };
-};
+const isConfirmed = (batch: EvnReadingBatch) => batch.status?.toUpperCase() === 'DA_CHOT';
 
 const toDatePickerValue = (value?: string) => {
   if (!value) return null;
@@ -118,10 +108,16 @@ const EvnReadingBatchScreen = () => {
 
   const openReadingInput = useCallback(
     (batch?: EvnReadingBatch) => {
-      const feederId = batch?.masterMeterId;
-      router.push(
-        `${ROUTES.EVN_READING_BATCH_INPUT}${feederId ? `?feederId=${encodeURIComponent(feederId)}` : ''}`
-      );
+      const params = new URLSearchParams();
+      if (batch?.masterMeterId) params.set('feederId', batch.masterMeterId);
+      if (batch?.id) params.set('batchId', String(batch.id));
+      if (batch?.periodCode) params.set('periodCode', batch.periodCode);
+      if (batch?.periodNo) params.set('periodNo', String(batch.periodNo));
+      if (batch?.periodFrom) params.set('periodFrom', batch.periodFrom);
+      if (batch?.periodTo) params.set('periodTo', batch.periodTo);
+      if (batch?.readingDate) params.set('readingDate', batch.readingDate);
+      const query = params.toString();
+      router.push(`${ROUTES.EVN_READING_BATCH_INPUT}${query ? `?${query}` : ''}`);
     },
     [router]
   );
@@ -171,8 +167,8 @@ const EvnReadingBatchScreen = () => {
       },
       {
         title: 'Địa chỉ',
-        dataIndex: 'feederAddress',
-        key: 'feederAddress',
+        dataIndex: 'address',
+        key: 'address',
         width: 220,
         render: (value: string) => value || NULL_VALUE
       },
@@ -186,10 +182,13 @@ const EvnReadingBatchScreen = () => {
       },
       {
         title: 'Kỳ ghi chỉ số',
-        key: 'readingPeriod',
+        key: 'periodCode',
         width: 115,
         align: 'center',
-        render: (_: unknown, batch: EvnReadingBatch) => batch.readingPeriod || '-'
+        render: (_: unknown, batch: EvnReadingBatch) =>
+          batch.periodCode
+            ? `${batch.periodCode}${batch.periodNo ? ` - Kỳ ${batch.periodNo}` : ''}`
+            : NULL_VALUE
       },
       {
         title: 'Từ ngày ghi chỉ số',
@@ -201,31 +200,28 @@ const EvnReadingBatchScreen = () => {
         title: 'Đến ngày ghi chỉ số',
         key: 'periodTo',
         width: 145,
-        render: (_: unknown, batch: EvnReadingBatch) =>
-          formatDate(batch.periodTo || batch.readingDate)
+        render: (_: unknown, batch: EvnReadingBatch) => formatDate(batch.periodTo)
       },
       {
         title: 'Trạng thái nhập',
         key: 'inputStatus',
         width: 125,
         render: (_: unknown, batch: EvnReadingBatch) => {
-          const meta = getInputStatusMeta(batch);
+          const meta = getStatusMeta(batch.status, batch.statusLabel);
           return <Status type={meta.type} kind={KIND_STATUS.SECONDARY} content={meta.label} />;
         }
       },
       {
         title: 'Người nhập',
-        key: 'inputBy',
+        key: 'enteredBy',
         width: 110,
-        render: (_: unknown, batch: EvnReadingBatch) =>
-          batch.inputBy || batch.submittedBy || NULL_VALUE
+        render: (_: unknown, batch: EvnReadingBatch) => batch.enteredBy || NULL_VALUE
       },
       {
-        title: 'Ngày nhập',
-        key: 'inputAt',
+        title: 'Cập nhật lúc',
+        key: 'enteredAt',
         width: 145,
-        render: (_: unknown, batch: EvnReadingBatch) =>
-          formatDate(batch.inputAt || batch.submittedAt)
+        render: (_: unknown, batch: EvnReadingBatch) => formatDateTime(batch.enteredAt)
       },
       {
         title: 'Thao tác',
@@ -240,7 +236,7 @@ const EvnReadingBatchScreen = () => {
               key: 'input',
               icon: <EditOutlined />,
               label: 'Nhập chỉ số',
-              disabled: status === 'CONFIRMED' || status === 'DA_CHOT',
+              disabled: isConfirmed(batch),
               onClick: () => openReadingInput(batch)
             },
             {
@@ -251,23 +247,28 @@ const EvnReadingBatchScreen = () => {
             },
             {
               key: 'export',
-              icon: <FilePdfOutlined />,
-              label: 'Xuất biên bản PDF',
+              icon: <FileExcelOutlined />,
+              label: 'Xuất biên bản (Excel)',
               disabled: actionLoading,
               onClick: () => onExport(batch.id)
             },
-            ...(status === 'DRAFT'
+            // Điều kiện theo BE: sửa khi chưa chốt, xóa khi Chưa nhập, chốt khi Đã nhập / Chờ chốt.
+            ...(!isConfirmed(batch)
               ? [
                   {
                     key: 'edit',
                     icon: <EditOutlined />,
-                    label: 'Sửa lô nháp',
+                    label: 'Sửa lô',
                     onClick: () => openEdit(batch)
-                  },
+                  }
+                ]
+              : []),
+            ...(status === 'CHUA_NHAP'
+              ? [
                   {
                     key: 'delete',
                     icon: <DeleteOutlined />,
-                    label: 'Xóa lô nháp',
+                    label: 'Xóa lô',
                     danger: true,
                     onClick: () => {
                       setConfirmBatch(batch);
@@ -276,7 +277,7 @@ const EvnReadingBatchScreen = () => {
                   }
                 ]
               : []),
-            ...(status === 'SUBMITTED'
+            ...(status === 'DA_NHAP' || status === 'CHO_CHOT'
               ? [
                   {
                     key: 'confirm',
@@ -516,7 +517,7 @@ const EvnReadingBatchScreen = () => {
       </Drawer>
 
       <Modal
-        title={`Chi tiết lô chốt ${detail?.meterCode || ''}`}
+        title={`Chi tiết lô chốt ${detail?.feederCode || detail?.meterCode || ''}`}
         open={Boolean(detail)}
         footer={null}
         onCancel={onCloseDetail}
@@ -544,9 +545,9 @@ const EvnReadingBatchScreen = () => {
                 <div>
                   <TextBase classNames="caption1 !text-color-700" text="Trạng thái" />
                   <Status
-                    type={getStatusMeta(detail.status).type}
+                    type={getStatusMeta(detail.status, detail.statusLabel).type}
                     kind={KIND_STATUS.SECONDARY}
-                    content={getStatusMeta(detail.status).label}
+                    content={getStatusMeta(detail.status, detail.statusLabel).label}
                   />
                 </div>
               </div>

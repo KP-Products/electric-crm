@@ -497,6 +497,14 @@ export const getMeterReadingMetrics = (meter?: ManualReadingMeter) => {
 export interface ManualMeterReadingOptions {
   scope?: 'customer' | 'feeder';
   feederId?: string;
+  /** Kỳ của lô chốt EVN (mở từ danh sách lô); ngày dạng dd-MM-yyyy như API. */
+  batchPeriod?: {
+    periodCode?: string;
+    periodNo?: string;
+    periodFrom?: string;
+    periodTo?: string;
+    readingDate?: string;
+  };
 }
 
 export default function useManualMeterReading(options: ManualMeterReadingOptions = {}) {
@@ -507,9 +515,26 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
   const initialFilter = useMemo<ManualReadingFilter>(
     () =>
       isFeederScope
-        ? { ...DEFAULT_FILTER, searchBy: 'FEEDER', customerCode: options.feederId || '' }
+        ? {
+            ...DEFAULT_FILTER,
+            searchBy: 'FEEDER',
+            customerCode: options.feederId || '',
+            periodCode: options.batchPeriod?.periodCode || DEFAULT_FILTER.periodCode,
+            periodNo: options.batchPeriod?.periodNo || DEFAULT_FILTER.periodNo,
+            periodFrom: options.batchPeriod?.periodFrom || DEFAULT_FILTER.periodFrom,
+            periodTo: options.batchPeriod?.periodTo || DEFAULT_FILTER.periodTo,
+            readingDate: options.batchPeriod?.readingDate || DEFAULT_FILTER.readingDate
+          }
         : DEFAULT_FILTER,
-    [isFeederScope, options.feederId]
+    [
+      isFeederScope,
+      options.feederId,
+      options.batchPeriod?.periodCode,
+      options.batchPeriod?.periodNo,
+      options.batchPeriod?.periodFrom,
+      options.batchPeriod?.periodTo,
+      options.batchPeriod?.readingDate
+    ]
   );
   const [filterDraft, setFilterDraft] = useState<ManualReadingFilter>(initialFilter);
   const [filterApplied, setFilterApplied] = useState<ManualReadingFilter>(initialFilter);
@@ -1298,6 +1323,77 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
     };
   }, []);
 
+  /**
+   * Lô chốt EVN của lộ + kỳ đang chọn; chưa có thì tạo. Lô đã có mà khác ngày ghi / khoảng ngày thì
+   * báo để người dùng chọn đúng kỳ của lô (BE cũng chặn vì kỳ ghi công tơ phải khớp lô).
+   */
+  const resolveFeederBatchId = useCallback(async (): Promise<number | undefined> => {
+    const masterMeterId = filterApplied.customerCode;
+    const periodNo = Number(filterApplied.periodNo);
+    const search = await evnReadingBatchServices.search({
+      masterMeterId,
+      periodCode: filterApplied.periodCode,
+      page: K_SIZE_0,
+      size: 100
+    });
+    if (hasApiError(search)) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getErrorMessage(search, 'Không tải được lô chốt của lộ')
+      });
+      return undefined;
+    }
+
+    const batch = (search.data?.items || []).find(
+      (item) =>
+        item.masterMeterId === masterMeterId &&
+        item.periodCode === filterApplied.periodCode &&
+        Number(item.periodNo || 1) === periodNo
+    );
+    if (batch) {
+      const sameDates =
+        batch.readingDate === filterApplied.readingDate &&
+        (!batch.periodFrom || batch.periodFrom === filterApplied.periodFrom) &&
+        (!batch.periodTo || batch.periodTo === filterApplied.periodTo);
+      if (!sameDates) {
+        showToast({
+          type: TYPE_TOAST.ERROR,
+          content: `Lộ đã có lô kỳ ${batch.periodCode} - Kỳ ${batch.periodNo || 1} (${
+            batch.periodFrom || '?'
+          } → ${batch.periodTo || '?'}, ngày ghi ${
+            batch.readingDate || '?'
+          }). Vui lòng chọn đúng khoảng ngày và ngày ghi của lô`
+        });
+        return undefined;
+      }
+      return batch.id;
+    }
+
+    const created = await evnReadingBatchServices.create({
+      masterMeterId,
+      periodCode: filterApplied.periodCode,
+      periodNo,
+      periodFrom: filterApplied.periodFrom,
+      periodTo: filterApplied.periodTo,
+      readingDate: filterApplied.readingDate
+    });
+    if (hasApiError(created) || !created.data?.id) {
+      showToast({
+        type: TYPE_TOAST.ERROR,
+        content: getErrorMessage(created, 'Tạo lô chốt cho lộ thất bại')
+      });
+      return undefined;
+    }
+    return created.data.id;
+  }, [
+    filterApplied.customerCode,
+    filterApplied.periodCode,
+    filterApplied.periodFrom,
+    filterApplied.periodNo,
+    filterApplied.periodTo,
+    filterApplied.readingDate
+  ]);
+
   const saveMeterToServer = useCallback(
     async (meter: ManualReadingMeter, saveMode: ReadingPeriodSaveMode, showSuccess = true) => {
       if (hasUnsyncedFilter) {
@@ -1352,7 +1448,42 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       const reactiveEnergyIndex = toNumber(meter.reactiveIndex);
       let savedMeter: ManualReadingMeter | undefined;
 
-      if (meter.periodId) {
+      if (isFeederScope) {
+        // Nhập theo lộ phải đi qua lô chốt EVN: BE tạo/cập nhật kỳ ghi của công tơ con VÀ tính lại
+        // số công tơ đã nhập + trạng thái lô. Gọi thẳng reading-periods thì lô đứng yên ở "Chưa
+        // nhập" và không bao giờ chốt được.
+        const batchId = await resolveFeederBatchId();
+        if (batchId === undefined) return false;
+
+        const response = await evnReadingBatchServices.saveReadings({
+          id: batchId,
+          meters: [
+            {
+              meterNumber: meter.meterCode,
+              reactiveIndex: reactiveEnergyIndex,
+              readings: readings.map((reading) => ({
+                tou: reading.tou,
+                oldIndex: reading.oldIndex,
+                newIndex: reading.newIndex
+              }))
+            }
+          ]
+        });
+        const savedRow = response.data?.meters?.find((row) => row.meterNumber === meter.meterCode);
+        if (hasApiError(response) || !savedRow?.periodId) {
+          showToast({
+            type: TYPE_TOAST.ERROR,
+            content: getErrorMessage(response, 'Lưu chỉ số công tơ theo lộ thất bại')
+          });
+          return false;
+        }
+
+        const detail = await manualMeterReadingServices.getReadingPeriod({ id: savedRow.periodId });
+        savedMeter =
+          hasApiError(detail) || !detail.data
+            ? { ...meter, periodId: savedRow.periodId, status: 'SAVED' }
+            : mapPeriodDetailToMeter(meter, detail.data);
+      } else if (meter.periodId) {
         const response = await manualMeterReadingServices.updateReadingPeriod({
           id: meter.periodId,
           saveMode,
@@ -1426,8 +1557,10 @@ export default function useManualMeterReading(options: ManualMeterReadingOptions
       filterApplied.periodTo,
       filterApplied.readingDate,
       hasUnsyncedFilter,
+      isFeederScope,
       periodInfo.from,
       periodInfo.to,
+      resolveFeederBatchId,
       uploadPendingPhoto
     ]
   );

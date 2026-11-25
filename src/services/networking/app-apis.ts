@@ -251,6 +251,7 @@ const ApiEndPoint = {
   BILLING_READING_BATCH_DELETE: '/admin/billing/reading-batches/delete',
   BILLING_READING_BATCH_CONFIRM: '/admin/billing/reading-batches/confirm',
   BILLING_READING_BATCH_METERS_BY_FEEDER: '/admin/billing/reading-batches/meters-by-feeder',
+  BILLING_READING_BATCH_SAVE_READINGS: '/admin/billing/reading-batches/save-readings',
   BILLING_READING_BATCH_EXPORT_RECORD: '/admin/billing/reading-batches/export-record',
 
   // BILLING 6.1 - NHAP DU LIEU SAO KE

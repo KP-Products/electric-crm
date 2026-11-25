@@ -1,39 +1,65 @@
 import { PaginationReq, PaginationRes, ResultBase } from './common';
 import { MeterSearchForReadingRow } from './manual-meter-reading';
 
-export type EvnReadingBatchStatus = 'DRAFT' | 'SUBMITTED' | 'CONFIRMED' | 'REJECTED';
+/** Trạng thái lô theo BE (BatchStatus): Chưa nhập / Đã nhập / Nhập lỗi / Chờ chốt / Đã chốt. */
+export type EvnReadingBatchStatus = 'CHUA_NHAP' | 'DA_NHAP' | 'NHAP_LOI' | 'CHO_CHOT' | 'DA_CHOT';
 
+/** Dòng danh sách lô (BatchListRowDto) — chi tiết lô (BatchDetailDto) có thêm các trường tổng. */
 export interface EvnReadingBatch {
   id: number;
-  /** Thông tin lộ trả về từ API danh sách (tương thích dữ liệu API cũ theo meterCode). */
+  masterMeterId?: string;
   feederCode?: string;
   feederName?: string;
-  feederAddress?: string;
+  address?: string;
+  /** Trả về từ create/update/confirm (BatchDto). */
   meterCode?: string;
-  masterMeterId?: string;
-  readingPeriod?: string;
+  periodCode?: string;
+  periodNo?: number;
   periodFrom?: string;
   periodTo?: string;
   readingDate?: string;
-  inputStatus?: string;
-  inputBy?: string;
-  inputAt?: string;
   status?: EvnReadingBatchStatus | string;
+  statusLabel?: string;
   totalMeterCount?: number;
   enteredMeterCount?: number;
-  submittedBy?: string;
-  submittedAt?: string;
+  enteredBy?: string;
+  enteredAt?: string;
   confirmedBy?: string;
   confirmedAt?: string;
-  rejectedBy?: string;
-  rejectedAt?: string;
   rejectionReason?: string;
   note?: string;
+  totalActive?: number;
+  totalReactive?: number;
+  totalEnergyAdjusted?: number;
+  meters?: EvnBatchMeterRow[];
+}
+
+export interface EvnBatchTouReading {
+  tou: string;
+  oldIndex?: number;
+  newIndex?: number;
+}
+
+export interface EvnBatchMeterRow {
+  periodId?: number;
+  meterNumber: string;
+  customerCode?: string;
+  customerName?: string;
+  address?: string;
+  multiplier?: number;
+  activeIndex?: number;
+  reactiveIndex?: number;
+  totalEnergyAdjusted?: number;
+  abnormal?: boolean;
+  photoCount?: number;
+  readings?: EvnBatchTouReading[];
 }
 
 export interface SearchEvnReadingBatchesReq extends PaginationReq {
-  meterCode?: string;
+  /** Mã lộ, tìm gần đúng. */
+  feederCode?: string;
   masterMeterId?: string;
+  periodCode?: string;
   status?: EvnReadingBatchStatus;
   from?: string;
   to?: string;
@@ -45,20 +71,35 @@ export interface CreateEvnReadingBatchReq {
   masterMeterId: string;
   readingDate: string;
   note?: string;
+  periodCode?: string;
+  periodNo?: number;
+  periodFrom?: string;
+  periodTo?: string;
 }
 
 export interface UpdateEvnReadingBatchReq {
   id: number;
   readingDate?: string;
   note?: string;
+  periodCode?: string;
+  periodNo?: number;
+  periodFrom?: string;
+  periodTo?: string;
 }
 
 export interface EvnReadingBatchIdReq {
   id: number;
 }
 
-export interface RejectEvnReadingBatchReq extends EvnReadingBatchIdReq {
-  reason?: string;
+export interface SaveEvnBatchReadingsReq {
+  id: number;
+  meters: {
+    meterNumber: string;
+    activeIndex?: number;
+    reactiveIndex?: number;
+    readings: EvnBatchTouReading[];
+  }[];
+  note?: string;
 }
 
 export interface FeederMetersReq {

@@ -29,6 +29,7 @@ import {
   parseFormattedNumber
 } from 'utils/number-input';
 import {
+  ManualMeterReadingOptions,
   ManualReadingMeter,
   ManualReadingRegister,
   ManualReadingStatus
@@ -130,11 +131,14 @@ const MeterListItem = ({
 export interface ManualMeterReadingScreenProps {
   scope?: 'customer' | 'feeder';
   feederId?: string;
+  /** Kỳ của lô chốt EVN khi mở từ danh sách lô — màn nhập dùng đúng kỳ này. */
+  batchPeriod?: ManualMeterReadingOptions['batchPeriod'];
 }
 
 const ManualMeterReadingScreen = ({
   scope = 'customer',
-  feederId
+  feederId,
+  batchPeriod
 }: ManualMeterReadingScreenProps) => {
   const isFeederScope = scope === 'feeder';
   const {
@@ -173,7 +177,7 @@ const ManualMeterReadingScreen = ({
     onRemoveUploadedPhoto,
     onClearSelectedMeter,
     onSave
-  } = useManualMeterReading({ scope, feederId });
+  } = useManualMeterReading({ scope, feederId, batchPeriod });
 
   const isSelectedMeterConfirmed = selectedMeter?.status === 'CONFIRMED';
   const isSelectedMeterWaitingConfirmed = selectedMeter?.status === 'SAVED';

@@ -69,7 +69,7 @@ const buildSearchRequest = (
 ): SearchEvnReadingBatchesReq => ({
   page: page - K_SIZE_1,
   size: DEFAULT_PAGE_SIZE,
-  meterCode: filter.meterCode.trim() || undefined,
+  feederCode: filter.meterCode.trim() || undefined,
   status: (filter.status || undefined) as EvnReadingBatchStatus | undefined,
   from: filter.from ? normalizeDateForApi(filter.from) : undefined,
   to: filter.to ? normalizeDateForApi(filter.to) : undefined
@@ -270,7 +270,7 @@ export default function useEvnReadingBatch() {
       });
       return;
     }
-    downloadBlob(response.data, response.fileName || `bien-ban-chot-so-evn-${id}.pdf`);
+    downloadBlob(response.data, response.fileName || `bien-ban-chot-so-evn-${id}.xlsx`);
   }, []);
 
   const pagination = useMemo(
